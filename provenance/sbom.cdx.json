@@ -1,0 +1,63 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:70c6eb64-254d-4c2d-a37d-c55b1a676f8e",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "application",
+      "name": "MainStreet AI + ClaimSieve Trust Root Patch",
+      "version": "0.31.0-trust-root"
+    },
+    "properties": [
+      {
+        "name": "claimsieve:evidence-status",
+        "value": "declared source inventory; not generated from resolved dependencies"
+      }
+    ]
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "ed25519-dalek",
+      "version": "2.1",
+      "scope": "required"
+    },
+    {
+      "type": "library",
+      "name": "serde",
+      "version": "1",
+      "scope": "required"
+    },
+    {
+      "type": "library",
+      "name": "serde_json",
+      "version": "1",
+      "scope": "required"
+    },
+    {
+      "type": "library",
+      "name": "serde_jcs",
+      "version": "0.1",
+      "scope": "required"
+    },
+    {
+      "type": "library",
+      "name": "sha2",
+      "version": "0.10",
+      "scope": "required"
+    },
+    {
+      "type": "framework",
+      "name": "Rocq Prover",
+      "version": "9.2",
+      "scope": "development"
+    },
+    {
+      "type": "application",
+      "name": "OpenClaw",
+      "version": "PINNED_BUILD_REQUIRED",
+      "scope": "optional"
+    }
+  ]
+}

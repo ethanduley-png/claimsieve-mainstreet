@@ -1,0 +1,773 @@
+{
+  "campaign_state": {
+    "boundary_crossings": 1,
+    "campaign_id": "campaign-001",
+    "credential_events": 0,
+    "denials": 0,
+    "destinations": [
+      "+15551234567"
+    ],
+    "encoded_fragments": 0,
+    "last_sequence": 10,
+    "quarantines": 0,
+    "sessions": [
+      "session-001"
+    ],
+    "status": "ACTIVE",
+    "suspension_reason": null,
+    "total_actions": 1,
+    "trust_domains": [
+      "sms-provider"
+    ]
+  },
+  "decision": {
+    "approval_digest": "sha256:1ba8ea53a5c09ac66793af18e980185d7bf6c14303e177a8f85d9cd189e49530",
+    "campaign_state_digest": "sha256:37d4fc3cb04ba66ba6c47273b35e2eba389bd4068873df41b2c04e267e7d4356",
+    "decided_at_seq": 10,
+    "decision_id": "decision:proposal-001:10",
+    "evidence_root": "sha256:5a690eecc64c3f87b2574331917b06a0c5675f804a72691d2b74f5f47e3f0349",
+    "policy_digest": "sha256:e16c49408236bf51017556079c3d5d8f8e8b21bda0aa226e64b16570a2800b11",
+    "prior_campaign_state_digest": "sha256:2f4dbcc4a0f3caca385502f4ecb40591134e0df2362fa95d9d60d551e0960823",
+    "proposal_digest": "sha256:2bd0b3760f83a2581b69e36e335e38bf68135f58338e87b03e4d421175e7872c",
+    "reason_codes": [
+      "ALL_GATES_PASSED"
+    ],
+    "schema_version": "claimsieve.decision.v1",
+    "trace_id": "trace-001",
+    "verdict": "ALLOW"
+  },
+  "evidence": [
+    {
+      "content": {
+        "consent": "lead-form",
+        "phone": "+15551234567"
+      },
+      "issuer_key_id": "crm_evidence-key-v1",
+      "observed_at_seq": 10,
+      "schema_version": "claimsieve.evidence.v1",
+      "signature": "ed25519:q87TIEu59znWTAH658vw-1WOejUdohjOnMgsGy3Zx2-Fn9PALQiq908VTxKppdj7cOxZ1jhnzBVcN4EYKzk5DA",
+      "source": "spiffe://mainstreet.local/tenant-demo/crm-reader",
+      "subject": "lead-123",
+      "type": "customer_contact_authority",
+      "verified": true
+    },
+    {
+      "content": {
+        "authority": "+15551234567",
+        "trust_domain": "sms-provider"
+      },
+      "issuer_key_id": "registry_evidence-key-v1",
+      "observed_at_seq": 10,
+      "schema_version": "claimsieve.evidence.v1",
+      "signature": "ed25519:41i6np2zq2w-n4Gyw3OpbfHSX3W6bA4vjL1sbcIQPB5e3p-uQ6a1P8pX5aIeOS7b6ygfSU6y7Qg2gU_7r8mRCw",
+      "source": "spiffe://claimsieve.local/registry",
+      "subject": "sms-provider",
+      "type": "destination_registry",
+      "verified": true
+    },
+    {
+      "content": {
+        "expires_at_seq": 100,
+        "network_profile_digest": "sha256:cce5478dee12434ae609f7ba2dd3c39f4b0d8c3037ccdc66ac9eb150dcea05b9",
+        "runtime_manifest_digest": "sha256:99b41347b32f0e016eaa4038f45095a73d9384d5a93a5af3e8d316e2f5285daf",
+        "skills_manifest_digest": "sha256:4c265376d40a8fde3adff5a7d9124e93e181e17a1d4009a8ac66273e697450a1",
+        "status": "ACTIVE",
+        "valid_from_seq": 0
+      },
+      "issuer_key_id": "deployment_evidence-key-v1",
+      "observed_at_seq": 10,
+      "schema_version": "claimsieve.evidence.v1",
+      "signature": "ed25519:K3lb9UyFAN0tmn9Qb0uN0fCeDWdd-1YlQ3yZ4T4wKToONbpPu9i0BvnvrQtypD_tm4a5vZ_CpwMGSqbTOeqaDQ",
+      "source": "spiffe://claimsieve.local/deployment-certifier",
+      "subject": "mainstreet-tenant-demo-deployment",
+      "type": "deployment_certificate",
+      "verified": true
+    },
+    {
+      "content": {
+        "deployment_certificate_digest": "sha256:d67c901640b2508f3276bef04889b33deb932c0b9c90aba43411d9e4cfe8f3f6",
+        "policy_version": 2,
+        "runtime_manifest_digest": "sha256:99b41347b32f0e016eaa4038f45095a73d9384d5a93a5af3e8d316e2f5285daf",
+        "status": "ACTIVE"
+      },
+      "issuer_key_id": "epoch_evidence-key-v1",
+      "observed_at_seq": 10,
+      "schema_version": "claimsieve.evidence.v1",
+      "signature": "ed25519:eg9YLE4dQ7JSL40sfRC3H6iOCu77jqNC3ZevRqTIeJogh54fkfkHFqKcaJQ_MN70PO8PowzKzsvMZo8HgkNyAA",
+      "source": "spiffe://claimsieve.local/epoch-authority",
+      "subject": "tenant-demo-epoch-2",
+      "type": "governance_epoch",
+      "verified": true
+    }
+  ],
+  "ledgers": {
+    "decision": [
+      {
+        "ledger_id": "decision",
+        "payload": {
+          "policy": {
+            "allowed_action_kinds": [
+              "send_message",
+              "create_calendar_event",
+              "fetch_artifact"
+            ],
+            "allowed_approver_identities": [
+              "spiffe://mainstreet.local/tenant-demo/human/owner"
+            ],
+            "allowed_approver_key_ids": [
+              "approver-key-v1"
+            ],
+            "allowed_effect_classes": [
+              "read",
+              "external_write",
+              "network_boundary"
+            ],
+            "allowed_principals": [
+              "spiffe://mainstreet.local/tenant-demo/agent/openclaw"
+            ],
+            "allowed_subgoals": [
+              "respond_to_lead",
+              "schedule_appointment",
+              "retrieve_pinned_dependency"
+            ],
+            "allowed_trust_domains": [
+              "tenant-demo",
+              "sms-provider",
+              "calendar-provider",
+              "artifact-registry"
+            ],
+            "approval_required_for": [
+              "external_write",
+              "network_boundary",
+              "create_calendar_event"
+            ],
+            "campaign_limits": {
+              "max_actions": 20,
+              "max_boundary_crossings": 4,
+              "max_denials": 3,
+              "max_encoded_fragments": 1,
+              "max_new_destinations": 4,
+              "max_sessions": 3
+            },
+            "deny_risk_tags": [
+              "UNDECLARED_REDIRECT",
+              "EXECUTABLE_UPLOAD",
+              "PACKAGE_PROXY_TUNNEL"
+            ],
+            "freshness_window": 10,
+            "policy_id": "mainstreet-demo-policy",
+            "required_evidence": [
+              "customer_contact_authority",
+              "destination_registry",
+              "deployment_certificate",
+              "governance_epoch"
+            ],
+            "schema_version": "claimsieve.policy.v1",
+            "suspend_risk_tags": [
+              "DIRECT_EXECUTION_ATTEMPT",
+              "CREDENTIAL_USE",
+              "CLOUD_METADATA_ACCESS",
+              "OBSERVER_TAMPER",
+              "UNRESTRICTED_NESTED_AGENT"
+            ],
+            "tenant_id": "tenant-demo",
+            "trusted_evidence_key_ids": {
+              "customer_contact_authority": [
+                "crm_evidence-key-v1"
+              ],
+              "deployment_certificate": [
+                "deployment_evidence-key-v1"
+              ],
+              "destination_registry": [
+                "registry_evidence-key-v1"
+              ],
+              "governance_epoch": [
+                "epoch_evidence-key-v1"
+              ]
+            },
+            "trusted_evidence_sources": {
+              "customer_contact_authority": [
+                "spiffe://mainstreet.local/tenant-demo/crm-reader"
+              ],
+              "deployment_certificate": [
+                "spiffe://claimsieve.local/deployment-certifier"
+              ],
+              "destination_registry": [
+                "spiffe://claimsieve.local/registry"
+              ],
+              "governance_epoch": [
+                "spiffe://claimsieve.local/epoch-authority"
+              ]
+            },
+            "version": 2
+          },
+          "schema_version": "claimsieve.signed_policy.v1",
+          "signature": "ed25519:85d0NEzLPbEtgelyk58vvS80iIHJQaPYA9yrlurbmDpexlXtpu7aq_Ha0yyPS2XPS6e7RX4WGk1_Q1oPxNnICw",
+          "signer_key_id": "policy_authority-key-v1"
+        },
+        "payload_hash": "sha256:8b32f76ab9046f8560ac4d479452b8f7dda7e112fae3fd9de1af5ce85df6a149",
+        "previous_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "record_hash": "sha256:51fc2d9d83a07b3ffb9f2ddf84ad07cce88791897b3c8114f5becf60375c9135",
+        "record_type": "SIGNED_POLICY_RECORDED",
+        "schema_version": "claimsieve.ledger_record.v1",
+        "sequence": 0,
+        "signature": "ed25519:YEEvm-zii7Xa6sUBlrmc3akFZGXYgZGyhhzu2KHy44wblbbDpFBfluKx6t9OPnKNtokODfDGzJyVkxmw3uBNDw",
+        "trace_id": "trace-001",
+        "writer_key_id": "decision-key-v1"
+      },
+      {
+        "ledger_id": "decision",
+        "payload": {
+          "approval_digest": "sha256:1ba8ea53a5c09ac66793af18e980185d7bf6c14303e177a8f85d9cd189e49530",
+          "campaign_state_digest": "sha256:37d4fc3cb04ba66ba6c47273b35e2eba389bd4068873df41b2c04e267e7d4356",
+          "decided_at_seq": 10,
+          "decision_id": "decision:proposal-001:10",
+          "evidence_root": "sha256:5a690eecc64c3f87b2574331917b06a0c5675f804a72691d2b74f5f47e3f0349",
+          "policy_digest": "sha256:e16c49408236bf51017556079c3d5d8f8e8b21bda0aa226e64b16570a2800b11",
+          "prior_campaign_state_digest": "sha256:2f4dbcc4a0f3caca385502f4ecb40591134e0df2362fa95d9d60d551e0960823",
+          "proposal_digest": "sha256:2bd0b3760f83a2581b69e36e335e38bf68135f58338e87b03e4d421175e7872c",
+          "reason_codes": [
+            "ALL_GATES_PASSED"
+          ],
+          "schema_version": "claimsieve.decision.v1",
+          "trace_id": "trace-001",
+          "verdict": "ALLOW"
+        },
+        "payload_hash": "sha256:7939c54723b17c1197effb699658e095849befa4333597cb2ae62739a8576209",
+        "previous_hash": "sha256:51fc2d9d83a07b3ffb9f2ddf84ad07cce88791897b3c8114f5becf60375c9135",
+        "record_hash": "sha256:5e8dea9b696cbfecf5e45850ef4bd1adc834ea6b57febb8bbcfab6c0fe859911",
+        "record_type": "DECISION_RECORDED",
+        "schema_version": "claimsieve.ledger_record.v1",
+        "sequence": 1,
+        "signature": "ed25519:aN7S4cpZeF-_zbFsCCFPJv4Iz3lxOOX42NPdMnH6Yr9y7S2Bt6dLhoscmdY2vtszeMVo9GneuYm7w069YrjNBg",
+        "trace_id": "trace-001",
+        "writer_key_id": "decision-key-v1"
+      },
+      {
+        "ledger_id": "decision",
+        "payload": {
+          "action_digest": "sha256:4f6650762d1f6c67271091ab8b05c5cb818cb47ab4db3c1a0dbd91ffcf176f06",
+          "approval_digest": "sha256:1ba8ea53a5c09ac66793af18e980185d7bf6c14303e177a8f85d9cd189e49530",
+          "authority_key_id": "authority-key-v1",
+          "campaign_id": "campaign-001",
+          "campaign_state_digest": "sha256:37d4fc3cb04ba66ba6c47273b35e2eba389bd4068873df41b2c04e267e7d4356",
+          "decision_digest": "sha256:7939c54723b17c1197effb699658e095849befa4333597cb2ae62739a8576209",
+          "destination_digest": "sha256:a8286d1f67a0d31457d9d674980edd3adabb650de4e10872f7884c0bb38e0252",
+          "evidence_root": "sha256:5a690eecc64c3f87b2574331917b06a0c5675f804a72691d2b74f5f47e3f0349",
+          "expires_at_seq": 15,
+          "max_uses": 1,
+          "nonce": "111111111111111111111111111111111111111111111111",
+          "parameter_digest": "sha256:02f72062750685f803c96c6def16aa7c578aed213a230328c56d6916ab538c20",
+          "permit_id": "permit:81b804ac5dc7485d10af360817fd96ab57fed5c18f7716ba7e9b5458bf4ae305",
+          "policy_digest": "sha256:e16c49408236bf51017556079c3d5d8f8e8b21bda0aa226e64b16570a2800b11",
+          "principal": "spiffe://mainstreet.local/tenant-demo/agent/openclaw",
+          "prior_campaign_state_digest": "sha256:2f4dbcc4a0f3caca385502f4ecb40591134e0df2362fa95d9d60d551e0960823",
+          "proposal_digest": "sha256:2bd0b3760f83a2581b69e36e335e38bf68135f58338e87b03e4d421175e7872c",
+          "schema_version": "claimsieve.permit.v1",
+          "signature": "ed25519:sIq-ar86bH_8G-hk3nFh6DBm4szWDwjYVSKWhKZs8GnuTC7epqMH4x3aCpcuweOtsu0ALwqEKYM-FjDeP4zuCA",
+          "signed_policy_digest": "sha256:8b32f76ab9046f8560ac4d479452b8f7dda7e112fae3fd9de1af5ce85df6a149",
+          "tenant_id": "tenant-demo",
+          "trace_id": "trace-001",
+          "valid_from_seq": 10
+        },
+        "payload_hash": "sha256:0d084b21d8afb2bc3595057636c5be7f383d9506374234cdeef9536b9ca4ea01",
+        "previous_hash": "sha256:5e8dea9b696cbfecf5e45850ef4bd1adc834ea6b57febb8bbcfab6c0fe859911",
+        "record_hash": "sha256:d6aecb7639e6be529870171f8ee5afed6505f35ea32d5c458bbadecfe2fff2f8",
+        "record_type": "PERMIT_ISSUED",
+        "schema_version": "claimsieve.ledger_record.v1",
+        "sequence": 2,
+        "signature": "ed25519:utWJT4HSveYkYQdoGKJ7pjm497bmzGJPUG4YYO8RhmxxOVqytvqqeL8XaIRsmJuQWQpGz15cZ_o_3bY8MahzBA",
+        "trace_id": "trace-001",
+        "writer_key_id": "decision-key-v1"
+      }
+    ],
+    "evidence": [
+      {
+        "ledger_id": "evidence",
+        "payload": {
+          "content": {
+            "consent": "lead-form",
+            "phone": "+15551234567"
+          },
+          "issuer_key_id": "crm_evidence-key-v1",
+          "observed_at_seq": 10,
+          "schema_version": "claimsieve.evidence.v1",
+          "signature": "ed25519:q87TIEu59znWTAH658vw-1WOejUdohjOnMgsGy3Zx2-Fn9PALQiq908VTxKppdj7cOxZ1jhnzBVcN4EYKzk5DA",
+          "source": "spiffe://mainstreet.local/tenant-demo/crm-reader",
+          "subject": "lead-123",
+          "type": "customer_contact_authority",
+          "verified": true
+        },
+        "payload_hash": "sha256:750138aed39f82032fefa6cfa9ea087c4366c9677b403fd48eccfd5f399ed156",
+        "previous_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "record_hash": "sha256:791fadd2fb7b267c5470ad542a55e39e2df95597a3ba088aecb5f01b07c1a63d",
+        "record_type": "EVIDENCE_RECORDED",
+        "schema_version": "claimsieve.ledger_record.v1",
+        "sequence": 0,
+        "signature": "ed25519:OzOBrvtlqcwbHBXdCTJzTpM7nxE8Wtie0gDCwItDGH-b0UjVIcyTGktjVtNS-DoMOkL1N4p3mzopFzhnSCiSDQ",
+        "trace_id": "trace-001",
+        "writer_key_id": "evidence-key-v1"
+      },
+      {
+        "ledger_id": "evidence",
+        "payload": {
+          "content": {
+            "authority": "+15551234567",
+            "trust_domain": "sms-provider"
+          },
+          "issuer_key_id": "registry_evidence-key-v1",
+          "observed_at_seq": 10,
+          "schema_version": "claimsieve.evidence.v1",
+          "signature": "ed25519:41i6np2zq2w-n4Gyw3OpbfHSX3W6bA4vjL1sbcIQPB5e3p-uQ6a1P8pX5aIeOS7b6ygfSU6y7Qg2gU_7r8mRCw",
+          "source": "spiffe://claimsieve.local/registry",
+          "subject": "sms-provider",
+          "type": "destination_registry",
+          "verified": true
+        },
+        "payload_hash": "sha256:1622d7ac059219ef5939eb5adf7dc6da93e490dada00c2f7b2d63a7830a3d3aa",
+        "previous_hash": "sha256:791fadd2fb7b267c5470ad542a55e39e2df95597a3ba088aecb5f01b07c1a63d",
+        "record_hash": "sha256:cd69c2bb300af803198ff9347aa1cf3cdfb5810e25001aeebdcc9e1c6dadcbcb",
+        "record_type": "EVIDENCE_RECORDED",
+        "schema_version": "claimsieve.ledger_record.v1",
+        "sequence": 1,
+        "signature": "ed25519:nEbngXUOmwHhbP3xTpoKTcutXNMelm3YI09EVcmPRH78LHfILeAGK3aK9igXvjG9HO5Pv5BLwWkrsFMhASEZDg",
+        "trace_id": "trace-001",
+        "writer_key_id": "evidence-key-v1"
+      },
+      {
+        "ledger_id": "evidence",
+        "payload": {
+          "content": {
+            "expires_at_seq": 100,
+            "network_profile_digest": "sha256:cce5478dee12434ae609f7ba2dd3c39f4b0d8c3037ccdc66ac9eb150dcea05b9",
+            "runtime_manifest_digest": "sha256:99b41347b32f0e016eaa4038f45095a73d9384d5a93a5af3e8d316e2f5285daf",
+            "skills_manifest_digest": "sha256:4c265376d40a8fde3adff5a7d9124e93e181e17a1d4009a8ac66273e697450a1",
+            "status": "ACTIVE",
+            "valid_from_seq": 0
+          },
+          "issuer_key_id": "deployment_evidence-key-v1",
+          "observed_at_seq": 10,
+          "schema_version": "claimsieve.evidence.v1",
+          "signature": "ed25519:K3lb9UyFAN0tmn9Qb0uN0fCeDWdd-1YlQ3yZ4T4wKToONbpPu9i0BvnvrQtypD_tm4a5vZ_CpwMGSqbTOeqaDQ",
+          "source": "spiffe://claimsieve.local/deployment-certifier",
+          "subject": "mainstreet-tenant-demo-deployment",
+          "type": "deployment_certificate",
+          "verified": true
+        },
+        "payload_hash": "sha256:d67c901640b2508f3276bef04889b33deb932c0b9c90aba43411d9e4cfe8f3f6",
+        "previous_hash": "sha256:cd69c2bb300af803198ff9347aa1cf3cdfb5810e25001aeebdcc9e1c6dadcbcb",
+        "record_hash": "sha256:a9f26ccc359f35abc04a18cfb0724b2a88a5f50edd0231d51e0e028e856166ee",
+        "record_type": "EVIDENCE_RECORDED",
+        "schema_version": "claimsieve.ledger_record.v1",
+        "sequence": 2,
+        "signature": "ed25519:aKNbdSnpK9Gt8KspPdIgj6UBdc6PFuo22gJrBSQf5BA6hSEsDMzmxCclLLCOMTsbVCHN8toc_lATT7wbChxdCg",
+        "trace_id": "trace-001",
+        "writer_key_id": "evidence-key-v1"
+      },
+      {
+        "ledger_id": "evidence",
+        "payload": {
+          "content": {
+            "deployment_certificate_digest": "sha256:d67c901640b2508f3276bef04889b33deb932c0b9c90aba43411d9e4cfe8f3f6",
+            "policy_version": 2,
+            "runtime_manifest_digest": "sha256:99b41347b32f0e016eaa4038f45095a73d9384d5a93a5af3e8d316e2f5285daf",
+            "status": "ACTIVE"
+          },
+          "issuer_key_id": "epoch_evidence-key-v1",
+          "observed_at_seq": 10,
+          "schema_version": "claimsieve.evidence.v1",
+          "signature": "ed25519:eg9YLE4dQ7JSL40sfRC3H6iOCu77jqNC3ZevRqTIeJogh54fkfkHFqKcaJQ_MN70PO8PowzKzsvMZo8HgkNyAA",
+          "source": "spiffe://claimsieve.local/epoch-authority",
+          "subject": "tenant-demo-epoch-2",
+          "type": "governance_epoch",
+          "verified": true
+        },
+        "payload_hash": "sha256:10dbeb803622e8599089b252fa1495af7cfa3865452d29aa8de763dd6b93e0d1",
+        "previous_hash": "sha256:a9f26ccc359f35abc04a18cfb0724b2a88a5f50edd0231d51e0e028e856166ee",
+        "record_hash": "sha256:0847c1098e80f5b6c1867eb2fd5450f527bfec8cbcea4771ae81543d2a1034f2",
+        "record_type": "EVIDENCE_RECORDED",
+        "schema_version": "claimsieve.ledger_record.v1",
+        "sequence": 3,
+        "signature": "ed25519:KCMudJZGsWxlEV21cM-DmvQd__o_r-uxdEn5JffmtrbbOjt_0b5LAPiFNWSGagQpK2EvXio3EpqSlLMih8sgDw",
+        "trace_id": "trace-001",
+        "writer_key_id": "evidence-key-v1"
+      }
+    ],
+    "execution": [
+      {
+        "ledger_id": "execution",
+        "payload": {
+          "action_digest": "sha256:4f6650762d1f6c67271091ab8b05c5cb818cb47ab4db3c1a0dbd91ffcf176f06",
+          "permit_id": "permit:81b804ac5dc7485d10af360817fd96ab57fed5c18f7716ba7e9b5458bf4ae305",
+          "reservation_id": "reservation:permit:81b804ac5dc7485d10af360817fd96ab57fed5c18f7716ba7e9b5458bf4ae305",
+          "reserved_at_seq": 11,
+          "schema_version": "claimsieve.reservation.v1"
+        },
+        "payload_hash": "sha256:2122442aee435fba81d901247359c3859d0f4d732cc45ab1bfe459de576365de",
+        "previous_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "record_hash": "sha256:1ab508a0d862ae3a9271c70c302c4966836206cb708cf7ac7874234c51a0fb9a",
+        "record_type": "PERMIT_RESERVED",
+        "schema_version": "claimsieve.ledger_record.v1",
+        "sequence": 0,
+        "signature": "ed25519:Ld4HALPfbQPyFSK4uka00GCWF2FK7mp52K2m_ErVunmDfsA8C-DttCGq5QvJ1KOq3PIPUXfXGZzzvFlYZOSCCA",
+        "trace_id": "trace-001",
+        "writer_key_id": "execution-key-v1"
+      },
+      {
+        "ledger_id": "execution",
+        "payload": {
+          "action_digest": "sha256:4f6650762d1f6c67271091ab8b05c5cb818cb47ab4db3c1a0dbd91ffcf176f06",
+          "attempted_at_seq": 11,
+          "campaign_id": "campaign-001",
+          "executor_key_id": "executor-key-v1",
+          "permit_id": "permit:81b804ac5dc7485d10af360817fd96ab57fed5c18f7716ba7e9b5458bf4ae305",
+          "provider_id": "provider:permit:81b804ac5dc7485d10af360817fd96ab57fed5c18f7716ba7e9b5458bf4ae305",
+          "provider_status": "accepted",
+          "reservation_id": "reservation:permit:81b804ac5dc7485d10af360817fd96ab57fed5c18f7716ba7e9b5458bf4ae305",
+          "schema_version": "claimsieve.executor_receipt.v1",
+          "signature": "ed25519:2owkwz8G2fYl7tw7aunIZlm1K3iwlUng2uFUZCBRQk4WBJyoJHIffhrBXFdohDwCCCadY-LAX48pbyi063WnDA",
+          "trace_id": "trace-001"
+        },
+        "payload_hash": "sha256:0e0962e8e253ea55966195ff153e8f4315b49ae7eba279b4bfe36b5e8b29f9d4",
+        "previous_hash": "sha256:1ab508a0d862ae3a9271c70c302c4966836206cb708cf7ac7874234c51a0fb9a",
+        "record_hash": "sha256:c05c19dc3061865249e454cc866b6b4ef6b98d9c4580baf8e83a0afc330115be",
+        "record_type": "EXECUTOR_RECEIPT",
+        "schema_version": "claimsieve.ledger_record.v1",
+        "sequence": 1,
+        "signature": "ed25519:ogb-hDzkrA7pPULsLqWiPi_J0o-ixWBJSWAabGMPGBJeqcf1PqpT73UqojFLzIL3OBbTXquveFnwY4GZTBHyAQ",
+        "trace_id": "trace-001",
+        "writer_key_id": "execution-key-v1"
+      },
+      {
+        "ledger_id": "execution",
+        "payload": {
+          "campaign_id": "campaign-001",
+          "executor_receipt_digest": "sha256:0e0962e8e253ea55966195ff153e8f4315b49ae7eba279b4bfe36b5e8b29f9d4",
+          "observed_action_digest": "sha256:d1cafdbf2c1662f0a09343bc91b6bf8bc2fe9dd34104bb338cc529eadc48e7ca",
+          "observed_at_seq": 12,
+          "observer_key_id": "observer-key-v1",
+          "permit_id": "permit:81b804ac5dc7485d10af360817fd96ab57fed5c18f7716ba7e9b5458bf4ae305",
+          "reconciliation": "CONFIRMED_SUCCESS",
+          "schema_version": "claimsieve.observer_receipt.v1",
+          "signature": "ed25519:jebwgBnc72IodoGz4o-hxiHXJl4FYprWW9zyJXrN4PSVK36qY5HLTjZcWVmST49M4-P0cZjReJKvh-d3jd-0DQ",
+          "trace_id": "trace-001"
+        },
+        "payload_hash": "sha256:f975af2c8fda4d30df2033434e53a217ba5ff2dd201cb5dda8cb350d6725b90d",
+        "previous_hash": "sha256:c05c19dc3061865249e454cc866b6b4ef6b98d9c4580baf8e83a0afc330115be",
+        "record_hash": "sha256:77d74499f902673f90cfdf676a8d6557c09310331fd7dc44bc2fec5bf37603d8",
+        "record_type": "OBSERVER_RECEIPT",
+        "schema_version": "claimsieve.ledger_record.v1",
+        "sequence": 2,
+        "signature": "ed25519:FWceK4IDJrhNtmnAgJhL9x7Mmyw2AsEBNMtuaZMfENeKqmhdBy3xxGF8pWvqD3muJYfB8xtkdi9zxb5hzqiZCg",
+        "trace_id": "trace-001",
+        "writer_key_id": "execution-key-v1"
+      }
+    ],
+    "proposal": [
+      {
+        "ledger_id": "proposal",
+        "payload": {
+          "action": {
+            "destination": {
+              "authority": "+15551234567",
+              "resource": "lead-123",
+              "scheme": "sms",
+              "trust_domain": "sms-provider"
+            },
+            "effect_class": "external_write",
+            "kind": "send_message",
+            "method": "SEND",
+            "parameters": {
+              "body": "Hi! Would you like to schedule an intro session?"
+            },
+            "reversibility": "compensable"
+          },
+          "approval": {
+            "approval_id": "approval-proposal-001",
+            "approved_at_seq": 10,
+            "approver": "spiffe://mainstreet.local/tenant-demo/human/owner",
+            "approver_key_id": "approver-key-v1",
+            "display_digest": "sha256:457d11ea0de2b2658362c4d9432373d539097471a6470fa4bf1dec040df0b34f",
+            "expires_at_seq": 15,
+            "proposal_digest": "sha256:2bd0b3760f83a2581b69e36e335e38bf68135f58338e87b03e4d421175e7872c",
+            "schema_version": "claimsieve.approval.v1",
+            "signature": "ed25519:sP7YMv2toLQcIESQXZaH8fWGNEZvvC9K8zs2rrgURuedTFoECYcRp-Quv_zsU7_DErgd2DmkwNqQsx_onIAABA"
+          },
+          "campaign_id": "campaign-001",
+          "evidence_refs": [
+            "sha256:750138aed39f82032fefa6cfa9ea087c4366c9677b403fd48eccfd5f399ed156",
+            "sha256:1622d7ac059219ef5939eb5adf7dc6da93e490dada00c2f7b2d63a7830a3d3aa",
+            "sha256:d67c901640b2508f3276bef04889b33deb932c0b9c90aba43411d9e4cfe8f3f6",
+            "sha256:10dbeb803622e8599089b252fa1495af7cfa3865452d29aa8de763dd6b93e0d1"
+          ],
+          "objective": {
+            "constraints": [
+              "No medical claims",
+              "No unapproved destination",
+              "No direct provider access"
+            ],
+            "expected_effect": "One consented SMS is sent to the lead.",
+            "root": "Help the gym respond to a lead using only approved business channels.",
+            "subgoal": "respond_to_lead"
+          },
+          "parent_action_id": null,
+          "principal": "spiffe://mainstreet.local/tenant-demo/agent/openclaw",
+          "proposal_id": "proposal-001",
+          "requested_at_seq": 10,
+          "risk_tags": [],
+          "schema_version": "claimsieve.proposal.v1",
+          "session_id": "session-001",
+          "tenant_id": "tenant-demo",
+          "trace_id": "trace-001"
+        },
+        "payload_hash": "sha256:534a9c3b944483adbf958c61e887797d23c729672e5620850fe45dec401b8a2c",
+        "previous_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "record_hash": "sha256:2ff167f3bad5a6e2337ea84f4976d55967ed35f63fda739c8c0ed3f551ea80af",
+        "record_type": "PROPOSAL_SUBMITTED",
+        "schema_version": "claimsieve.ledger_record.v1",
+        "sequence": 0,
+        "signature": "ed25519:TZ-vafdtq53Egslm7eVm27gUV5M8aC6fTSWboGu4Bso6OvQioFKv550-gRLRJ3tjWbFLE87vMn238_4-POLjBA",
+        "trace_id": "trace-001",
+        "writer_key_id": "proposal-key-v1"
+      }
+    ]
+  },
+  "manifest": {
+    "bundle_digest": "sha256:42df7e64269bf61fc776105c08cd7bef41c7ee68babdba0ddea4e8b80384ddf2",
+    "canonical_profile": "claimsieve.restricted-json.v1",
+    "hash_algorithm": "sha256",
+    "ledger_heads": {
+      "decision": "sha256:d6aecb7639e6be529870171f8ee5afed6505f35ea32d5c458bbadecfe2fff2f8",
+      "evidence": "sha256:0847c1098e80f5b6c1867eb2fd5450f527bfec8cbcea4771ae81543d2a1034f2",
+      "execution": "sha256:77d74499f902673f90cfdf676a8d6557c09310331fd7dc44bc2fec5bf37603d8",
+      "proposal": "sha256:2ff167f3bad5a6e2337ea84f4976d55967ed35f63fda739c8c0ed3f551ea80af"
+    },
+    "record_counts": {
+      "decision": 3,
+      "evidence": 4,
+      "execution": 3,
+      "proposal": 1
+    },
+    "release_id": "claimsieve-mainstreet-0.33.0-independent-outcome-boundary",
+    "schema_version": "claimsieve.bundle_manifest.v2",
+    "signature_algorithm": "ed25519",
+    "trace_id": "trace-001",
+    "trust_root_id": "claimsieve-fixture-trust-root-v1"
+  },
+  "permit": {
+    "action_digest": "sha256:4f6650762d1f6c67271091ab8b05c5cb818cb47ab4db3c1a0dbd91ffcf176f06",
+    "approval_digest": "sha256:1ba8ea53a5c09ac66793af18e980185d7bf6c14303e177a8f85d9cd189e49530",
+    "authority_key_id": "authority-key-v1",
+    "campaign_id": "campaign-001",
+    "campaign_state_digest": "sha256:37d4fc3cb04ba66ba6c47273b35e2eba389bd4068873df41b2c04e267e7d4356",
+    "decision_digest": "sha256:7939c54723b17c1197effb699658e095849befa4333597cb2ae62739a8576209",
+    "destination_digest": "sha256:a8286d1f67a0d31457d9d674980edd3adabb650de4e10872f7884c0bb38e0252",
+    "evidence_root": "sha256:5a690eecc64c3f87b2574331917b06a0c5675f804a72691d2b74f5f47e3f0349",
+    "expires_at_seq": 15,
+    "max_uses": 1,
+    "nonce": "111111111111111111111111111111111111111111111111",
+    "parameter_digest": "sha256:02f72062750685f803c96c6def16aa7c578aed213a230328c56d6916ab538c20",
+    "permit_id": "permit:81b804ac5dc7485d10af360817fd96ab57fed5c18f7716ba7e9b5458bf4ae305",
+    "policy_digest": "sha256:e16c49408236bf51017556079c3d5d8f8e8b21bda0aa226e64b16570a2800b11",
+    "principal": "spiffe://mainstreet.local/tenant-demo/agent/openclaw",
+    "prior_campaign_state_digest": "sha256:2f4dbcc4a0f3caca385502f4ecb40591134e0df2362fa95d9d60d551e0960823",
+    "proposal_digest": "sha256:2bd0b3760f83a2581b69e36e335e38bf68135f58338e87b03e4d421175e7872c",
+    "schema_version": "claimsieve.permit.v1",
+    "signature": "ed25519:sIq-ar86bH_8G-hk3nFh6DBm4szWDwjYVSKWhKZs8GnuTC7epqMH4x3aCpcuweOtsu0ALwqEKYM-FjDeP4zuCA",
+    "signed_policy_digest": "sha256:8b32f76ab9046f8560ac4d479452b8f7dda7e112fae3fd9de1af5ce85df6a149",
+    "tenant_id": "tenant-demo",
+    "trace_id": "trace-001",
+    "valid_from_seq": 10
+  },
+  "proposal": {
+    "action": {
+      "destination": {
+        "authority": "+15551234567",
+        "resource": "lead-123",
+        "scheme": "sms",
+        "trust_domain": "sms-provider"
+      },
+      "effect_class": "external_write",
+      "kind": "send_message",
+      "method": "SEND",
+      "parameters": {
+        "body": "Hi! Would you like to schedule an intro session?"
+      },
+      "reversibility": "compensable"
+    },
+    "approval": {
+      "approval_id": "approval-proposal-001",
+      "approved_at_seq": 10,
+      "approver": "spiffe://mainstreet.local/tenant-demo/human/owner",
+      "approver_key_id": "approver-key-v1",
+      "display_digest": "sha256:457d11ea0de2b2658362c4d9432373d539097471a6470fa4bf1dec040df0b34f",
+      "expires_at_seq": 15,
+      "proposal_digest": "sha256:2bd0b3760f83a2581b69e36e335e38bf68135f58338e87b03e4d421175e7872c",
+      "schema_version": "claimsieve.approval.v1",
+      "signature": "ed25519:sP7YMv2toLQcIESQXZaH8fWGNEZvvC9K8zs2rrgURuedTFoECYcRp-Quv_zsU7_DErgd2DmkwNqQsx_onIAABA"
+    },
+    "campaign_id": "campaign-001",
+    "evidence_refs": [
+      "sha256:750138aed39f82032fefa6cfa9ea087c4366c9677b403fd48eccfd5f399ed156",
+      "sha256:1622d7ac059219ef5939eb5adf7dc6da93e490dada00c2f7b2d63a7830a3d3aa",
+      "sha256:d67c901640b2508f3276bef04889b33deb932c0b9c90aba43411d9e4cfe8f3f6",
+      "sha256:10dbeb803622e8599089b252fa1495af7cfa3865452d29aa8de763dd6b93e0d1"
+    ],
+    "objective": {
+      "constraints": [
+        "No medical claims",
+        "No unapproved destination",
+        "No direct provider access"
+      ],
+      "expected_effect": "One consented SMS is sent to the lead.",
+      "root": "Help the gym respond to a lead using only approved business channels.",
+      "subgoal": "respond_to_lead"
+    },
+    "parent_action_id": null,
+    "principal": "spiffe://mainstreet.local/tenant-demo/agent/openclaw",
+    "proposal_id": "proposal-001",
+    "requested_at_seq": 10,
+    "risk_tags": [],
+    "schema_version": "claimsieve.proposal.v1",
+    "session_id": "session-001",
+    "tenant_id": "tenant-demo",
+    "trace_id": "trace-001"
+  },
+  "receipts": [
+    {
+      "action_digest": "sha256:4f6650762d1f6c67271091ab8b05c5cb818cb47ab4db3c1a0dbd91ffcf176f06",
+      "attempted_at_seq": 11,
+      "campaign_id": "campaign-001",
+      "executor_key_id": "executor-key-v1",
+      "permit_id": "permit:81b804ac5dc7485d10af360817fd96ab57fed5c18f7716ba7e9b5458bf4ae305",
+      "provider_id": "provider:permit:81b804ac5dc7485d10af360817fd96ab57fed5c18f7716ba7e9b5458bf4ae305",
+      "provider_status": "accepted",
+      "reservation_id": "reservation:permit:81b804ac5dc7485d10af360817fd96ab57fed5c18f7716ba7e9b5458bf4ae305",
+      "schema_version": "claimsieve.executor_receipt.v1",
+      "signature": "ed25519:2owkwz8G2fYl7tw7aunIZlm1K3iwlUng2uFUZCBRQk4WBJyoJHIffhrBXFdohDwCCCadY-LAX48pbyi063WnDA",
+      "trace_id": "trace-001"
+    },
+    {
+      "campaign_id": "campaign-001",
+      "executor_receipt_digest": "sha256:0e0962e8e253ea55966195ff153e8f4315b49ae7eba279b4bfe36b5e8b29f9d4",
+      "observed_action_digest": "sha256:d1cafdbf2c1662f0a09343bc91b6bf8bc2fe9dd34104bb338cc529eadc48e7ca",
+      "observed_at_seq": 12,
+      "observer_key_id": "observer-key-v1",
+      "permit_id": "permit:81b804ac5dc7485d10af360817fd96ab57fed5c18f7716ba7e9b5458bf4ae305",
+      "reconciliation": "CONFIRMED_SUCCESS",
+      "schema_version": "claimsieve.observer_receipt.v1",
+      "signature": "ed25519:jebwgBnc72IodoGz4o-hxiHXJl4FYprWW9zyJXrN4PSVK36qY5HLTjZcWVmST49M4-P0cZjReJKvh-d3jd-0DQ",
+      "trace_id": "trace-001"
+    }
+  ],
+  "schema_version": "claimsieve.evidence_bundle.v2",
+  "signed_policy": {
+    "policy": {
+      "allowed_action_kinds": [
+        "send_message",
+        "create_calendar_event",
+        "fetch_artifact"
+      ],
+      "allowed_approver_identities": [
+        "spiffe://mainstreet.local/tenant-demo/human/owner"
+      ],
+      "allowed_approver_key_ids": [
+        "approver-key-v1"
+      ],
+      "allowed_effect_classes": [
+        "read",
+        "external_write",
+        "network_boundary"
+      ],
+      "allowed_principals": [
+        "spiffe://mainstreet.local/tenant-demo/agent/openclaw"
+      ],
+      "allowed_subgoals": [
+        "respond_to_lead",
+        "schedule_appointment",
+        "retrieve_pinned_dependency"
+      ],
+      "allowed_trust_domains": [
+        "tenant-demo",
+        "sms-provider",
+        "calendar-provider",
+        "artifact-registry"
+      ],
+      "approval_required_for": [
+        "external_write",
+        "network_boundary",
+        "create_calendar_event"
+      ],
+      "campaign_limits": {
+        "max_actions": 20,
+        "max_boundary_crossings": 4,
+        "max_denials": 3,
+        "max_encoded_fragments": 1,
+        "max_new_destinations": 4,
+        "max_sessions": 3
+      },
+      "deny_risk_tags": [
+        "UNDECLARED_REDIRECT",
+        "EXECUTABLE_UPLOAD",
+        "PACKAGE_PROXY_TUNNEL"
+      ],
+      "freshness_window": 10,
+      "policy_id": "mainstreet-demo-policy",
+      "required_evidence": [
+        "customer_contact_authority",
+        "destination_registry",
+        "deployment_certificate",
+        "governance_epoch"
+      ],
+      "schema_version": "claimsieve.policy.v1",
+      "suspend_risk_tags": [
+        "DIRECT_EXECUTION_ATTEMPT",
+        "CREDENTIAL_USE",
+        "CLOUD_METADATA_ACCESS",
+        "OBSERVER_TAMPER",
+        "UNRESTRICTED_NESTED_AGENT"
+      ],
+      "tenant_id": "tenant-demo",
+      "trusted_evidence_key_ids": {
+        "customer_contact_authority": [
+          "crm_evidence-key-v1"
+        ],
+        "deployment_certificate": [
+          "deployment_evidence-key-v1"
+        ],
+        "destination_registry": [
+          "registry_evidence-key-v1"
+        ],
+        "governance_epoch": [
+          "epoch_evidence-key-v1"
+        ]
+      },
+      "trusted_evidence_sources": {
+        "customer_contact_authority": [
+          "spiffe://mainstreet.local/tenant-demo/crm-reader"
+        ],
+        "deployment_certificate": [
+          "spiffe://claimsieve.local/deployment-certifier"
+        ],
+        "destination_registry": [
+          "spiffe://claimsieve.local/registry"
+        ],
+        "governance_epoch": [
+          "spiffe://claimsieve.local/epoch-authority"
+        ]
+      },
+      "version": 2
+    },
+    "schema_version": "claimsieve.signed_policy.v1",
+    "signature": "ed25519:85d0NEzLPbEtgelyk58vvS80iIHJQaPYA9yrlurbmDpexlXtpu7aq_Ha0yyPS2XPS6e7RX4WGk1_Q1oPxNnICw",
+    "signer_key_id": "policy_authority-key-v1"
+  },
+  "trace_id": "trace-001",
+  "witness_statement": {
+    "manifest_digest": "sha256:ab09cf11171e564f3c8e019e99fa7426fa0872a08848c033783a76a8e925ba28",
+    "release_id": "claimsieve-mainstreet-0.33.0-independent-outcome-boundary",
+    "schema_version": "claimsieve.witness_statement.v1",
+    "signature": "ed25519:t2DqIAWT9dIavgt3d1NQik9bGfY_bvhw2APaLGNEOMgJdbvDIFoEj_eCWMEWwUK9Qa1BOLXlk-t-h5g0b1wnDw",
+    "witness_key_id": "witness-key-v1"
+  }
+}

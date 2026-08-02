@@ -1,0 +1,33 @@
+{
+  "_type": "https://in-toto.io/Statement/v1",
+  "subject": [
+    {
+      "name": "claimsieve_mainstreet_v0_31_trust_root.zip",
+      "digest": {
+        "sha256": "REPLACE_AT_RELEASE"
+      }
+    }
+  ],
+  "predicateType": "https://slsa.dev/provenance/v1",
+  "predicate": {
+    "buildDefinition": {
+      "buildType": "https://claimsieve.example/build-types/release/v1",
+      "externalParameters": {
+        "version": "0.31.0-trust-root"
+      },
+      "internalParameters": {
+        "deterministicZipTimestamp": "2026-08-01T04:00:00Z"
+      },
+      "resolvedDependencies": []
+    },
+    "runDetails": {
+      "builder": {
+        "id": "REPLACE_WITH_CI_WORKFLOW_ID"
+      },
+      "metadata": {
+        "invocationId": "REPLACE_AT_RELEASE"
+      },
+      "byproducts": []
+    }
+  }
+}

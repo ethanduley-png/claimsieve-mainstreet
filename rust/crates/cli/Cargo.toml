@@ -1,0 +1,17 @@
+[package]
+name = "claimsieve-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "claimsieve"
+path = "src/main.rs"
+
+[dependencies]
+claimsieve-verifier = { path = "../verifier" }
+serde_json.workspace = true
+
+[lints]
+workspace = true

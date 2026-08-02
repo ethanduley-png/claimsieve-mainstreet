@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://claimsieve.example/schemas/permit.schema.json",
+  "title": "ClaimSieve Permit v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "permit_id",
+    "trace_id",
+    "tenant_id",
+    "campaign_id",
+    "principal",
+    "proposal_digest",
+    "action_digest",
+    "destination_digest",
+    "parameter_digest",
+    "policy_digest",
+    "signed_policy_digest",
+    "prior_campaign_state_digest",
+    "campaign_state_digest",
+    "evidence_root",
+    "decision_digest",
+    "approval_digest",
+    "valid_from_seq",
+    "expires_at_seq",
+    "max_uses",
+    "nonce",
+    "authority_key_id",
+    "signature"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "claimsieve.permit.v1"
+    },
+    "permit_id": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "tenant_id": {
+      "type": "string"
+    },
+    "campaign_id": {
+      "type": "string"
+    },
+    "principal": {
+      "type": "string",
+      "pattern": "^spiffe://"
+    },
+    "proposal_digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "action_digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "destination_digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "parameter_digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "policy_digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "evidence_root": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "approval_digest": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "valid_from_seq": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "expires_at_seq": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "max_uses": {
+      "const": 1
+    },
+    "nonce": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32,128}$"
+    },
+    "authority_key_id": {
+      "type": "string"
+    },
+    "signature": {
+      "type": "string",
+      "pattern": "^ed25519:[A-Za-z0-9_-]+$"
+    },
+    "decision_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "signed_policy_digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "prior_campaign_state_digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "campaign_state_digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    }
+  }
+}

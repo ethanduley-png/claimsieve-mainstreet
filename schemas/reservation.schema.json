@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://claimsieve.local/schemas/reservation.schema.json",
+  "title": "ClaimSieve Durable Reservation v2",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "reservation_id", "permit_id", "campaign_id", "action_digest",
+    "request_digest", "resource_key", "idempotency_key", "reserved_sequence",
+    "fencing_token", "containment_epoch", "status", "updated_sequence"
+  ],
+  "properties": {
+    "reservation_id": {"type": "string", "minLength": 1},
+    "permit_id": {"type": "string", "minLength": 1},
+    "campaign_id": {"type": "string", "minLength": 1},
+    "action_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "request_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "resource_key": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "idempotency_key": {"type": "string", "minLength": 1},
+    "reserved_sequence": {"type": "integer", "minimum": 0},
+    "fencing_token": {"type": "integer", "minimum": 1},
+    "containment_epoch": {"type": "integer", "minimum": 0},
+    "status": {
+      "enum": [
+        "RESERVED", "EXECUTING", "DISPATCHING", "PROVIDER_ACKNOWLEDGED",
+        "PROVIDER_REJECTED", "BLOCKED_STALE_FENCE", "OUTCOME_UNKNOWN", "RECONCILED"
+      ]
+    },
+    "outcome": {
+      "type": ["string", "null"],
+      "enum": [null, "CONFIRMED_SUCCESS", "CONFIRMED_FAILURE", "DIVERGENT_EFFECT", "OUTCOME_UNKNOWN"]
+    }
+  }
+}

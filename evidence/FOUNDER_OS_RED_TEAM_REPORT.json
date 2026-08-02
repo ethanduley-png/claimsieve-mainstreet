@@ -1,0 +1,61 @@
+{
+  "blocked_or_detected": 8,
+  "limitations": [
+    "The GitHub provider is deterministic and local; no live GitHub API call was made.",
+    "Complete mediation still depends on deployment and credential isolation.",
+    "Fixture keys are deterministic test material and are not production credentials."
+  ],
+  "results": [
+    {
+      "actual": "permit binding mismatch: proposal_digest",
+      "blocked_or_detected": true,
+      "expected": "blocked",
+      "name": "repository_substitution"
+    },
+    {
+      "actual": "permit binding mismatch: proposal_digest",
+      "blocked_or_detected": true,
+      "expected": "blocked",
+      "name": "payload_mutation"
+    },
+    {
+      "actual": "repository is not in the Founder OS allowlist",
+      "blocked_or_detected": true,
+      "expected": "blocked",
+      "name": "unapproved_repository"
+    },
+    {
+      "actual": "permit replay or concurrent duplicate",
+      "blocked_or_detected": true,
+      "expected": "blocked",
+      "name": "permit_replay"
+    },
+    {
+      "actual": "OUTCOME_UNKNOWN",
+      "blocked_or_detected": true,
+      "expected": "OUTCOME_UNKNOWN",
+      "name": "timeout_before_commit"
+    },
+    {
+      "actual": "CONFIRMED_SUCCESS",
+      "blocked_or_detected": true,
+      "expected": "CONFIRMED_SUCCESS by independent readback",
+      "name": "timeout_after_commit"
+    },
+    {
+      "actual": "false",
+      "blocked_or_detected": true,
+      "expected": "false",
+      "name": "automatic_retry_after_unknown"
+    },
+    {
+      "actual": "{\"decision\": [], \"evidence\": [], \"execution\": [], \"proposal\": []}",
+      "blocked_or_detected": true,
+      "expected": "all chains verify",
+      "name": "four_ledger_integrity"
+    }
+  ],
+  "schema_version": "claimsieve.founder_os_red_team.v1",
+  "surviving_tested_bypasses": [],
+  "total": 8
+}

@@ -1,0 +1,18 @@
+{
+  "automatic_retry_allowed": false,
+  "expected_action_digest": "sha256:d5d781e81f83f68f829a152315ad5f6588bb6612ad31f6572bbb91e64ce2b325",
+  "initial_outcome": "OUTCOME_UNKNOWN",
+  "issue_number": 1,
+  "issue_url": "https://github.com/ethanduley-png/claimsieve-mainstreet/issues/1",
+  "observed_action_digest": "sha256:d5d781e81f83f68f829a152315ad5f6588bb6612ad31f6572bbb91e64ce2b325",
+  "observed_on": "2026-08-02",
+  "permit_id": "permit:d8e647c58feaf565f9260956bedbce3397e4ff045643be83e7f9c741fe49404f",
+  "proposal_id": "founder-proposal-github-canary-20260802142713",
+  "provider_evidence_conflict": false,
+  "provider_status": "accepted",
+  "reconciled_outcome": "CONFIRMED_SUCCESS",
+  "repository": "ethanduley-png/claimsieve-mainstreet",
+  "schema_version": "claimsieve.github_live_canary_report.v1",
+  "temporary_tokens_revoked": true,
+  "write_attempts": 1
+}

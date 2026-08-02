@@ -1,0 +1,122 @@
+{
+  "errors": [],
+  "gate_passed": true,
+  "native_toolchains": {
+    "rocq": {
+      "available": true,
+      "path": "C:\\Users\\Ethan\\Rocq-Platform9.0.2025.08\\bin\\rocq.exe",
+      "returncode": 0,
+      "version": "The Rocq Prover, version 9.0.1"
+    },
+    "rust": {
+      "available": true,
+      "path": "C:\\Users\\Ethan\\.cargo\\bin\\cargo.exe",
+      "returncode": 0,
+      "version": "cargo 1.97.1 (c980f4866 2026-06-30)"
+    }
+  },
+  "python_outcome_vectors": [
+    {
+      "actual_conflict": false,
+      "actual_reconciliation": "OUTCOME_UNKNOWN",
+      "id": "no-provider-record",
+      "passed": true
+    },
+    {
+      "actual_conflict": false,
+      "actual_reconciliation": "CONFIRMED_FAILURE",
+      "id": "provider-rejected-no-effect",
+      "passed": true
+    },
+    {
+      "actual_conflict": false,
+      "actual_reconciliation": "CONFIRMED_SUCCESS",
+      "id": "provider-accepted-exact-effect",
+      "passed": true
+    },
+    {
+      "actual_conflict": false,
+      "actual_reconciliation": "CONFIRMED_SUCCESS",
+      "id": "transport-timeout-later-exact-readback",
+      "passed": true
+    },
+    {
+      "actual_conflict": false,
+      "actual_reconciliation": "DIVERGENT_EFFECT",
+      "id": "provider-accepted-divergent-effect",
+      "passed": true
+    },
+    {
+      "actual_conflict": true,
+      "actual_reconciliation": "OUTCOME_UNKNOWN",
+      "id": "provider-rejected-but-effect-exists",
+      "passed": true
+    },
+    {
+      "actual_conflict": true,
+      "actual_reconciliation": "OUTCOME_UNKNOWN",
+      "id": "provider-accepted-but-no-effect-readable",
+      "passed": true
+    },
+    {
+      "actual_conflict": false,
+      "actual_reconciliation": "OUTCOME_UNKNOWN",
+      "id": "transport-timeout-no-readback",
+      "passed": true
+    }
+  ],
+  "release": "0.34.0",
+  "remaining_semantic_divergences": [
+    {
+      "description": "Rust observer receipt protocol remains v1-shaped while the executed Python durable boundary and JSON schema use observer receipt v2 with reservation, campaign, provider-record, and conflict bindings.",
+      "id": "REM-DIV-001",
+      "impact": "Rust cannot yet claim wire-format parity or portable verifier parity."
+    },
+    {
+      "description": "Rocq abstracts independent provider evidence into constructors and does not model parsing, signatures, databases, transport, or provider read APIs.",
+      "id": "REM-DIV-002",
+      "impact": "Theorems cannot establish implementation-level observer independence or provider-contract compliance."
+    }
+  ],
+  "resolved_semantic_divergences": [
+    {
+      "description": "v0.32 Python trusted a signed executor rejection when no provider record existed.",
+      "id": "DIV-001",
+      "resolution": "Observer classification now excludes executor receipts; executed trace remains OUTCOME_UNKNOWN."
+    },
+    {
+      "description": "v0.32 Rust executor owned the observer signing key.",
+      "id": "DIV-002",
+      "resolution": "Observer key moved to a separate IndependentObserver source boundary in Rust source."
+    },
+    {
+      "description": "v0.32 Rust enabled automatic retry after confirmed failure while Python and Rocq denied it.",
+      "id": "DIV-003",
+      "resolution": "Rust source now returns false for every automatic logical retry outcome."
+    },
+    {
+      "description": "Python, Rust, and Rocq did not define contradictory provider evidence consistently.",
+      "id": "DIV-004",
+      "resolution": "Contradictory provider status/effect evidence now maps to OUTCOME_UNKNOWN and containment in executable Python and source models."
+    },
+    {
+      "description": "Rust native compilation and execution status was previously unknown.",
+      "id": "DIV-005",
+      "resolution": "Formatting, warning-denied Clippy, 28 tests, documentation tests, and v0.34 bundle verification pass under the project-pinned toolchain."
+    },
+    {
+      "description": "Rocq compiler acceptance and assumption status were previously unknown.",
+      "id": "DIV-006",
+      "resolution": "All four Rocq files compile and both assumption-audit files report their theorems closed under the global context."
+    }
+  ],
+  "schema_version": "claimsieve.semantic_divergence_report.v1",
+  "stripe_contract_derived_trace": {
+    "effect_count": 1,
+    "first_transport": "network_error",
+    "live_api_called": false,
+    "passed": true,
+    "replay_authorized": true,
+    "second_was_idempotent_replay": true
+  }
+}

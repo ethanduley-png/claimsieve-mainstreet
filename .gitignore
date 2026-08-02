@@ -1,0 +1,14 @@
+.claimsieve-github/
+.pytest_cache/
+.venv/
+__pycache__/
+*.pyc
+*.sqlite3
+node_modules/
+rust/target/
+rocq/.lia.cache
+rocq/*.aux
+rocq/*.glob
+rocq/*.vo
+rocq/*.vok
+rocq/*.vos

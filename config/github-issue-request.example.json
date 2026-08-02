@@ -1,0 +1,11 @@
+{
+  "body": "Review the governed GitHub integration and its independent read-back evidence.",
+  "campaign_id": "founder-campaign-github-001",
+  "proposal_id": "founder-proposal-github-001",
+  "repository": "OWNER/REPOSITORY",
+  "requested_at_seq": 10,
+  "session_id": "founder-session-github-001",
+  "title": "Review ClaimSieve GitHub integration",
+  "trace_id": "founder-trace-github-001",
+  "work_item_id": "work-item-github-001"
+}

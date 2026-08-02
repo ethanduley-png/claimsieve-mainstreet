@@ -1,0 +1,860 @@
+HISTORICAL PRE-NATIVE-INSTALL TRANSCRIPT; superseded by DURABLE_RED_TEAM_REPORT.json and NATIVE_COMPILATION_ATTEMPT.txt.
+{
+  "blocked_or_detected": 25,
+  "bypasses": 0,
+  "limitations": 4,
+  "release": "0.34.0",
+  "results": [
+    {
+      "actual_result": "sequence=10, reserved=True",
+      "attack": "PROCESS_RESTART_STATE_RESET",
+      "control": "SQLite FULL-synchronous transaction commits campaign successor and permit before return.",
+      "coverage": "EXECUTED",
+      "expected_result": "campaign sequence and permit survive restart",
+      "impact_if_unblocked": "Restart resets campaign limits or loses authorization state",
+      "reproducible_trace": {
+        "campaign": {
+          "boundary_crossings": 1,
+          "campaign_id": "campaign-001",
+          "credential_events": 0,
+          "denials": 0,
+          "destinations": [
+            "+15551234567"
+          ],
+          "encoded_fragments": 0,
+          "last_sequence": 10,
+          "quarantines": 0,
+          "sessions": [
+            "session-001"
+          ],
+          "status": "ACTIVE",
+          "suspension_reason": null,
+          "total_actions": 1,
+          "trust_domains": [
+            "sms-provider"
+          ]
+        },
+        "reservation": {
+          "action_digest": "sha256:4f6650762d1f6c67271091ab8b05c5cb818cb47ab4db3c1a0dbd91ffcf176f06",
+          "campaign_id": "campaign-001",
+          "containment_epoch": 0,
+          "executor_id": null,
+          "fencing_token": 3,
+          "idempotency_key": "permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+          "observation_digest": null,
+          "outcome": null,
+          "permit_id": "permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+          "provider_status": null,
+          "request_digest": "sha256:04858df31544ba3332bbe87d84186e1a27a44f0f467c1a0adc86cde7b006ded2",
+          "reservation_id": "reservation:permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+          "reserved_sequence": 11,
+          "resource_key": "sha256:093775507bde16193f96dca86c711df1d32d576695c8d266accd590ed0f6a8ce",
+          "status": "RESERVED",
+          "updated_sequence": 11
+        }
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "first=True, second=False",
+      "attack": "DUPLICATE_RESERVATION",
+      "control": "Unique permit and idempotency constraints inside a serialized write transaction.",
+      "coverage": "EXECUTED",
+      "expected_result": "exactly one reservation",
+      "impact_if_unblocked": "Double execution",
+      "reproducible_trace": {
+        "first": {
+          "action_digest": "sha256:4f6650762d1f6c67271091ab8b05c5cb818cb47ab4db3c1a0dbd91ffcf176f06",
+          "campaign_id": "campaign-001",
+          "containment_epoch": 0,
+          "executor_id": null,
+          "fencing_token": 3,
+          "idempotency_key": "permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+          "observation_digest": null,
+          "outcome": null,
+          "permit_id": "permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+          "provider_status": null,
+          "request_digest": "sha256:04858df31544ba3332bbe87d84186e1a27a44f0f467c1a0adc86cde7b006ded2",
+          "reservation_id": "reservation:permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+          "reserved_sequence": 11,
+          "resource_key": "sha256:093775507bde16193f96dca86c711df1d32d576695c8d266accd590ed0f6a8ce",
+          "status": "RESERVED",
+          "updated_sequence": 11
+        },
+        "second": null
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "RESERVED",
+      "attack": "CRASH_AFTER_RESERVATION",
+      "control": "Reservation commits before the executor can dispatch.",
+      "coverage": "EXECUTED",
+      "expected_result": "durable RESERVED recovery item",
+      "impact_if_unblocked": "Lost reservation permits replay or stranded authority",
+      "reproducible_trace": {
+        "crash": "after_reservation",
+        "recovery_queue": [
+          {
+            "action_digest": "sha256:4f6650762d1f6c67271091ab8b05c5cb818cb47ab4db3c1a0dbd91ffcf176f06",
+            "campaign_id": "campaign-001",
+            "containment_epoch": 0,
+            "executor_id": null,
+            "fencing_token": 3,
+            "idempotency_key": "permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+            "observation_digest": null,
+            "outcome": null,
+            "permit_id": "permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+            "provider_status": null,
+            "request_digest": "sha256:04858df31544ba3332bbe87d84186e1a27a44f0f467c1a0adc86cde7b006ded2",
+            "reservation_id": "reservation:permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+            "reserved_sequence": 11,
+            "resource_key": "sha256:093775507bde16193f96dca86c711df1d32d576695c8d266accd590ed0f6a8ce",
+            "status": "RESERVED",
+            "updated_sequence": 11
+          }
+        ]
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "CONFIRMED_SUCCESS",
+      "attack": "CRASH_AFTER_PROVIDER_COMMIT",
+      "control": "Provider idempotency record plus independent reconciliation.",
+      "coverage": "EXECUTED",
+      "expected_result": "independent provider query confirms effect without retry",
+      "impact_if_unblocked": "Duplicate side effect after crash",
+      "reproducible_trace": {
+        "crash": "after_provider",
+        "observation": {
+          "campaign_id": "campaign-001",
+          "observed_action_digest": "sha256:d1cafdbf2c1662f0a09343bc91b6bf8bc2fe9dd34104bb338cc529eadc48e7ca",
+          "observed_at_seq": 12,
+          "observer_key_id": "observer-key-v1",
+          "permit_id": "permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+          "provider_record_digest": "sha256:8a06b2156097b8522029d23371cdb3fff7adb2e8559f7f610ea373795c15fe61",
+          "receipt_conflict": false,
+          "reconciliation": "CONFIRMED_SUCCESS",
+          "reservation_id": "reservation:permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+          "schema_version": "claimsieve.observer_receipt.v2",
+          "signature": "ed25519:75L2SMvKc8y7skGEg7VYB4YQQfjiq2guRq_t_GODSPjlLeCWfN5wQjDegX-bDZuNC5ajai07ug_t0ZxEQCbwDQ"
+        },
+        "reservation": {
+          "action_digest": "sha256:4f6650762d1f6c67271091ab8b05c5cb818cb47ab4db3c1a0dbd91ffcf176f06",
+          "campaign_id": "campaign-001",
+          "containment_epoch": 0,
+          "executor_id": "spiffe://claimsieve.local/executor/reference",
+          "fencing_token": 3,
+          "idempotency_key": "permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+          "observation_digest": null,
+          "outcome": null,
+          "permit_id": "permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+          "provider_status": null,
+          "request_digest": "sha256:04858df31544ba3332bbe87d84186e1a27a44f0f467c1a0adc86cde7b006ded2",
+          "reservation_id": "reservation:permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+          "reserved_sequence": 11,
+          "resource_key": "sha256:093775507bde16193f96dca86c711df1d32d576695c8d266accd590ed0f6a8ce",
+          "status": "DISPATCHING",
+          "updated_sequence": 11
+        }
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "OUTCOME_UNKNOWN, retry=False",
+      "attack": "TIMEOUT_BEFORE_COMMIT",
+      "control": "Unknown is durable and only independent evidence may resolve it.",
+      "coverage": "EXECUTED",
+      "expected_result": "OUTCOME_UNKNOWN and no automatic retry",
+      "impact_if_unblocked": "Unknown remote state treated as safe failure",
+      "reproducible_trace": {
+        "execution": {
+          "automatic_retry_allowed": false,
+          "executor_receipt": {
+            "action_digest": "sha256:4f6650762d1f6c67271091ab8b05c5cb818cb47ab4db3c1a0dbd91ffcf176f06",
+            "attempted_at_seq": 11,
+            "campaign_id": "campaign-001",
+            "containment_epoch": 0,
+            "executor_key_id": "executor-key-v1",
+            "fencing_token": 3,
+            "idempotency_key": "permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+            "permit_id": "permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+            "provider_id": null,
+            "provider_status": "timeout_unknown",
+            "request_digest": "sha256:04858df31544ba3332bbe87d84186e1a27a44f0f467c1a0adc86cde7b006ded2",
+            "reservation_id": "reservation:permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+            "schema_version": "claimsieve.executor_receipt.v2",
+            "signature": "ed25519:pzASYBG9dDQqb-Qzi0we-QzNqBnpSVWSRIDmFqUuJbdsMwoApSng9eocBoj4oQYBrwhVEr6FhZsnjRuM7Q8CAQ",
+            "trace_id": "trace-001"
+          },
+          "reservation": {
+            "action_digest": "sha256:4f6650762d1f6c67271091ab8b05c5cb818cb47ab4db3c1a0dbd91ffcf176f06",
+            "campaign_id": "campaign-001",
+            "containment_epoch": 0,
+            "executor_id": "spiffe://claimsieve.local/executor/reference",
+            "fencing_token": 3,
+            "idempotency_key": "permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+            "observation_digest": null,
+            "outcome": "OUTCOME_UNKNOWN",
+            "permit_id": "permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+            "provider_receipt": {
+              "action_digest": "sha256:4f6650762d1f6c67271091ab8b05c5cb818cb47ab4db3c1a0dbd91ffcf176f06",
+              "attempted_at_seq": 11,
+              "campaign_id": "campaign-001",
+              "containment_epoch": 0,
+              "executor_key_id": "executor-key-v1",
+              "fencing_token": 3,
+              "idempotency_key": "permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+              "permit_id": "permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+              "provider_id": null,
+              "provider_status": "timeout_unknown",
+              "request_digest": "sha256:04858df31544ba3332bbe87d84186e1a27a44f0f467c1a0adc86cde7b006ded2",
+              "reservation_id": "reservation:permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+              "schema_version": "claimsieve.executor_receipt.v2",
+              "signature": "ed25519:pzASYBG9dDQqb-Qzi0we-QzNqBnpSVWSRIDmFqUuJbdsMwoApSng9eocBoj4oQYBrwhVEr6FhZsnjRuM7Q8CAQ",
+              "trace_id": "trace-001"
+            },
+            "provider_status": "timeout_unknown",
+            "request_digest": "sha256:04858df31544ba3332bbe87d84186e1a27a44f0f467c1a0adc86cde7b006ded2",
+            "reservation_id": "reservation:permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+            "reserved_sequence": 11,
+            "resource_key": "sha256:093775507bde16193f96dca86c711df1d32d576695c8d266accd590ed0f6a8ce",
+            "status": "OUTCOME_UNKNOWN",
+            "updated_sequence": 11
+          }
+        },
+        "observation": {
+          "campaign_id": "campaign-001",
+          "observed_action_digest": null,
+          "observed_at_seq": 12,
+          "observer_key_id": "observer-key-v1",
+          "permit_id": "permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+          "provider_record_digest": null,
+          "receipt_conflict": false,
+          "reconciliation": "OUTCOME_UNKNOWN",
+          "reservation_id": "reservation:permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+          "schema_version": "claimsieve.observer_receipt.v2",
+          "signature": "ed25519:JIGSgwBS7X7slvB7OBMy8i-wq5Eee1ixFnoB91qyyiXAxDd8GwYpVcb5AUzIhFAEvE9Ph2nm9jT2PeLSplFGBQ"
+        }
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "CONFIRMED_SUCCESS",
+      "attack": "TIMEOUT_AFTER_COMMIT",
+      "control": "Same idempotency key plus provider read API.",
+      "coverage": "EXECUTED",
+      "expected_result": "independent query confirms success",
+      "impact_if_unblocked": "Duplicate retry after committed effect",
+      "reproducible_trace": {
+        "execution": {
+          "automatic_retry_allowed": false,
+          "executor_receipt": {
+            "action_digest": "sha256:4f6650762d1f6c67271091ab8b05c5cb818cb47ab4db3c1a0dbd91ffcf176f06",
+            "attempted_at_seq": 11,
+            "campaign_id": "campaign-001",
+            "containment_epoch": 0,
+            "executor_key_id": "executor-key-v1",
+            "fencing_token": 3,
+            "idempotency_key": "permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+            "permit_id": "permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+            "provider_id": null,
+            "provider_status": "timeout_unknown",
+            "request_digest": "sha256:04858df31544ba3332bbe87d84186e1a27a44f0f467c1a0adc86cde7b006ded2",
+            "reservation_id": "reservation:permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+            "schema_version": "claimsieve.executor_receipt.v2",
+            "signature": "ed25519:pzASYBG9dDQqb-Qzi0we-QzNqBnpSVWSRIDmFqUuJbdsMwoApSng9eocBoj4oQYBrwhVEr6FhZsnjRuM7Q8CAQ",
+            "trace_id": "trace-001"
+          },
+          "reservation": {
+            "action_digest": "sha256:4f6650762d1f6c67271091ab8b05c5cb818cb47ab4db3c1a0dbd91ffcf176f06",
+            "campaign_id": "campaign-001",
+            "containment_epoch": 0,
+            "executor_id": "spiffe://claimsieve.local/executor/reference",
+            "fencing_token": 3,
+            "idempotency_key": "permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+            "observation_digest": null,
+            "outcome": "OUTCOME_UNKNOWN",
+            "permit_id": "permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+            "provider_receipt": {
+              "action_digest": "sha256:4f6650762d1f6c67271091ab8b05c5cb818cb47ab4db3c1a0dbd91ffcf176f06",
+              "attempted_at_seq": 11,
+              "campaign_id": "campaign-001",
+              "containment_epoch": 0,
+              "executor_key_id": "executor-key-v1",
+              "fencing_token": 3,
+              "idempotency_key": "permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+              "permit_id": "permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+              "provider_id": null,
+              "provider_status": "timeout_unknown",
+              "request_digest": "sha256:04858df31544ba3332bbe87d84186e1a27a44f0f467c1a0adc86cde7b006ded2",
+              "reservation_id": "reservation:permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+              "schema_version": "claimsieve.executor_receipt.v2",
+              "signature": "ed25519:pzASYBG9dDQqb-Qzi0we-QzNqBnpSVWSRIDmFqUuJbdsMwoApSng9eocBoj4oQYBrwhVEr6FhZsnjRuM7Q8CAQ",
+              "trace_id": "trace-001"
+            },
+            "provider_status": "timeout_unknown",
+            "request_digest": "sha256:04858df31544ba3332bbe87d84186e1a27a44f0f467c1a0adc86cde7b006ded2",
+            "reservation_id": "reservation:permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+            "reserved_sequence": 11,
+            "resource_key": "sha256:093775507bde16193f96dca86c711df1d32d576695c8d266accd590ed0f6a8ce",
+            "status": "OUTCOME_UNKNOWN",
+            "updated_sequence": 11
+          }
+        },
+        "observation": {
+          "campaign_id": "campaign-001",
+          "observed_action_digest": "sha256:d1cafdbf2c1662f0a09343bc91b6bf8bc2fe9dd34104bb338cc529eadc48e7ca",
+          "observed_at_seq": 12,
+          "observer_key_id": "observer-key-v1",
+          "permit_id": "permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+          "provider_record_digest": "sha256:0f0f4545f67d9c489b3ca3fa2b387d2212905fa18eadb2c9bb819147b5a72729",
+          "receipt_conflict": false,
+          "reconciliation": "CONFIRMED_SUCCESS",
+          "reservation_id": "reservation:permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+          "schema_version": "claimsieve.observer_receipt.v2",
+          "signature": "ed25519:-J4fsljejUOWDDZ2d3fWqgxF_tg2KmZoztaLqLEvOwPhvX4qQ84yxO1MpFwn1fJVdFVbnMC6oBPYwaS0xJUjCA"
+        }
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "permit revoked",
+      "attack": "REVOCATION_BEFORE_DISPATCH",
+      "control": "Revocation is checked inside the dispatch commit transaction.",
+      "coverage": "EXECUTED",
+      "expected_result": "reject with revoked",
+      "impact_if_unblocked": "Execution after revocation",
+      "reproducible_trace": {
+        "exception": "DurableStateError",
+        "message": "permit revoked"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "in_flight=True, CONFIRMED_SUCCESS",
+      "attack": "REVOCATION_AFTER_DISPATCH",
+      "control": "Explicit dispatch linearization point and in-flight revocation trace.",
+      "coverage": "EXECUTED",
+      "expected_result": "mark in flight and reconcile; do not claim retroactive prevention",
+      "impact_if_unblocked": "False assurance that a dispatched request was stopped",
+      "reproducible_trace": {
+        "observation": {
+          "campaign_id": "campaign-001",
+          "observed_action_digest": "sha256:d1cafdbf2c1662f0a09343bc91b6bf8bc2fe9dd34104bb338cc529eadc48e7ca",
+          "observed_at_seq": 12,
+          "observer_key_id": "observer-key-v1",
+          "permit_id": "permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+          "provider_record_digest": "sha256:8a06b2156097b8522029d23371cdb3fff7adb2e8559f7f610ea373795c15fe61",
+          "receipt_conflict": false,
+          "reconciliation": "CONFIRMED_SUCCESS",
+          "reservation_id": "reservation:permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+          "schema_version": "claimsieve.observer_receipt.v2",
+          "signature": "ed25519:75L2SMvKc8y7skGEg7VYB4YQQfjiq2guRq_t_GODSPjlLeCWfN5wQjDegX-bDZuNC5ajai07ug_t0ZxEQCbwDQ"
+        },
+        "provider": {
+          "provider_id": "provider:permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+          "status": "accepted"
+        },
+        "revocation": {
+          "event_hash": "sha256:33439e79f50f5fc1b4d18780616a2a53273ce5d1ed280818406dc67663b25cec",
+          "event_sequence": 6,
+          "event_type": "PERMIT_REVOKED",
+          "object_id": "permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+          "payload": {
+            "containment_epoch": 1,
+            "in_flight_at_revocation": true,
+            "reason": "late stop",
+            "sequence": 11
+          },
+          "previous_hash": "sha256:9a71e0398e483d8e84b1d934574d83688349084cf024db2e02392a9cda08600c"
+        }
+      },
+      "status": "DETECTED"
+    },
+    {
+      "actual_result": "execution globally frozen",
+      "attack": "FREEZE_BEFORE_DISPATCH",
+      "control": "Global freeze is checked at the dispatch commit point.",
+      "coverage": "EXECUTED",
+      "expected_result": "reject with frozen",
+      "impact_if_unblocked": "Execution after containment freeze",
+      "reproducible_trace": {
+        "exception": "DurableStateError",
+        "message": "execution globally frozen"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "stale_fence",
+      "attack": "STALE_EXECUTOR_FENCE",
+      "control": "Resource-scoped monotonically increasing fencing token.",
+      "coverage": "EXECUTED",
+      "expected_result": "reject lower fencing token after newer token",
+      "impact_if_unblocked": "Old leader executes after failover",
+      "reproducible_trace": {
+        "newer": {
+          "provider_id": "provider:id2",
+          "status": "accepted"
+        },
+        "older": {
+          "fencing_token": 10,
+          "provider_id": null,
+          "status": "stale_fence"
+        }
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "accepted, replay=True",
+      "attack": "IDEMPOTENT_REPLAY",
+      "control": "Provider stores the first result by idempotency key.",
+      "coverage": "EXECUTED",
+      "expected_result": "same key and request returns original result",
+      "impact_if_unblocked": "Duplicate provider object",
+      "reproducible_trace": {
+        "first": {
+          "provider_id": "provider:permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+          "status": "accepted"
+        },
+        "second": {
+          "idempotent_replay": true,
+          "provider_id": "provider:permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+          "status": "accepted"
+        }
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "idempotency key reused with different request",
+      "attack": "IDEMPOTENCY_PARAMETER_MUTATION",
+      "control": "Idempotency key is bound to request digest.",
+      "coverage": "EXECUTED",
+      "expected_result": "reject with different request",
+      "impact_if_unblocked": "Idempotency key hides a different action",
+      "reproducible_trace": {
+        "exception": "DurableStateError",
+        "message": "idempotency key reused with different request"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "OUTCOME_UNKNOWN, conflict=True",
+      "attack": "CONFLICTING_PROVIDER_RECEIPT",
+      "control": "Independent provider contradiction is preserved as uncertainty and triggers containment.",
+      "coverage": "EXECUTED",
+      "expected_result": "contradictory provider evidence remains OUTCOME_UNKNOWN, conflict is explicit, and the campaign is contained",
+      "impact_if_unblocked": "Contradictory evidence is collapsed into a false terminal outcome",
+      "reproducible_trace": {
+        "campaign_id": "campaign-001",
+        "observed_action_digest": "sha256:d1cafdbf2c1662f0a09343bc91b6bf8bc2fe9dd34104bb338cc529eadc48e7ca",
+        "observed_at_seq": 12,
+        "observer_key_id": "observer-key-v1",
+        "permit_id": "permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+        "provider_record_digest": "sha256:5ba6e8a5671d2ef3269d5884bacdecdcf14a5b47503357a5fa5227ab2ad94733",
+        "receipt_conflict": true,
+        "reconciliation": "OUTCOME_UNKNOWN",
+        "reservation_id": "reservation:permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+        "schema_version": "claimsieve.observer_receipt.v2",
+        "signature": "ed25519:T-LsEp26LhyKBClxiGIOKLsUhWNAiplaqEpjYjpJQ9f0V1gISsNr7fYKzFzUoXUoo060DKlhQac1WhokmX7YCQ"
+      },
+      "status": "DETECTED"
+    },
+    {
+      "actual_result": "CONFIRMED_SUCCESS",
+      "attack": "FORGED_EXECUTOR_RECEIPT",
+      "control": "Executor receipts are retained for audit and conflict evidence but removed from the observer's terminal-outcome trust path.",
+      "coverage": "EXECUTED",
+      "expected_result": "forged local executor narrative has no authority over terminal classification",
+      "impact_if_unblocked": "Observer lets a forged executor narrative override independent provider evidence",
+      "reproducible_trace": {
+        "campaign_id": "campaign-001",
+        "observed_action_digest": "sha256:d1cafdbf2c1662f0a09343bc91b6bf8bc2fe9dd34104bb338cc529eadc48e7ca",
+        "observed_at_seq": 12,
+        "observer_key_id": "observer-key-v1",
+        "permit_id": "permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+        "provider_record_digest": "sha256:8a06b2156097b8522029d23371cdb3fff7adb2e8559f7f610ea373795c15fe61",
+        "receipt_conflict": false,
+        "reconciliation": "CONFIRMED_SUCCESS",
+        "reservation_id": "reservation:permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+        "schema_version": "claimsieve.observer_receipt.v2",
+        "signature": "ed25519:75L2SMvKc8y7skGEg7VYB4YQQfjiq2guRq_t_GODSPjlLeCWfN5wQjDegX-bDZuNC5ajai07ug_t0ZxEQCbwDQ"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "DIVERGENT_EFFECT",
+      "attack": "DIVERGENT_EXTERNAL_EFFECT",
+      "control": "Independent effect digest comparison.",
+      "coverage": "EXECUTED",
+      "expected_result": "DIVERGENT_EFFECT",
+      "impact_if_unblocked": "Provider changes destination or parameters",
+      "reproducible_trace": {
+        "campaign_id": "campaign-001",
+        "observed_action_digest": "sha256:b3516daffc468fe740997f1d0394354c73b39fd82d515f38ef581ecd03fbb025",
+        "observed_at_seq": 12,
+        "observer_key_id": "observer-key-v1",
+        "permit_id": "permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+        "provider_record_digest": "sha256:ca83f3a83346e4cdb514b8ec60c5598b639186065025431589e5a32ae8216c42",
+        "receipt_conflict": false,
+        "reconciliation": "DIVERGENT_EFFECT",
+        "reservation_id": "reservation:permit:456fd0dd1e54b2537b5ef4c7323ac0b6ae5a2c799980686d8f7afa94eb02b54a",
+        "schema_version": "claimsieve.observer_receipt.v2",
+        "signature": "ed25519:YjtMvY1UkA4WDGw78foOSXcBFzhzGjU52KLk5zjjMbRZAqGdWalQ0hMYHgitL_qepLRASNonb-OM69cNHooKAw"
+      },
+      "status": "DETECTED"
+    },
+    {
+      "actual_result": "terminal outcome cannot be rewritten",
+      "attack": "TERMINAL_OUTCOME_REWRITE",
+      "control": "Terminal reconciliation is immutable and observer authenticated.",
+      "coverage": "EXECUTED",
+      "expected_result": "reject with cannot be rewritten",
+      "impact_if_unblocked": "Audit history changes a known outcome",
+      "reproducible_trace": {
+        "exception": "DurableStateError",
+        "message": "terminal outcome cannot be rewritten"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "False",
+      "attack": "STATE_JOURNAL_TAMPERING",
+      "control": "Canonical hash chain over durable state events.",
+      "coverage": "EXECUTED",
+      "expected_result": "detect hash-chain break",
+      "impact_if_unblocked": "Operational history rewritten",
+      "reproducible_trace": {
+        "verified": false
+      },
+      "status": "DETECTED"
+    },
+    {
+      "actual_result": "signed executor command required",
+      "attack": "UNAUTHENTICATED_EXECUTOR_COMMAND",
+      "control": "State transitions require a command signed by a configured executor key.",
+      "coverage": "EXECUTED",
+      "expected_result": "reject with signed executor command required",
+      "impact_if_unblocked": "A caller with database API access claims the executor role",
+      "reproducible_trace": {
+        "exception": "DurableStateError",
+        "message": "signed executor command required"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "permit outside durable validity sequence",
+      "attack": "EXPIRED_PERMIT_RESERVATION",
+      "control": "Durable permit validity is rechecked inside the reservation transaction.",
+      "coverage": "EXECUTED",
+      "expected_result": "reject with outside durable validity",
+      "impact_if_unblocked": "Expired capability creates a fresh execution reservation",
+      "reproducible_trace": {
+        "exception": "DurableStateError",
+        "message": "permit outside durable validity sequence"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "permit expired before dispatch commit",
+      "attack": "PERMIT_EXPIRY_BEFORE_DISPATCH",
+      "control": "Validity is checked again at the dispatch commit point.",
+      "coverage": "EXECUTED",
+      "expected_result": "reject with expired before dispatch",
+      "impact_if_unblocked": "A reservation extends authority beyond permit expiration",
+      "reproducible_trace": {
+        "exception": "DurableStateError",
+        "message": "permit expired before dispatch commit"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "executor receipt signature invalid",
+      "attack": "FORGED_PROVIDER_ATTEMPT_RECEIPT",
+      "control": "Provider-attempt persistence verifies the configured executor key and exact bindings.",
+      "coverage": "EXECUTED",
+      "expected_result": "reject with signature invalid",
+      "impact_if_unblocked": "A caller writes provider-attempt state without executor authority",
+      "reproducible_trace": {
+        "exception": "DurableStateError",
+        "message": "executor receipt signature invalid"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "trusted observer receipt key not configured",
+      "attack": "UNAUTHENTICATED_OBSERVER_OUTCOME",
+      "control": "Outcome transitions require a receipt signed by a configured observer key.",
+      "coverage": "EXECUTED",
+      "expected_result": "reject with trusted observer receipt key",
+      "impact_if_unblocked": "An arbitrary caller marks an unknown effect as successful",
+      "reproducible_trace": {
+        "exception": "DurableStateError",
+        "message": "trusted observer receipt key not configured"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "None",
+      "attack": "MINORITY_PARTITION_WRITE",
+      "control": "Quorum-only commit model.",
+      "coverage": "DETERMINISTIC_MODEL",
+      "expected_result": "reject without quorum",
+      "impact_if_unblocked": "Split-brain campaign successor",
+      "reproducible_trace": [
+        {
+          "event": "LEADER_ELECTED",
+          "node": "n1",
+          "term": 1
+        },
+        {
+          "command": "initial",
+          "commit_index": 1,
+          "event": "COMMIT",
+          "fencing_token": 1,
+          "leader": "n1",
+          "replicas": [
+            "n1",
+            "n2",
+            "n3"
+          ],
+          "term": 1
+        },
+        {
+          "event": "PARTITION",
+          "groups": [
+            [
+              "n1"
+            ],
+            [
+              "n2",
+              "n3"
+            ]
+          ]
+        },
+        {
+          "command": "minority",
+          "event": "COMMIT_REJECTED_NO_QUORUM",
+          "leader": "n1"
+        },
+        {
+          "event": "LEADER_ELECTED",
+          "node": "n2",
+          "term": 2
+        },
+        {
+          "command": "majority",
+          "commit_index": 2,
+          "event": "COMMIT",
+          "fencing_token": 2,
+          "leader": "n2",
+          "replicas": [
+            "n2",
+            "n3"
+          ],
+          "term": 2
+        },
+        {
+          "commit_index": 2,
+          "event": "HEAL"
+        },
+        {
+          "event": "ELECTION_REJECTED_STALE_LOG",
+          "node": "n3"
+        }
+      ],
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "elected=True, first=1, second=2",
+      "attack": "MAJORITY_FAILOVER",
+      "control": "Monotonic term, commit index, and fence in the model.",
+      "coverage": "DETERMINISTIC_MODEL",
+      "expected_result": "new term commits with larger fence",
+      "impact_if_unblocked": "Failover reuses stale authority",
+      "reproducible_trace": [
+        {
+          "event": "LEADER_ELECTED",
+          "node": "n1",
+          "term": 1
+        },
+        {
+          "command": "initial",
+          "commit_index": 1,
+          "event": "COMMIT",
+          "fencing_token": 1,
+          "leader": "n1",
+          "replicas": [
+            "n1",
+            "n2",
+            "n3"
+          ],
+          "term": 1
+        },
+        {
+          "event": "PARTITION",
+          "groups": [
+            [
+              "n1"
+            ],
+            [
+              "n2",
+              "n3"
+            ]
+          ]
+        },
+        {
+          "command": "minority",
+          "event": "COMMIT_REJECTED_NO_QUORUM",
+          "leader": "n1"
+        },
+        {
+          "event": "LEADER_ELECTED",
+          "node": "n2",
+          "term": 2
+        },
+        {
+          "command": "majority",
+          "commit_index": 2,
+          "event": "COMMIT",
+          "fencing_token": 2,
+          "leader": "n2",
+          "replicas": [
+            "n2",
+            "n3"
+          ],
+          "term": 2
+        },
+        {
+          "commit_index": 2,
+          "event": "HEAL"
+        },
+        {
+          "event": "ELECTION_REJECTED_STALE_LOG",
+          "node": "n3"
+        }
+      ],
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "False",
+      "attack": "STALE_LOG_ELECTION",
+      "control": "Candidate log freshness requirement in model.",
+      "coverage": "DETERMINISTIC_MODEL",
+      "expected_result": "reject stale candidate",
+      "impact_if_unblocked": "Old state becomes leader",
+      "reproducible_trace": [
+        {
+          "event": "LEADER_ELECTED",
+          "node": "n1",
+          "term": 1
+        },
+        {
+          "command": "initial",
+          "commit_index": 1,
+          "event": "COMMIT",
+          "fencing_token": 1,
+          "leader": "n1",
+          "replicas": [
+            "n1",
+            "n2",
+            "n3"
+          ],
+          "term": 1
+        },
+        {
+          "event": "PARTITION",
+          "groups": [
+            [
+              "n1"
+            ],
+            [
+              "n2",
+              "n3"
+            ]
+          ]
+        },
+        {
+          "command": "minority",
+          "event": "COMMIT_REJECTED_NO_QUORUM",
+          "leader": "n1"
+        },
+        {
+          "event": "LEADER_ELECTED",
+          "node": "n2",
+          "term": 2
+        },
+        {
+          "command": "majority",
+          "commit_index": 2,
+          "event": "COMMIT",
+          "fencing_token": 2,
+          "leader": "n2",
+          "replicas": [
+            "n2",
+            "n3"
+          ],
+          "term": 2
+        },
+        {
+          "commit_index": 2,
+          "event": "HEAL"
+        },
+        {
+          "event": "ELECTION_REJECTED_STALE_LOG",
+          "node": "n3"
+        }
+      ],
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "No networked Raft or equivalent production consensus service is implemented; partition behavior is a deterministic safety model.",
+      "attack": "MULTI_NODE_CONSENSUS_IMPLEMENTATION",
+      "control": "Required before live consequential execution.",
+      "coverage": "INFRASTRUCTURE_REQUIRED",
+      "expected_result": "validate in deployed infrastructure",
+      "impact_if_unblocked": "Infrastructure-specific failure remains untested",
+      "reproducible_trace": {
+        "detail": "No networked Raft or equivalent production consensus service is implemented; partition behavior is a deterministic safety model."
+      },
+      "status": "LIMITATION"
+    },
+    {
+      "actual_result": "The dispatch commit point and remote side effect cannot be one atomic transaction; post-dispatch revocation requires reconciliation.",
+      "attack": "REMOTE_PROVIDER_ATOMICITY",
+      "control": "Required before live consequential execution.",
+      "coverage": "INFRASTRUCTURE_REQUIRED",
+      "expected_result": "validate in deployed infrastructure",
+      "impact_if_unblocked": "Infrastructure-specific failure remains untested",
+      "reproducible_trace": {
+        "detail": "The dispatch commit point and remote side effect cannot be one atomic transaction; post-dispatch revocation requires reconciliation."
+      },
+      "status": "LIMITATION"
+    },
+    {
+      "actual_result": "Provider and observer use a separate SQLite database but run on the same test host and process family.",
+      "attack": "INDEPENDENT_HOST_OBSERVER",
+      "control": "Required before live consequential execution.",
+      "coverage": "INFRASTRUCTURE_REQUIRED",
+      "expected_result": "validate in deployed infrastructure",
+      "impact_if_unblocked": "Infrastructure-specific failure remains untested",
+      "reproducible_trace": {
+        "detail": "Provider and observer use a separate SQLite database but run on the same test host and process family."
+      },
+      "status": "LIMITATION"
+    },
+    {
+      "actual_result": "Rust and Rocq toolchains are unavailable in this environment; source candidates are not compiled or accepted.",
+      "attack": "RUST_AND_ROCQ_EXECUTION",
+      "control": "Required before live consequential execution.",
+      "coverage": "INFRASTRUCTURE_REQUIRED",
+      "expected_result": "validate in deployed infrastructure",
+      "impact_if_unblocked": "Infrastructure-specific failure remains untested",
+      "reproducible_trace": {
+        "detail": "Rust and Rocq toolchains are unavailable in this environment; source candidates are not compiled or accepted."
+      },
+      "status": "LIMITATION"
+    }
+  ],
+  "total": 29
+}

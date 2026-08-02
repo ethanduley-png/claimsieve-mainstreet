@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://claimsieve.example/schemas/evidence-bundle.schema.json",
+  "title": "ClaimSieve Evidence Bundle v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "trace_id",
+    "proposal",
+    "signed_policy",
+    "evidence",
+    "decision",
+    "campaign_state",
+    "permit",
+    "ledgers",
+    "receipts",
+    "manifest",
+    "witness_statement"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "claimsieve.evidence_bundle.v2"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "proposal": {
+      "type": "object"
+    },
+    "signed_policy": {
+      "type": "object"
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "decision": {
+      "type": "object"
+    },
+    "campaign_state": {
+      "type": "object"
+    },
+    "permit": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "ledgers": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "proposal",
+        "evidence",
+        "decision",
+        "execution"
+      ],
+      "properties": {
+        "proposal": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "decision": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "execution": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "receipts": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "manifest": {
+      "type": "object"
+    },
+    "witness_statement": {
+      "type": "object"
+    }
+  }
+}

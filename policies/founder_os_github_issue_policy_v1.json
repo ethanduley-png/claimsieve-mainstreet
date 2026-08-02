@@ -1,0 +1,87 @@
+{
+  "allowed_action_kinds": [
+    "run_connector"
+  ],
+  "allowed_approver_identities": [
+    "spiffe://mainstreet.local/tenant-founder/human/founder"
+  ],
+  "allowed_approver_key_ids": [
+    "approver-key-v1"
+  ],
+  "allowed_effect_classes": [
+    "external_write"
+  ],
+  "allowed_principals": [
+    "spiffe://mainstreet.local/tenant-founder/agent/openclaw"
+  ],
+  "allowed_subgoals": [
+    "create_project_issue"
+  ],
+  "allowed_trust_domains": [
+    "github.com"
+  ],
+  "approval_required_for": [
+    "run_connector",
+    "external_write"
+  ],
+  "campaign_limits": {
+    "max_actions": 20,
+    "max_boundary_crossings": 2,
+    "max_denials": 3,
+    "max_encoded_fragments": 0,
+    "max_new_destinations": 3,
+    "max_sessions": 3
+  },
+  "deny_risk_tags": [
+    "UNDECLARED_REDIRECT",
+    "EXECUTABLE_UPLOAD",
+    "PACKAGE_PROXY_TUNNEL",
+    "PURPOSE_MISMATCH"
+  ],
+  "freshness_window": 10,
+  "policy_id": "mainstreet-founder-os-github-issue",
+  "required_evidence": [
+    "work_item_authority",
+    "destination_registry",
+    "deployment_certificate",
+    "governance_epoch"
+  ],
+  "schema_version": "claimsieve.policy.v1",
+  "suspend_risk_tags": [
+    "DIRECT_EXECUTION_ATTEMPT",
+    "CREDENTIAL_USE",
+    "CLOUD_METADATA_ACCESS",
+    "OBSERVER_TAMPER",
+    "UNRESTRICTED_NESTED_AGENT"
+  ],
+  "tenant_id": "tenant-founder",
+  "trusted_evidence_key_ids": {
+    "deployment_certificate": [
+      "deployment_evidence-key-v1"
+    ],
+    "destination_registry": [
+      "github_registry_evidence-key-v1"
+    ],
+    "governance_epoch": [
+      "epoch_evidence-key-v1"
+    ],
+    "work_item_authority": [
+      "founder_work_evidence-key-v1"
+    ]
+  },
+  "trusted_evidence_sources": {
+    "deployment_certificate": [
+      "spiffe://claimsieve.local/deployment-certifier"
+    ],
+    "destination_registry": [
+      "spiffe://claimsieve.local/github-repository-registry"
+    ],
+    "governance_epoch": [
+      "spiffe://claimsieve.local/epoch-authority"
+    ],
+    "work_item_authority": [
+      "spiffe://mainstreet.local/tenant-founder/founder-work-log"
+    ]
+  },
+  "version": 1
+}

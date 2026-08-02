@@ -1,0 +1,6 @@
+ROCQ TOOLCHAIN: PASS
+The Rocq Prover, version 9.0.1
+Claimsieve.v: PASS
+DurableState.v: PASS
+Check.v: PASS; all audited theorems closed under the global context
+CheckDurableState.v: PASS; all audited theorems closed under the global context

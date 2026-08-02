@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://claimsieve.local/schemas/observer-receipt-v2.schema.json",
+  "title": "ClaimSieve Observer Receipt v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "reservation_id", "permit_id", "campaign_id",
+    "provider_record_digest", "observed_action_digest", "reconciliation",
+    "receipt_conflict", "observed_at_seq", "observer_key_id", "signature"
+  ],
+  "properties": {
+    "schema_version": {"const": "claimsieve.observer_receipt.v2"},
+    "reservation_id": {"type": "string"},
+    "permit_id": {"type": "string"},
+    "campaign_id": {"type": "string"},
+    "provider_record_digest": {"type": ["string", "null"]},
+    "observed_action_digest": {"type": ["string", "null"]},
+    "reconciliation": {"enum": ["CONFIRMED_SUCCESS", "CONFIRMED_FAILURE", "DIVERGENT_EFFECT", "OUTCOME_UNKNOWN"]},
+    "receipt_conflict": {"type": "boolean"},
+    "observed_at_seq": {"type": "integer", "minimum": 0},
+    "observer_key_id": {"type": "string"},
+    "signature": {"type": "string"}
+  }
+}

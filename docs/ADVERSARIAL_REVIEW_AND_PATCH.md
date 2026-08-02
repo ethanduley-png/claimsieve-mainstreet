@@ -1,0 +1,9 @@
+# Adversarial Review and Patch
+
+See:
+
+- [`STRONGEST_VULNERABILITIES.md`](STRONGEST_VULNERABILITIES.md)
+- [`CURRENT_ARCHITECTURE_CRITIQUE.md`](CURRENT_ARCHITECTURE_CRITIQUE.md)
+- [`RED_TEAM_REPORT.md`](RED_TEAM_REPORT.md)
+- `evidence/original-v0.30-probes/`
+- `evidence/RED_TEAM_REPORT.json`

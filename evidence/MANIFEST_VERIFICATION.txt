@@ -1,0 +1,1 @@
+MANIFEST VERIFICATION: SKIPPED (set VERIFY_MANIFEST=1 in an immutable fresh extraction)

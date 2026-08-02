@@ -1,0 +1,8 @@
+{
+  "executor_claim": "rejected (valid signature, false semantics)",
+  "final_outcome": "CONFIRMED_FAILURE",
+  "invariant": "I-032 Unknown is not failure; observation must be independent",
+  "observer_reconciliation": "CONFIRMED_FAILURE",
+  "provider_record": null,
+  "violation": true
+}

@@ -1,0 +1,33 @@
+{
+  "schema_version": "mainstreet.original_probe.v1",
+  "results": [
+    {
+      "attack": "DUPLICATE_OBJECT_REFERENCE",
+      "expected": "reject shared object identity as serialization-ambiguous",
+      "actual": {
+        "accepted": true
+      },
+      "impact": "MEDIUM: docs claim rejection, but aliasing crosses the boundary",
+      "test_passed": true
+    },
+    {
+      "attack": "PROTOTYPE_POLLUTION_KEY",
+      "expected": "reject dangerous property names at every depth",
+      "actual": {
+        "accepted": true,
+        "globalPolluted": false
+      },
+      "impact": "MEDIUM: dangerous keys can reach downstream JavaScript consumers",
+      "test_passed": true
+    },
+    {
+      "attack": "SINGLE_CALLABLE_AMBIENT_AUTHORITY",
+      "expected": "proposal bridge cannot be injected with an arbitrary effectful function",
+      "actual": {
+        "sideEffect": 1
+      },
+      "impact": "HIGH: source-level shape checks cannot constrain the injected function; OS/network isolation is mandatory",
+      "test_passed": true
+    }
+  ]
+}

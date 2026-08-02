@@ -1,0 +1,62 @@
+{
+  "keys": {
+    "approver-key-v1": "ed25519-pub:iodf_x6zhFFXes1a_uQFRWVo3XyJ4JCGOgVXvHr0nxc",
+    "authority-key-v1": "ed25519-pub:bnoc3Smwt4_ROvTFWY_v9O8qlxZuPKby5Pv8zYBQW_E",
+    "containment-key-v1": "ed25519-pub:_RckOFqgx1tk-3jNYC-h2ZH96_drE8WO1wLqyDXp9hg",
+    "crm_evidence-key-v1": "ed25519-pub:C1E62bSSQBXKCQLtB5BE06xdvsIwbwaUjBDajrbjny0",
+    "decision-key-v1": "ed25519-pub:7UkoxijRwsbq6QM4kFmVYSlZJzpcY_k2NsFGFKyHN9E",
+    "deployment_evidence-key-v1": "ed25519-pub:C-71qeZ55qPhNP4ng3v_MsfLX11E6gm8sOVCutakwMw",
+    "epoch_evidence-key-v1": "ed25519-pub:2b8hSHSKhcidparY7gsPwtEF_TnUGkx5ZTY1TwrikAw",
+    "evidence-key-v1": "ed25519-pub:gTl3Dqh9F19Wo1Rmw0x-zMuNipG07jeiXfYPW4_Js5Q",
+    "execution-key-v1": "ed25519-pub:ypOsFwUYcHHWe4PH_w7-gQjo7EUwV113JoeTM9vavnw",
+    "executor-key-v1": "ed25519-pub:6kpsY-KcUgq-9VB7Ey7F-ZVHdq6-vnuSQh7qaRRG0iw",
+    "observer-key-v1": "ed25519-pub:E5j2LG0aRXxRumpLXz29L2n8qTIWIY3ImX5Ba9F9k8o",
+    "policy_authority-key-v1": "ed25519-pub:Zr5-Myx6RTMyvZ0Kf32wVfXF7xoGraZtmLOftoEMRzo",
+    "proposal-key-v1": "ed25519-pub:iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w",
+    "registry_evidence-key-v1": "ed25519-pub:kaKKC3Q4FZOk2UaVeSCJJq_IrYLIg5t2RDWbnrqaSzo",
+    "witness-key-v1": "ed25519-pub:Q6cucUQBdi32a2jCbfvfJoKq7J8kdOykYT5CSg-6_Tw"
+  },
+  "roles": {
+    "approval_signers": [
+      "approver-key-v1"
+    ],
+    "authority_signers": [
+      "authority-key-v1"
+    ],
+    "containment_signers": [
+      "containment-key-v1"
+    ],
+    "decision_ledger_writers": [
+      "decision-key-v1"
+    ],
+    "evidence_ledger_writers": [
+      "evidence-key-v1"
+    ],
+    "evidence_signers": [
+      "crm_evidence-key-v1",
+      "registry_evidence-key-v1",
+      "deployment_evidence-key-v1",
+      "epoch_evidence-key-v1"
+    ],
+    "execution_ledger_writers": [
+      "execution-key-v1"
+    ],
+    "executor_signers": [
+      "executor-key-v1"
+    ],
+    "observer_signers": [
+      "observer-key-v1"
+    ],
+    "policy_signers": [
+      "policy_authority-key-v1"
+    ],
+    "proposal_ledger_writers": [
+      "proposal-key-v1"
+    ],
+    "witness_signers": [
+      "witness-key-v1"
+    ]
+  },
+  "root_id": "claimsieve-fixture-trust-root-v1",
+  "schema_version": "claimsieve.trust_root.v1"
+}

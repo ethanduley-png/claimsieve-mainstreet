@@ -1,0 +1,70 @@
+{
+  "results": [
+    {
+      "actual": {
+        "decision_verdicts": [
+          "ALLOW",
+          "ALLOW"
+        ],
+        "executed": [
+          "CONFIRMED_SUCCESS",
+          "CONFIRMED_SUCCESS"
+        ],
+        "reservations": 2
+      },
+      "attack": "CAMPAIGN_STATE_FORK",
+      "expected": "second sibling permit denied because max_actions=1 and first transition consumed the parent state",
+      "impact": "CRITICAL: cumulative campaign limits can be bypassed through sibling issuance from the same prior state",
+      "test_passed": true
+    },
+    {
+      "actual": {
+        "permit_issued": true,
+        "verdict": "ALLOW"
+      },
+      "attack": "UNSIGNED_POLICY_SUBSTITUTION",
+      "expected": "authority rejects policy not signed by an externally trusted policy authority",
+      "impact": "CRITICAL: caller-controlled policy can widen authority",
+      "test_passed": true
+    },
+    {
+      "actual": {
+        "executor_has_observer_private_key": true,
+        "forged_signature_prefix": "ed25519:6cC8Ut7T"
+      },
+      "attack": "OBSERVER_KEY_CUSTODY_COLLAPSE",
+      "expected": "executor process cannot access observer signing key",
+      "impact": "HIGH: compromised executor can forge independent observation",
+      "test_passed": true
+    },
+    {
+      "actual": {
+        "attacker_key_ids": [
+          "attacker-approver-key",
+          "attacker-authority-key",
+          "attacker-containment-key"
+        ],
+        "verification_errors": []
+      },
+      "attack": "SELF_ASSERTED_BUNDLE_KEYS",
+      "expected": "offline verifier rejects a bundle unless signatures chain to an external pinned trust root",
+      "impact": "CRITICAL: a fully re-signed fabricated history is internally valid and accepted",
+      "test_passed": true
+    },
+    {
+      "actual": {
+        "first": "ALLOW",
+        "first_last_sequence": 10,
+        "second": "ALLOW",
+        "second_reasons": [
+          "ALL_GATES_PASSED"
+        ]
+      },
+      "attack": "NON_STRICT_SEQUENCE_REUSE",
+      "expected": "second transition at the same logical sequence is denied",
+      "impact": "HIGH: same-sequence transitions permit ambiguous ordering and facilitate state forks",
+      "test_passed": true
+    }
+  ],
+  "schema_version": "claimsieve.original_attack_probe.v1"
+}

@@ -1,0 +1,15 @@
+{
+  "schema_version": "claimsieve.toolchain_status.v1",
+  "release": "0.33.0",
+  "originating_environment": {
+    "python": {"version": "3.13.5", "status": "executed"},
+    "node": {"version": "22.16.0", "status": "executed"},
+    "npm": {"version": "10.9.2", "status": "observed"},
+    "rust": {"intended_version": "1.90.0", "status": "not available"},
+    "rocq": {"intended_version": "9.2", "status": "not available"}
+  },
+  "native_nonclaims": [
+    "The Rust workspace did not compile in the originating environment.",
+    "The Rocq files were not compiler accepted or assumption audited in the originating environment."
+  ]
+}

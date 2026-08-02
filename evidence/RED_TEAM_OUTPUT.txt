@@ -1,0 +1,1002 @@
+{
+  "blocked_or_detected": 52,
+  "bypasses": 0,
+  "limitations": 6,
+  "release": "0.34.0",
+  "results": [
+    {
+      "actual_result": "decision does not match independent kernel reevaluation",
+      "attack": "FABRICATED_ALLOW_DECISION",
+      "coverage": "EXECUTED",
+      "expected_result": "reject with independent kernel",
+      "fix_or_control": "Authority independently reconstructs the decision.",
+      "impact_if_unblocked": "Unauthorized permit",
+      "reproducible_trace": {
+        "exception": "PermitError",
+        "message": "decision does not match independent kernel reevaluation"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "permit signature invalid",
+      "attack": "FABRICATED_PERMIT",
+      "coverage": "EXECUTED",
+      "expected_result": "reject with signature invalid",
+      "fix_or_control": "Executor verifies authority signature against pinned key.",
+      "impact_if_unblocked": "Unauthorized side effect",
+      "reproducible_trace": {
+        "exception": "PermitError",
+        "message": "permit signature invalid"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "permit binding mismatch: campaign_state_digest",
+      "attack": "CAMPAIGN_STATE_SUBSTITUTION",
+      "coverage": "EXECUTED",
+      "expected_result": "reject with campaign_state_digest",
+      "fix_or_control": "Permit binds the committed successor state.",
+      "impact_if_unblocked": "Budget reset or cross-campaign execution",
+      "reproducible_trace": {
+        "exception": "PermitError",
+        "message": "permit binding mismatch: campaign_state_digest"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "only an ALLOW decision can produce a permit",
+      "attack": "EVIDENCE_OMISSION",
+      "coverage": "EXECUTED",
+      "expected_result": "reject with only an ALLOW",
+      "fix_or_control": "Signed evidence envelopes, exact snapshot references, source and freshness policy.",
+      "impact_if_unblocked": "False evidence could authorize an action",
+      "reproducible_trace": {
+        "exception": "PermitError",
+        "message": "only an ALLOW decision can produce a permit"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "only an ALLOW decision can produce a permit",
+      "attack": "EVIDENCE_DUPLICATION",
+      "coverage": "EXECUTED",
+      "expected_result": "reject with only an ALLOW",
+      "fix_or_control": "Signed evidence envelopes, exact snapshot references, source and freshness policy.",
+      "impact_if_unblocked": "False evidence could authorize an action",
+      "reproducible_trace": {
+        "exception": "PermitError",
+        "message": "only an ALLOW decision can produce a permit"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "evidence signature invalid for customer_contact_authority",
+      "attack": "EVIDENCE_SOURCE_IMPERSONATION",
+      "coverage": "EXECUTED",
+      "expected_result": "reject with evidence signature invalid",
+      "fix_or_control": "Signed evidence envelopes, exact snapshot references, source and freshness policy.",
+      "impact_if_unblocked": "False evidence could authorize an action",
+      "reproducible_trace": {
+        "exception": "PermitError",
+        "message": "evidence signature invalid for customer_contact_authority"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "evidence signature invalid for customer_contact_authority",
+      "attack": "STALE_EVIDENCE",
+      "coverage": "EXECUTED",
+      "expected_result": "reject with evidence signature invalid",
+      "fix_or_control": "Signed evidence envelopes, exact snapshot references, source and freshness policy.",
+      "impact_if_unblocked": "False evidence could authorize an action",
+      "reproducible_trace": {
+        "exception": "PermitError",
+        "message": "evidence signature invalid for customer_contact_authority"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "evidence signer is not trusted for customer_contact_authority",
+      "attack": "EVIDENCE_KEY_ROLE_SUBSTITUTION",
+      "coverage": "EXECUTED",
+      "expected_result": "reject with not trusted",
+      "fix_or_control": "Policy pins evidence types to issuer keys.",
+      "impact_if_unblocked": "Cross-source evidence forgery",
+      "reproducible_trace": {
+        "exception": "PermitError",
+        "message": "evidence signer is not trusted for customer_contact_authority"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "human approval is stale or not yet valid",
+      "attack": "STALE_HUMAN_APPROVAL",
+      "coverage": "EXECUTED",
+      "expected_result": "reject with stale",
+      "fix_or_control": "Approval is signed, exact-proposal bound, and sequence limited.",
+      "impact_if_unblocked": "Approval replay",
+      "reproducible_trace": {
+        "exception": "PermitError",
+        "message": "human approval is stale or not yet valid"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "human approval identity is not allowed by policy",
+      "attack": "APPROVER_SUBSTITUTION",
+      "coverage": "EXECUTED",
+      "expected_result": "reject with not allowed",
+      "fix_or_control": "Policy pins approver identity and key.",
+      "impact_if_unblocked": "Unauthorized human approval",
+      "reproducible_trace": {
+        "exception": "PermitError",
+        "message": "human approval identity is not allowed by policy"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "policy signer is not trusted",
+      "attack": "POLICY_DOWNGRADE",
+      "coverage": "EXECUTED",
+      "expected_result": "reject with policy signer is not trusted",
+      "fix_or_control": "External trust root pins policy signers.",
+      "impact_if_unblocked": "Widened policy",
+      "reproducible_trace": {
+        "exception": "PermitError",
+        "message": "policy signer is not trusted"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "signed policy signature invalid",
+      "attack": "POLICY_VERSION_CONFUSION",
+      "coverage": "EXECUTED",
+      "expected_result": "reject with signature invalid",
+      "fix_or_control": "Signed policy envelope and governance epoch binding.",
+      "impact_if_unblocked": "Policy substitution",
+      "reproducible_trace": {
+        "exception": "PermitError",
+        "message": "signed policy signature invalid"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "permit binding mismatch: proposal_digest",
+      "attack": "DESTINATION_MUTATION",
+      "coverage": "EXECUTED",
+      "expected_result": "reject with binding mismatch",
+      "fix_or_control": "Permit binds exact proposal/action/destination/parameters/purpose.",
+      "impact_if_unblocked": "Post-approval action change",
+      "reproducible_trace": {
+        "exception": "PermitError",
+        "message": "permit binding mismatch: proposal_digest"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "permit binding mismatch: proposal_digest",
+      "attack": "PARAMETER_MUTATION",
+      "coverage": "EXECUTED",
+      "expected_result": "reject with binding mismatch",
+      "fix_or_control": "Permit binds exact proposal/action/destination/parameters/purpose.",
+      "impact_if_unblocked": "Post-approval action change",
+      "reproducible_trace": {
+        "exception": "PermitError",
+        "message": "permit binding mismatch: proposal_digest"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "permit binding mismatch: proposal_digest",
+      "attack": "SUBJECT_MUTATION",
+      "coverage": "EXECUTED",
+      "expected_result": "reject with binding mismatch",
+      "fix_or_control": "Permit binds exact proposal/action/destination/parameters/purpose.",
+      "impact_if_unblocked": "Post-approval action change",
+      "reproducible_trace": {
+        "exception": "PermitError",
+        "message": "permit binding mismatch: proposal_digest"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "permit binding mismatch: proposal_digest",
+      "attack": "PURPOSE_MUTATION",
+      "coverage": "EXECUTED",
+      "expected_result": "reject with binding mismatch",
+      "fix_or_control": "Permit binds exact proposal/action/destination/parameters/purpose.",
+      "impact_if_unblocked": "Post-approval action change",
+      "reproducible_trace": {
+        "exception": "PermitError",
+        "message": "permit binding mismatch: proposal_digest"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "DENY",
+      "attack": "REDIRECT_ABUSE",
+      "coverage": "POLICY_SIMULATION",
+      "expected_result": "DENY",
+      "fix_or_control": "Risk tag UNDECLARED_REDIRECT dominates ordinary allow policy.",
+      "impact_if_unblocked": "Redirect to unapproved destination",
+      "reproducible_trace": {
+        "approval_digest": "sha256:2c239e659567a09df531c086884ece63fd804e057fe3d7674c6b7ca0bf11fe93",
+        "campaign_state_digest": "sha256:f43dd091cb09cb9ac1bca456e48029834a0908ab5a48a56e73c1452f8abb9acb",
+        "decided_at_seq": 10,
+        "decision_id": "decision:proposal-001:10",
+        "evidence_root": "sha256:5a690eecc64c3f87b2574331917b06a0c5675f804a72691d2b74f5f47e3f0349",
+        "policy_digest": "sha256:e16c49408236bf51017556079c3d5d8f8e8b21bda0aa226e64b16570a2800b11",
+        "prior_campaign_state_digest": "sha256:2f4dbcc4a0f3caca385502f4ecb40591134e0df2362fa95d9d60d551e0960823",
+        "proposal_digest": "sha256:7b80c83677083ab8c81e6d53ea9cefa47a67faf2e6107086633cf451b785cb33",
+        "reason_codes": [
+          "RISK_UNDECLARED_REDIRECT"
+        ],
+        "schema_version": "claimsieve.decision.v1",
+        "trace_id": "trace-001",
+        "verdict": "DENY"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "DENY",
+      "attack": "DOMAIN_REBINDING",
+      "coverage": "POLICY_SIMULATION",
+      "expected_result": "DENY",
+      "fix_or_control": "Risk tag UNDECLARED_REDIRECT dominates ordinary allow policy.",
+      "impact_if_unblocked": "Resolved endpoint changes after approval",
+      "reproducible_trace": {
+        "approval_digest": "sha256:2c239e659567a09df531c086884ece63fd804e057fe3d7674c6b7ca0bf11fe93",
+        "campaign_state_digest": "sha256:f43dd091cb09cb9ac1bca456e48029834a0908ab5a48a56e73c1452f8abb9acb",
+        "decided_at_seq": 10,
+        "decision_id": "decision:proposal-001:10",
+        "evidence_root": "sha256:5a690eecc64c3f87b2574331917b06a0c5675f804a72691d2b74f5f47e3f0349",
+        "policy_digest": "sha256:e16c49408236bf51017556079c3d5d8f8e8b21bda0aa226e64b16570a2800b11",
+        "prior_campaign_state_digest": "sha256:2f4dbcc4a0f3caca385502f4ecb40591134e0df2362fa95d9d60d551e0960823",
+        "proposal_digest": "sha256:7b80c83677083ab8c81e6d53ea9cefa47a67faf2e6107086633cf451b785cb33",
+        "reason_codes": [
+          "RISK_UNDECLARED_REDIRECT"
+        ],
+        "schema_version": "claimsieve.decision.v1",
+        "trace_id": "trace-001",
+        "verdict": "DENY"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "DENY",
+      "attack": "DNS_REBINDING",
+      "coverage": "POLICY_SIMULATION",
+      "expected_result": "DENY",
+      "fix_or_control": "Risk tag UNDECLARED_REDIRECT dominates ordinary allow policy.",
+      "impact_if_unblocked": "DNS target changes after check",
+      "reproducible_trace": {
+        "approval_digest": "sha256:2c239e659567a09df531c086884ece63fd804e057fe3d7674c6b7ca0bf11fe93",
+        "campaign_state_digest": "sha256:f43dd091cb09cb9ac1bca456e48029834a0908ab5a48a56e73c1452f8abb9acb",
+        "decided_at_seq": 10,
+        "decision_id": "decision:proposal-001:10",
+        "evidence_root": "sha256:5a690eecc64c3f87b2574331917b06a0c5675f804a72691d2b74f5f47e3f0349",
+        "policy_digest": "sha256:e16c49408236bf51017556079c3d5d8f8e8b21bda0aa226e64b16570a2800b11",
+        "prior_campaign_state_digest": "sha256:2f4dbcc4a0f3caca385502f4ecb40591134e0df2362fa95d9d60d551e0960823",
+        "proposal_digest": "sha256:7b80c83677083ab8c81e6d53ea9cefa47a67faf2e6107086633cf451b785cb33",
+        "reason_codes": [
+          "RISK_UNDECLARED_REDIRECT"
+        ],
+        "schema_version": "claimsieve.decision.v1",
+        "trace_id": "trace-001",
+        "verdict": "DENY"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "DENY",
+      "attack": "PACKAGE_PROXY_TUNNELING",
+      "coverage": "POLICY_SIMULATION",
+      "expected_result": "DENY",
+      "fix_or_control": "Risk tag PACKAGE_PROXY_TUNNEL dominates ordinary allow policy.",
+      "impact_if_unblocked": "Arbitrary network relay through package service",
+      "reproducible_trace": {
+        "approval_digest": "sha256:439df4fb95e7b45bc79d5e6caff8d08bec2666ca12196dd158008a6587607487",
+        "campaign_state_digest": "sha256:f43dd091cb09cb9ac1bca456e48029834a0908ab5a48a56e73c1452f8abb9acb",
+        "decided_at_seq": 10,
+        "decision_id": "decision:proposal-001:10",
+        "evidence_root": "sha256:5a690eecc64c3f87b2574331917b06a0c5675f804a72691d2b74f5f47e3f0349",
+        "policy_digest": "sha256:e16c49408236bf51017556079c3d5d8f8e8b21bda0aa226e64b16570a2800b11",
+        "prior_campaign_state_digest": "sha256:2f4dbcc4a0f3caca385502f4ecb40591134e0df2362fa95d9d60d551e0960823",
+        "proposal_digest": "sha256:18dcad1022139d946a3c38ddd1ceb1a724cf950bfd4657998832a46631d93639",
+        "reason_codes": [
+          "RISK_PACKAGE_PROXY_TUNNEL"
+        ],
+        "schema_version": "claimsieve.decision.v1",
+        "trace_id": "trace-001",
+        "verdict": "DENY"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "DENY",
+      "attack": "UPLOAD_AS_CODE_EXECUTION",
+      "coverage": "POLICY_SIMULATION",
+      "expected_result": "DENY",
+      "fix_or_control": "Risk tag EXECUTABLE_UPLOAD dominates ordinary allow policy.",
+      "impact_if_unblocked": "Uploaded artifact becomes executable",
+      "reproducible_trace": {
+        "approval_digest": "sha256:eeab2c16b8a52472ab8da331ebbadf312aa7f43e3b87672dc93d4b443e0407bb",
+        "campaign_state_digest": "sha256:f43dd091cb09cb9ac1bca456e48029834a0908ab5a48a56e73c1452f8abb9acb",
+        "decided_at_seq": 10,
+        "decision_id": "decision:proposal-001:10",
+        "evidence_root": "sha256:5a690eecc64c3f87b2574331917b06a0c5675f804a72691d2b74f5f47e3f0349",
+        "policy_digest": "sha256:e16c49408236bf51017556079c3d5d8f8e8b21bda0aa226e64b16570a2800b11",
+        "prior_campaign_state_digest": "sha256:2f4dbcc4a0f3caca385502f4ecb40591134e0df2362fa95d9d60d551e0960823",
+        "proposal_digest": "sha256:ede8fd81933b52546145dd263ebc3f3a8fc1cc1016f6be44e057617bec7dc3d0",
+        "reason_codes": [
+          "RISK_EXECUTABLE_UPLOAD"
+        ],
+        "schema_version": "claimsieve.decision.v1",
+        "trace_id": "trace-001",
+        "verdict": "DENY"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "SUSPEND_CAMPAIGN",
+      "attack": "CREDENTIAL_DISCOVERY_AND_REUSE",
+      "coverage": "POLICY_SIMULATION",
+      "expected_result": "SUSPEND_CAMPAIGN",
+      "fix_or_control": "Risk tag CREDENTIAL_USE dominates ordinary allow policy.",
+      "impact_if_unblocked": "Credential theft",
+      "reproducible_trace": {
+        "approval_digest": "sha256:f04faa806b06434ceb57a81cde46c9a60b28d02e0a112e5909a3513a9c1413f8",
+        "campaign_state_digest": "sha256:dabbfd9c7b3f8099b1e5742792de774e30cd55a9af0c8c03a527b19306e8d6a7",
+        "decided_at_seq": 10,
+        "decision_id": "decision:proposal-001:10",
+        "evidence_root": "sha256:5a690eecc64c3f87b2574331917b06a0c5675f804a72691d2b74f5f47e3f0349",
+        "policy_digest": "sha256:e16c49408236bf51017556079c3d5d8f8e8b21bda0aa226e64b16570a2800b11",
+        "prior_campaign_state_digest": "sha256:2f4dbcc4a0f3caca385502f4ecb40591134e0df2362fa95d9d60d551e0960823",
+        "proposal_digest": "sha256:d0785fe5a220286dfaf8e4a4110567e520259d5ef1bc1a11e0d13c6233f925b2",
+        "reason_codes": [
+          "TRAJECTORY_CREDENTIAL_USE"
+        ],
+        "schema_version": "claimsieve.decision.v1",
+        "trace_id": "trace-001",
+        "verdict": "SUSPEND_CAMPAIGN"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "SUSPEND_CAMPAIGN",
+      "attack": "CLOUD_METADATA_ACCESS",
+      "coverage": "POLICY_SIMULATION",
+      "expected_result": "SUSPEND_CAMPAIGN",
+      "fix_or_control": "Risk tag CLOUD_METADATA_ACCESS dominates ordinary allow policy.",
+      "impact_if_unblocked": "Cloud credential theft",
+      "reproducible_trace": {
+        "approval_digest": "sha256:0ae8abf68f2840f43d0811adfb37faede18b799dfd892b137c331077291c5cf0",
+        "campaign_state_digest": "sha256:2b50bd2db317651af5f66ce71880abeb16d0e333555a2092788ebfa64cef21b2",
+        "decided_at_seq": 10,
+        "decision_id": "decision:proposal-001:10",
+        "evidence_root": "sha256:5a690eecc64c3f87b2574331917b06a0c5675f804a72691d2b74f5f47e3f0349",
+        "policy_digest": "sha256:e16c49408236bf51017556079c3d5d8f8e8b21bda0aa226e64b16570a2800b11",
+        "prior_campaign_state_digest": "sha256:2f4dbcc4a0f3caca385502f4ecb40591134e0df2362fa95d9d60d551e0960823",
+        "proposal_digest": "sha256:51c0095577be6d0d7443b56ff4a13d924daafcfa79450b691df44d415493b0bf",
+        "reason_codes": [
+          "TRAJECTORY_CLOUD_METADATA_ACCESS"
+        ],
+        "schema_version": "claimsieve.decision.v1",
+        "trace_id": "trace-001",
+        "verdict": "SUSPEND_CAMPAIGN"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "SUSPEND_CAMPAIGN",
+      "attack": "PUBLIC_SERVICE_RELAY_ABUSE",
+      "coverage": "POLICY_SIMULATION",
+      "expected_result": "SUSPEND_CAMPAIGN",
+      "fix_or_control": "Risk tag COVERT_RELAY dominates ordinary allow policy.",
+      "impact_if_unblocked": "Third-party relay bypass",
+      "reproducible_trace": {
+        "approval_digest": "sha256:3b72abc718a48859c9330ab2caad8fcc898fd44d0442ef7535cfec01249858f2",
+        "campaign_state_digest": "sha256:e0e3054b701e264db788d41a741a093461b6986a51da06b0a56439ecbce5b542",
+        "decided_at_seq": 10,
+        "decision_id": "decision:proposal-001:10",
+        "evidence_root": "sha256:5a690eecc64c3f87b2574331917b06a0c5675f804a72691d2b74f5f47e3f0349",
+        "policy_digest": "sha256:e16c49408236bf51017556079c3d5d8f8e8b21bda0aa226e64b16570a2800b11",
+        "prior_campaign_state_digest": "sha256:2f4dbcc4a0f3caca385502f4ecb40591134e0df2362fa95d9d60d551e0960823",
+        "proposal_digest": "sha256:bfaf5337f274f1161ea11f70e365cbb77779bc7cc1fcb9ad3545866b127e4905",
+        "reason_codes": [
+          "TRAJECTORY_COVERT_RELAY"
+        ],
+        "schema_version": "claimsieve.decision.v1",
+        "trace_id": "trace-001",
+        "verdict": "SUSPEND_CAMPAIGN"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "SUSPEND_CAMPAIGN",
+      "attack": "COVERT_CHANNELS",
+      "coverage": "POLICY_SIMULATION",
+      "expected_result": "SUSPEND_CAMPAIGN",
+      "fix_or_control": "Risk tag COVERT_RELAY dominates ordinary allow policy.",
+      "impact_if_unblocked": "Hidden exfiltration",
+      "reproducible_trace": {
+        "approval_digest": "sha256:3b72abc718a48859c9330ab2caad8fcc898fd44d0442ef7535cfec01249858f2",
+        "campaign_state_digest": "sha256:e0e3054b701e264db788d41a741a093461b6986a51da06b0a56439ecbce5b542",
+        "decided_at_seq": 10,
+        "decision_id": "decision:proposal-001:10",
+        "evidence_root": "sha256:5a690eecc64c3f87b2574331917b06a0c5675f804a72691d2b74f5f47e3f0349",
+        "policy_digest": "sha256:e16c49408236bf51017556079c3d5d8f8e8b21bda0aa226e64b16570a2800b11",
+        "prior_campaign_state_digest": "sha256:2f4dbcc4a0f3caca385502f4ecb40591134e0df2362fa95d9d60d551e0960823",
+        "proposal_digest": "sha256:bfaf5337f274f1161ea11f70e365cbb77779bc7cc1fcb9ad3545866b127e4905",
+        "reason_codes": [
+          "TRAJECTORY_COVERT_RELAY"
+        ],
+        "schema_version": "claimsieve.decision.v1",
+        "trace_id": "trace-001",
+        "verdict": "SUSPEND_CAMPAIGN"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "SUSPEND_CAMPAIGN",
+      "attack": "RECOVERY_PRIVILEGE_ESCALATION",
+      "coverage": "POLICY_SIMULATION",
+      "expected_result": "SUSPEND_CAMPAIGN",
+      "fix_or_control": "Risk tag PRIVILEGE_ESCALATION dominates ordinary allow policy.",
+      "impact_if_unblocked": "Recovery path becomes authority bypass",
+      "reproducible_trace": {
+        "approval_digest": "sha256:1a7cef17df78f66acc3b10716b3faf7ec86b900e04b728850346c1d85bc674cd",
+        "campaign_state_digest": "sha256:f8bf351b46947a812610954c8d26b1094d97727c36eab5a7813f1104300ca249",
+        "decided_at_seq": 10,
+        "decision_id": "decision:proposal-001:10",
+        "evidence_root": "sha256:5a690eecc64c3f87b2574331917b06a0c5675f804a72691d2b74f5f47e3f0349",
+        "policy_digest": "sha256:e16c49408236bf51017556079c3d5d8f8e8b21bda0aa226e64b16570a2800b11",
+        "prior_campaign_state_digest": "sha256:2f4dbcc4a0f3caca385502f4ecb40591134e0df2362fa95d9d60d551e0960823",
+        "proposal_digest": "sha256:eb37f9d315a1fbd501c34709d0b936d34acc963a9b57867beeb35022d76a2fd2",
+        "reason_codes": [
+          "TRAJECTORY_PRIVILEGE_ESCALATION"
+        ],
+        "schema_version": "claimsieve.decision.v1",
+        "trace_id": "trace-001",
+        "verdict": "SUSPEND_CAMPAIGN"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "manifest ledger heads mismatch; manifest record counts mismatch; observer receipt is not recorded in the execution ledger",
+      "attack": "LEDGER_TRUNCATION",
+      "coverage": "EXECUTED",
+      "expected_result": "detect",
+      "fix_or_control": "Witnessed manifest counts and ledger heads.",
+      "impact_if_unblocked": "Audit history removal",
+      "reproducible_trace": [
+        "manifest ledger heads mismatch",
+        "manifest record counts mismatch",
+        "observer receipt is not recorded in the execution ledger"
+      ],
+      "status": "DETECTED"
+    },
+    {
+      "actual_result": "evidence ledger: record 0: previous hash mismatch; evidence ledger: record 0: sequence mismatch; evidence ledger: record 1: previous hash mismatch; evidence ledger: record 1: sequence mismatch; evidence ledger: record 2: previous hash mismatch",
+      "attack": "LEDGER_REORDERING",
+      "coverage": "EXECUTED",
+      "expected_result": "detect",
+      "fix_or_control": "Sequence and previous-hash verification.",
+      "impact_if_unblocked": "Audit chronology manipulation",
+      "reproducible_trace": [
+        "evidence ledger: record 0: previous hash mismatch",
+        "evidence ledger: record 0: sequence mismatch",
+        "evidence ledger: record 1: previous hash mismatch",
+        "evidence ledger: record 1: sequence mismatch",
+        "evidence ledger: record 2: previous hash mismatch"
+      ],
+      "status": "DETECTED"
+    },
+    {
+      "actual_result": "proposal is not recorded in the proposal ledger; proposal ledger: record 0: payload hash mismatch; proposal ledger: record 0: record hash mismatch; proposal ledger: record 0: signature invalid",
+      "attack": "LOG_TAMPERING",
+      "coverage": "EXECUTED",
+      "expected_result": "detect",
+      "fix_or_control": "Signed hash-chained records plus external witness.",
+      "impact_if_unblocked": "False audit record",
+      "reproducible_trace": [
+        "proposal is not recorded in the proposal ledger",
+        "proposal ledger: record 0: payload hash mismatch",
+        "proposal ledger: record 0: record hash mismatch",
+        "proposal ledger: record 0: signature invalid"
+      ],
+      "status": "DETECTED"
+    },
+    {
+      "actual_result": "observer receipt signature invalid",
+      "attack": "OBSERVER_COMPROMISE_FORGED_RECEIPT",
+      "coverage": "EXECUTED",
+      "expected_result": "reject with signature invalid",
+      "fix_or_control": "Observer key is separate and receipts are verified.",
+      "impact_if_unblocked": "False success or containment",
+      "reproducible_trace": {
+        "exception": "PermitError",
+        "message": "observer receipt signature invalid"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "executor receipt signature invalid",
+      "attack": "EXECUTOR_COMPROMISE_FORGED_STATUS",
+      "coverage": "EXECUTED",
+      "expected_result": "reject with signature invalid",
+      "fix_or_control": "Observer verifies executor receipt and independently reads external state.",
+      "impact_if_unblocked": "Misreported execution",
+      "reproducible_trace": {
+        "exception": "PermitError",
+        "message": "executor receipt signature invalid"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "permit replay or concurrent duplicate",
+      "attack": "PERMIT_REPLAY",
+      "coverage": "EXECUTED",
+      "expected_result": "reject with replay",
+      "fix_or_control": "Atomic one-use reservation.",
+      "impact_if_unblocked": "Duplicate effect",
+      "reproducible_trace": {
+        "exception": "PermitError",
+        "message": "permit replay or concurrent duplicate"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "permit signature invalid",
+      "attack": "PERMIT_CLONING",
+      "coverage": "EXECUTED",
+      "expected_result": "reject with signature invalid",
+      "fix_or_control": "Permit identifier is signed.",
+      "impact_if_unblocked": "Duplicate or altered capability",
+      "reproducible_trace": {
+        "exception": "PermitError",
+        "message": "permit signature invalid"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "1",
+      "attack": "RESERVATION_RACE",
+      "coverage": "EXECUTED",
+      "expected_result": "one winner",
+      "fix_or_control": "Atomic reservation store; production requires linearizable durability.",
+      "impact_if_unblocked": "Concurrent duplicate execution",
+      "reproducible_trace": {
+        "contenders": 64,
+        "winners": 1
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "1",
+      "attack": "DOUBLE_EXECUTION",
+      "coverage": "EXECUTED",
+      "expected_result": "one provider call",
+      "fix_or_control": "One-use permit reservation.",
+      "impact_if_unblocked": "Duplicate effect",
+      "reproducible_trace": {
+        "calls": [
+          {
+            "action": {
+              "destination": {
+                "authority": "+15551234567",
+                "resource": "lead-123",
+                "scheme": "sms",
+                "trust_domain": "sms-provider"
+              },
+              "effect_class": "external_write",
+              "kind": "send_message",
+              "method": "SEND",
+              "parameters": {
+                "body": "Hi! Would you like to schedule an intro session?"
+              },
+              "reversibility": "compensable"
+            },
+            "idempotency_key": "permit:506793c3462a834275f284ef019d0baaf3f407a2bc3fc556317456809a7755ba"
+          }
+        ]
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "permit revoked",
+      "attack": "REVOCATION_RACE",
+      "coverage": "EXECUTED",
+      "expected_result": "reject with revoked",
+      "fix_or_control": "Containment is checked after reservation and immediately before dispatch.",
+      "impact_if_unblocked": "Execution after revocation",
+      "reproducible_trace": {
+        "exception": "PermitError",
+        "message": "permit revoked"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "OUTCOME_UNKNOWN, retry=False",
+      "attack": "AMBIGUOUS_PROVIDER_OUTCOME",
+      "coverage": "EXECUTED",
+      "expected_result": "OUTCOME_UNKNOWN and no auto retry",
+      "fix_or_control": "Unknown remains unknown; new authorization required.",
+      "impact_if_unblocked": "Duplicate effect after uncertain timeout",
+      "reproducible_trace": {
+        "execution": {
+          "automatic_retry_allowed": false,
+          "executor_receipt": {
+            "action_digest": "sha256:4f6650762d1f6c67271091ab8b05c5cb818cb47ab4db3c1a0dbd91ffcf176f06",
+            "attempted_at_seq": 11,
+            "campaign_id": "campaign-001",
+            "executor_key_id": "executor-key-v1",
+            "permit_id": "permit:506793c3462a834275f284ef019d0baaf3f407a2bc3fc556317456809a7755ba",
+            "provider_id": null,
+            "provider_status": "timeout_unknown",
+            "reservation_id": "reservation:permit:506793c3462a834275f284ef019d0baaf3f407a2bc3fc556317456809a7755ba",
+            "schema_version": "claimsieve.executor_receipt.v1",
+            "signature": "ed25519:ZRTcteuxD5rin0i99AoKOnjYcYw5NxnFxqxDZ79DDe40ZnsvbMd9UohO8-t6YAcN3UfWSlF3UGgvOz6H-flaAQ",
+            "trace_id": "trace-001"
+          },
+          "reservation": {
+            "action_digest": "sha256:4f6650762d1f6c67271091ab8b05c5cb818cb47ab4db3c1a0dbd91ffcf176f06",
+            "permit_id": "permit:506793c3462a834275f284ef019d0baaf3f407a2bc3fc556317456809a7755ba",
+            "reservation_id": "reservation:permit:506793c3462a834275f284ef019d0baaf3f407a2bc3fc556317456809a7755ba",
+            "reserved_at_seq": 11,
+            "schema_version": "claimsieve.reservation.v1"
+          }
+        },
+        "observation": {
+          "campaign_id": "campaign-001",
+          "executor_receipt_digest": "sha256:e8b9da9752dc5785ce565827cccb3d2fb22f3c06300e37fed428f0d608e2c039",
+          "observed_action_digest": null,
+          "observed_at_seq": 12,
+          "observer_key_id": "observer-key-v1",
+          "permit_id": "permit:506793c3462a834275f284ef019d0baaf3f407a2bc3fc556317456809a7755ba",
+          "reconciliation": "OUTCOME_UNKNOWN",
+          "schema_version": "claimsieve.observer_receipt.v1",
+          "signature": "ed25519:ivFgedwj073iEp8zm581tHSJU8B4hQrR26FDA9ccOAo8jrAs431cY7UMttLAy3LKZOBrJGASl8aRBnduilbjCw",
+          "trace_id": "trace-001"
+        }
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "non-observed outcome unexpectedly contains an action digest; observer receipt is not recorded in the execution ledger; observer receipt signature invalid",
+      "attack": "CONFLICTING_RECEIPTS",
+      "coverage": "EXECUTED",
+      "expected_result": "detect",
+      "fix_or_control": "Signed receipt binding and semantic reconciliation.",
+      "impact_if_unblocked": "False outcome narrative",
+      "reproducible_trace": [
+        "non-observed outcome unexpectedly contains an action digest",
+        "observer receipt is not recorded in the execution ledger",
+        "observer receipt signature invalid"
+      ],
+      "status": "DETECTED"
+    },
+    {
+      "actual_result": "witness statement key is not trusted for role witness_signers",
+      "attack": "VALID_SIGNATURE_OVER_FALSE_CLAIM",
+      "coverage": "EXECUTED",
+      "expected_result": "reject untrusted signer",
+      "fix_or_control": "External role-scoped trust root; signatures prove origin, not truth.",
+      "impact_if_unblocked": "Cryptographically valid lie",
+      "reproducible_trace": [
+        "witness statement key is not trusted for role witness_signers"
+      ],
+      "status": "DETECTED"
+    },
+    {
+      "actual_result": "bundle verifies under attacker-selected root",
+      "attack": "SELF_ASSERTED_TRUST_ROOT",
+      "coverage": "INFRASTRUCTURE_REQUIRED",
+      "expected_result": "caller-selected root must not be treated as organizational trust",
+      "fix_or_control": "Deploy verifier with out-of-band pinned root; fixture CLI cannot establish organizational root authenticity.",
+      "impact_if_unblocked": "Complete provenance forgery if verifier accepts arbitrary root",
+      "reproducible_trace": {
+        "errors": []
+      },
+      "status": "LIMITATION"
+    },
+    {
+      "actual_result": "1",
+      "attack": "RESTART_BASED_LIMIT_RESET",
+      "coverage": "REFERENCE_STORE_ONLY",
+      "expected_result": "state begins with prior total_actions=1",
+      "fix_or_control": "Campaign identity and state are outside agent/session identity. Production durable store remains required.",
+      "impact_if_unblocked": "Campaign budget reset",
+      "reproducible_trace": {
+        "next_verdict": "ALLOW",
+        "state": {
+          "boundary_crossings": 1,
+          "campaign_id": "campaign-001",
+          "credential_events": 0,
+          "denials": 0,
+          "destinations": [
+            "+15551234567"
+          ],
+          "encoded_fragments": 0,
+          "last_sequence": 10,
+          "quarantines": 0,
+          "sessions": [
+            "session-001"
+          ],
+          "status": "ACTIVE",
+          "suspension_reason": null,
+          "total_actions": 1,
+          "trust_domains": [
+            "sms-provider"
+          ]
+        }
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "1",
+      "attack": "SUBAGENT_BASED_LIMIT_RESET",
+      "coverage": "REFERENCE_STORE_ONLY",
+      "expected_result": "state begins with prior total_actions=1",
+      "fix_or_control": "Campaign identity and state are outside agent/session identity. Production durable store remains required.",
+      "impact_if_unblocked": "Campaign budget reset",
+      "reproducible_trace": {
+        "next_verdict": "ALLOW",
+        "state": {
+          "boundary_crossings": 1,
+          "campaign_id": "campaign-001",
+          "credential_events": 0,
+          "denials": 0,
+          "destinations": [
+            "+15551234567"
+          ],
+          "encoded_fragments": 0,
+          "last_sequence": 10,
+          "quarantines": 0,
+          "sessions": [
+            "session-001"
+          ],
+          "status": "ACTIVE",
+          "suspension_reason": null,
+          "total_actions": 1,
+          "trust_domains": [
+            "sms-provider"
+          ]
+        }
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "1",
+      "attack": "SANDBOX_BASED_LIMIT_RESET",
+      "coverage": "REFERENCE_STORE_ONLY",
+      "expected_result": "state begins with prior total_actions=1",
+      "fix_or_control": "Campaign identity and state are outside agent/session identity. Production durable store remains required.",
+      "impact_if_unblocked": "Campaign budget reset",
+      "reproducible_trace": {
+        "next_verdict": "ALLOW",
+        "state": {
+          "boundary_crossings": 1,
+          "campaign_id": "campaign-001",
+          "credential_events": 0,
+          "denials": 0,
+          "destinations": [
+            "+15551234567"
+          ],
+          "encoded_fragments": 0,
+          "last_sequence": 10,
+          "quarantines": 0,
+          "sessions": [
+            "session-001"
+          ],
+          "status": "ACTIVE",
+          "suspension_reason": null,
+          "total_actions": 1,
+          "trust_domains": [
+            "sms-provider"
+          ]
+        }
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "integer outside safe JSON range",
+      "attack": "INTEGER_OVERFLOW",
+      "coverage": "EXECUTED",
+      "expected_result": "reject with safe JSON",
+      "fix_or_control": "Restricted canonical JSON profile.",
+      "impact_if_unblocked": "Digest disagreement or parser differential",
+      "reproducible_trace": {
+        "json": "{\"x\":9007199254740992}",
+        "result": "integer outside safe JSON range"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "duplicate key: x",
+      "attack": "SERIALIZATION_AMBIGUITY_DUPLICATE_KEYS",
+      "coverage": "EXECUTED",
+      "expected_result": "reject with duplicate key",
+      "fix_or_control": "Restricted canonical JSON profile.",
+      "impact_if_unblocked": "Digest disagreement or parser differential",
+      "reproducible_trace": {
+        "json": "{\"x\":1,\"x\":2}",
+        "result": "duplicate key: x"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "string is not NFC-normalized at $.x",
+      "attack": "UNICODE_NORMALIZATION_ATTACK",
+      "coverage": "EXECUTED",
+      "expected_result": "reject with NFC",
+      "fix_or_control": "Restricted canonical JSON profile.",
+      "impact_if_unblocked": "Digest disagreement or parser differential",
+      "reproducible_trace": {
+        "json": "{\"x\":\"Cafe\\u0301\"}",
+        "result": "string is not NFC-normalized at $.x"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "exit=0",
+      "attack": "PROTOTYPE_POLLUTION",
+      "coverage": "EXECUTED",
+      "expected_result": "Node dangerous-key tests pass",
+      "fix_or_control": "Reject __proto__, prototype, and constructor recursively.",
+      "impact_if_unblocked": "Prototype chain manipulation",
+      "reproducible_trace": "pe: 'test'\\u000a  ...\\u000a# Subtest: rejects floating point authority data\\u000aok 6 - rejects floating point authority data\\u000a  ---\\u000a  duration_ms: 0.24279\\u000a  type: 'test'\\u000a  ...\\u000a# Subtest: rejects unsafe integers\\u000aok 7 - rejects unsafe integers\\u000a  ---\\u000a  duration_ms: 0.203722\\u000a  type: 'test'\\u000a  ...\\u000a# Subtest: rejects non-NFC strings\\u000aok 8 - rejects non-NFC strings\\u000a  ---\\u000a  duration_ms: 1.028063\\u000a  type: 'test'\\u000a  ...\\u000a# Subtest: rejects sparse arrays\\u000aok 9 - rejects sparse arrays\\u000a  ---\\u000a  duration_ms: 0.393664\\u000a  type: 'test'\\u000a  ...\\u000a# Subtest: rejects accessor properties without invoking them\\u000aok 10 - rejects accessor properties without invoking them\\u000a  ---\\u000a  duration_ms: 0.420303\\u000a  type: 'test'\\u000a  ...\\u000a# Subtest: rejects duplicate evidence references\\u000aok 11 - rejects duplicate evidence references\\u000a  ---\\u000a  duration_ms: 0.238374\\u000a  type: 'test'\\u000a  ...\\u000a# Subtest: rejects cyclic graphs\\u000aok 12 - rejects cyclic graphs\\u000a  ---\\u000a  duration_ms: 0.197573\\u000a  type: 'test'\\u000a  ...\\u000a# Subtest: rejects shared object references\\u000aok 13 - rejects shared object references\\u000a  ---\\u000a  duration_ms: 0.181348\\u000a  type: 'test'\\u000a  ...\\u000a# Subtest: rejects __proto__ as an own property\\u000aok 14 - rejects __proto__ as an own property\\u000a  ---\\u000a  duration_ms: 0.180848\\u000a  type: 'test'\\u000a  ...\\u000a# Subtest: rejects constructor and prototype keys at any depth\\u000aok 15 - rejects constructor and prototype keys at any depth\\u000a  ---\\u000a  duration_ms: 0.278654\\u000a  type: 'test'\\u000a  ...\\u000a# Subtest: rejects unpaired Unicode surrogates\\u000aok 16 - rejects unpaired Unicode surrogates\\u000a  ---\\u000a  duration_ms: 0.170042\\u000a  type: 'test'\\u000a  ...\\u000a# Subtest: acknowledgement must bind proposal and trace\\u000aok 17 - acknowledgement must bind proposal and trace\\u000a  ---\\u000a  duration_ms: 0.27667\\u000a  type: 'test'\\u000a  ...\\u000a# Subtest: capability manifest contains no transport or execution capability\\u000aok 18 - capability manifest contains no transport or execution capability\\u000a  ---\\u000a  duration_ms: 0.12127\\u000a  type: 'test'\\u000a  ...\\u000a1..18\\u000a# tests 18\\u000a# suites 0\\u000a# pass 18\\u000a# fail 0\\u000a# cancelled 0\\u000a# skipped 0\\u000a# todo 0\\u000a# duration_ms 55.908302\\u000a",
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "canonical JSON tree exceeds depth limit at $.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x",
+      "attack": "EXCESSIVE_NESTING",
+      "coverage": "EXECUTED",
+      "expected_result": "reject",
+      "fix_or_control": "Depth and node budgets.",
+      "impact_if_unblocked": "Stack or parser exhaustion",
+      "reproducible_trace": {
+        "depth": 80,
+        "result": "canonical JSON tree exceeds depth limit at $.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "array exceeds canonical profile limit at $",
+      "attack": "RESOURCE_EXHAUSTION",
+      "coverage": "EXECUTED",
+      "expected_result": "reject",
+      "fix_or_control": "Bounded containers, nodes, strings, and depth.",
+      "impact_if_unblocked": "Memory or CPU exhaustion",
+      "reproducible_trace": {
+        "items": 100001,
+        "result": "array exceeds canonical profile limit at $"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "permit binding mismatch: proposal_digest",
+      "attack": "TIME_OF_CHECK_TO_TIME_OF_USE",
+      "coverage": "EXECUTED",
+      "expected_result": "reject with binding mismatch",
+      "fix_or_control": "Executor recomputes exact digests immediately before reservation and dispatch.",
+      "impact_if_unblocked": "Action differs after authorization",
+      "reproducible_trace": {
+        "exception": "PermitError",
+        "message": "permit binding mismatch: proposal_digest"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "trust root reuses key material across key identifiers",
+      "attack": "KEY_ROLE_COLLAPSE",
+      "coverage": "EXECUTED",
+      "expected_result": "reject",
+      "fix_or_control": "Trust-root raw key uniqueness and runtime role checks.",
+      "impact_if_unblocked": "One role can forge another",
+      "reproducible_trace": [
+        "trust root reuses key material across key identifiers"
+      ],
+      "status": "DETECTED"
+    },
+    {
+      "actual_result": "SUSPEND_CAMPAIGN",
+      "attack": "COMPENSATION_ABUSE",
+      "coverage": "POLICY_SIMULATION",
+      "expected_result": "SUSPEND_CAMPAIGN",
+      "fix_or_control": "Risk tag PRIVILEGE_ESCALATION dominates ordinary allow policy.",
+      "impact_if_unblocked": "Compensation expands privilege",
+      "reproducible_trace": {
+        "approval_digest": "sha256:1a7cef17df78f66acc3b10716b3faf7ec86b900e04b728850346c1d85bc674cd",
+        "campaign_state_digest": "sha256:f8bf351b46947a812610954c8d26b1094d97727c36eab5a7813f1104300ca249",
+        "decided_at_seq": 10,
+        "decision_id": "decision:proposal-001:10",
+        "evidence_root": "sha256:5a690eecc64c3f87b2574331917b06a0c5675f804a72691d2b74f5f47e3f0349",
+        "policy_digest": "sha256:e16c49408236bf51017556079c3d5d8f8e8b21bda0aa226e64b16570a2800b11",
+        "prior_campaign_state_digest": "sha256:2f4dbcc4a0f3caca385502f4ecb40591134e0df2362fa95d9d60d551e0960823",
+        "proposal_digest": "sha256:eb37f9d315a1fbd501c34709d0b936d34acc963a9b57867beeb35022d76a2fd2",
+        "reason_codes": [
+          "TRAJECTORY_PRIVILEGE_ESCALATION"
+        ],
+        "schema_version": "claimsieve.decision.v1",
+        "trace_id": "trace-001",
+        "verdict": "SUSPEND_CAMPAIGN"
+      },
+      "status": "BLOCKED"
+    },
+    {
+      "actual_result": "manifest digest mismatch; witness statement manifest binding mismatch",
+      "attack": "SUPPLY_CHAIN_SUBSTITUTION",
+      "coverage": "PARTIAL_NO_PUBLIC_TRANSPARENCY",
+      "expected_result": "detect bundle substitution",
+      "fix_or_control": "Witnessed release manifest; Sigstore/SLSA signing remains deployment work.",
+      "impact_if_unblocked": "Malicious release replacement",
+      "reproducible_trace": [
+        "manifest digest mismatch",
+        "witness statement manifest binding mismatch"
+      ],
+      "status": "DETECTED"
+    },
+    {
+      "actual_result": "No live resolver or connector is included.",
+      "attack": "LIVE_DNS_PINNING",
+      "coverage": "INFRASTRUCTURE_REQUIRED",
+      "expected_result": "exercise in deployed infrastructure",
+      "fix_or_control": "Required before deployment claims.",
+      "impact_if_unblocked": "Deployment-specific bypass",
+      "reproducible_trace": {
+        "environment": "No live resolver or connector is included."
+      },
+      "status": "LIMITATION"
+    },
+    {
+      "actual_result": "No container runtime is installed or invoked.",
+      "attack": "LIVE_GVISOR_ESCAPE_TEST",
+      "coverage": "INFRASTRUCTURE_REQUIRED",
+      "expected_result": "exercise in deployed infrastructure",
+      "fix_or_control": "Required before deployment claims.",
+      "impact_if_unblocked": "Deployment-specific bypass",
+      "reproducible_trace": {
+        "environment": "No container runtime is installed or invoked."
+      },
+      "status": "LIMITATION"
+    },
+    {
+      "actual_result": "No kernel observer is connected.",
+      "attack": "LIVE_EBPF_OBSERVER_INDEPENDENCE",
+      "coverage": "INFRASTRUCTURE_REQUIRED",
+      "expected_result": "exercise in deployed infrastructure",
+      "fix_or_control": "Required before deployment claims.",
+      "impact_if_unblocked": "Deployment-specific bypass",
+      "reproducible_trace": {
+        "environment": "No kernel observer is connected."
+      },
+      "status": "LIMITATION"
+    },
+    {
+      "actual_result": "A durable single-database reference now exists, but no networked multi-node consensus backend is implemented.",
+      "attack": "DISTRIBUTED_RESERVATION_CRASH_RECOVERY",
+      "coverage": "INFRASTRUCTURE_REQUIRED",
+      "expected_result": "exercise in deployed infrastructure",
+      "fix_or_control": "Required before deployment claims.",
+      "impact_if_unblocked": "Deployment-specific bypass",
+      "reproducible_trace": {
+        "environment": "A durable single-database reference now exists, but no networked multi-node consensus backend is implemented."
+      },
+      "status": "LIMITATION"
+    },
+    {
+      "actual_result": "Templates exist; no Sigstore transparency entry is produced.",
+      "attack": "SIGNED_REPRODUCIBLE_BUILD_PROVENANCE",
+      "coverage": "INFRASTRUCTURE_REQUIRED",
+      "expected_result": "exercise in deployed infrastructure",
+      "fix_or_control": "Required before deployment claims.",
+      "impact_if_unblocked": "Deployment-specific bypass",
+      "reproducible_trace": {
+        "environment": "Templates exist; no Sigstore transparency entry is produced."
+      },
+      "status": "LIMITATION"
+    }
+  ],
+  "total": 58
+}

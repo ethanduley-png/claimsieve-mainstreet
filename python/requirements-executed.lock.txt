@@ -1,0 +1,10 @@
+# Exact Python packages observed in the originating execution environment.
+# This is an environment snapshot, not a hash-locked cross-platform supply-chain lock.
+attrs==26.1.0
+cffi==2.0.0
+cryptography==46.0.4
+jsonschema-specifications==2025.9.1
+jsonschema==4.26.0
+pycparser==3.0
+referencing==0.37.0
+rpds-py==2026.5.1

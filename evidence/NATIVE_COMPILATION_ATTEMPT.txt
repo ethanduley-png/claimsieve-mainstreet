@@ -1,0 +1,15 @@
+Native compilation attempt
+Release: 0.34.0
+Date: 2026-08-02
+
+[Rust] rustc 1.90.0 (project-pinned GNU toolchain)
+[Rust] cargo fmt --all -- --check: PASS
+[Rust] cargo clippy --workspace --all-targets --all-features -- -D warnings: PASS
+[Rust] cargo test --workspace --all-features: PASS (28 tests; documentation tests pass)
+[Rust] claimsieve verify valid_evidence_bundle.json fixture-trust-root.json: PASS
+
+[Rocq] The Rocq Prover, version 9.0.1
+[Rocq] Claimsieve.v: PASS
+[Rocq] DurableState.v: PASS
+[Rocq] Check.v: PASS; audited theorems closed under the global context
+[Rocq] CheckDurableState.v: PASS; audited theorems closed under the global context

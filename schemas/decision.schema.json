@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://claimsieve.example/schemas/decision.schema.json",
+  "title": "ClaimSieve Decision v1 with predecessor commitment",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "decision_id",
+    "trace_id",
+    "proposal_digest",
+    "approval_digest",
+    "policy_digest",
+    "evidence_root",
+    "prior_campaign_state_digest",
+    "campaign_state_digest",
+    "verdict",
+    "reason_codes",
+    "decided_at_seq"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "claimsieve.decision.v1"
+    },
+    "decision_id": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "proposal_digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "policy_digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "campaign_state_digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "verdict": {
+      "type": "string",
+      "enum": [
+        "ALLOW",
+        "DENY",
+        "REQUIRE_HUMAN",
+        "QUARANTINE",
+        "SUSPEND_CAMPAIGN"
+      ]
+    },
+    "reason_codes": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string"
+      }
+    },
+    "decided_at_seq": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "evidence_root": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "approval_digest": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "prior_campaign_state_digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    }
+  }
+}

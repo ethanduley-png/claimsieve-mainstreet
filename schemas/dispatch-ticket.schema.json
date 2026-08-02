@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://claimsieve.local/schemas/dispatch-ticket.schema.json",
+  "title": "ClaimSieve Dispatch Ticket v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "reservation_id", "permit_id", "campaign_id",
+    "action_digest", "request_digest", "resource_key", "idempotency_key",
+    "fencing_token", "containment_epoch"
+  ],
+  "properties": {
+    "schema_version": {"const": "claimsieve.dispatch_ticket.v1"},
+    "reservation_id": {"type": "string", "minLength": 1},
+    "permit_id": {"type": "string", "minLength": 1},
+    "campaign_id": {"type": "string", "minLength": 1},
+    "action_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "request_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "resource_key": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "idempotency_key": {"type": "string", "minLength": 1},
+    "fencing_token": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+    "containment_epoch": {"type": "integer", "minimum": 0, "maximum": 9007199254740991}
+  }
+}

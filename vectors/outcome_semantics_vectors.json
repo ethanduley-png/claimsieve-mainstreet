@@ -1,0 +1,62 @@
+{
+  "schema_version": "claimsieve.outcome_semantics_vectors.v1",
+  "intended_action_digest": "sha256:exact",
+  "vectors": [
+    {
+      "id": "no-provider-record",
+      "response_status": null,
+      "observed_action_digest": null,
+      "expected_reconciliation": "OUTCOME_UNKNOWN",
+      "expected_conflict": false
+    },
+    {
+      "id": "provider-rejected-no-effect",
+      "response_status": "rejected",
+      "observed_action_digest": null,
+      "expected_reconciliation": "CONFIRMED_FAILURE",
+      "expected_conflict": false
+    },
+    {
+      "id": "provider-accepted-exact-effect",
+      "response_status": "accepted",
+      "observed_action_digest": "sha256:exact",
+      "expected_reconciliation": "CONFIRMED_SUCCESS",
+      "expected_conflict": false
+    },
+    {
+      "id": "transport-timeout-later-exact-readback",
+      "response_status": "timeout_unknown",
+      "observed_action_digest": "sha256:exact",
+      "expected_reconciliation": "CONFIRMED_SUCCESS",
+      "expected_conflict": false
+    },
+    {
+      "id": "provider-accepted-divergent-effect",
+      "response_status": "accepted",
+      "observed_action_digest": "sha256:other",
+      "expected_reconciliation": "DIVERGENT_EFFECT",
+      "expected_conflict": false
+    },
+    {
+      "id": "provider-rejected-but-effect-exists",
+      "response_status": "rejected",
+      "observed_action_digest": "sha256:exact",
+      "expected_reconciliation": "OUTCOME_UNKNOWN",
+      "expected_conflict": true
+    },
+    {
+      "id": "provider-accepted-but-no-effect-readable",
+      "response_status": "accepted",
+      "observed_action_digest": null,
+      "expected_reconciliation": "OUTCOME_UNKNOWN",
+      "expected_conflict": true
+    },
+    {
+      "id": "transport-timeout-no-readback",
+      "response_status": "timeout_unknown",
+      "observed_action_digest": null,
+      "expected_reconciliation": "OUTCOME_UNKNOWN",
+      "expected_conflict": false
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+name: Reference tests
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  python-node:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: python -m pip install --disable-pip-version-check -r python/requirements-test.txt
+      - run: PYTHONPATH=python python -m unittest discover -s python/tests -v
+      - run: PYTHONPATH=python python python/generate_bundle.py
+      - run: PYTHONPATH=python python python/verify_bundle.py vectors/valid_evidence_bundle.json trust/fixture-trust-root.json
+      - run: node --test mainstreet/test/*.test.js
+      - run: python scripts/source_gate.py
+      - run: PYTHONPATH=python python evidence/V033_PATCHED_TRACE_PROBE.py
+      - run: PYTHONPATH=python python scripts/provider_contract_gate.py
+      - run: PYTHONPATH=python python scripts/semantic_divergence_gate.py
+      - run: PYTHONPATH=python python scripts/run_red_team.py
+      - run: PYTHONPATH=python python scripts/run_durable_red_team.py

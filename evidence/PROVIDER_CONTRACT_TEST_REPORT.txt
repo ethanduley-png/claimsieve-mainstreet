@@ -1,0 +1,6 @@
+PROVIDER CONTRACT GATE: PASS
+Contract: stripe-api-v1-idempotency-2026-08-01
+Clauses mapped: 7
+Scenarios passed: 6/6
+Live API called: NO
+External effects created: NO

@@ -1,0 +1,58 @@
+{
+  "_type": "layout",
+  "expires": "2027-08-01T00:00:00Z",
+  "readme": "ClaimSieve v0.31 release layout template. Replace key identifiers before use.",
+  "keys": {},
+  "steps": [
+    {
+      "name": "test",
+      "expected_materials": [
+        [
+          "ALLOW",
+          "*"
+        ]
+      ],
+      "expected_products": [
+        [
+          "CREATE",
+          "evidence/*"
+        ],
+        [
+          "MODIFY",
+          "vectors/valid_evidence_bundle.json"
+        ]
+      ],
+      "pubkeys": [],
+      "expected_command": [
+        "./scripts/test_all.sh"
+      ],
+      "threshold": 1
+    },
+    {
+      "name": "package",
+      "expected_materials": [
+        [
+          "MATCH",
+          "*",
+          "WITH",
+          "PRODUCTS",
+          "FROM",
+          "test"
+        ]
+      ],
+      "expected_products": [
+        [
+          "CREATE",
+          "claimsieve_mainstreet_v0_31_trust_root.zip"
+        ]
+      ],
+      "pubkeys": [],
+      "expected_command": [
+        "python3",
+        "scripts/package_release.py"
+      ],
+      "threshold": 1
+    }
+  ],
+  "inspect": []
+}

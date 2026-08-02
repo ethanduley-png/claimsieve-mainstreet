@@ -1,0 +1,148 @@
+TAP version 13
+# Subtest: Founder OS reuses the proposal-only boundary
+ok 1 - Founder OS reuses the proposal-only boundary
+  ---
+  duration_ms: 1.539642
+  type: 'test'
+  ...
+# Subtest: Founder OS rejects a non owner/name repository
+ok 2 - Founder OS rejects a non owner/name repository
+  ---
+  duration_ms: 0.372973
+  type: 'test'
+  ...
+# Subtest: Founder OS rejects empty issue content
+ok 3 - Founder OS rejects empty issue content
+  ---
+  duration_ms: 0.158044
+  type: 'test'
+  ...
+# Subtest: Founder OS cannot inject approval or authority fields
+ok 4 - Founder OS cannot inject approval or authority fields
+  ---
+  duration_ms: 0.563946
+  type: 'test'
+  ...
+# Subtest: Founder OS manifest exposes no execution capability
+ok 5 - Founder OS manifest exposes no execution capability
+  ---
+  duration_ms: 0.78264
+  type: 'test'
+  ...
+# Subtest: prepares a frozen proposal without any transport
+ok 6 - prepares a frozen proposal without any transport
+  ---
+  duration_ms: 1.738938
+  type: 'test'
+  ...
+# Subtest: validates only a non-authoritative acknowledgement
+ok 7 - validates only a non-authoritative acknowledgement
+  ---
+  duration_ms: 0.362157
+  type: 'test'
+  ...
+# Subtest: rejects acknowledgement authority claims
+ok 8 - rejects acknowledgement authority claims
+  ---
+  duration_ms: 0.552369
+  type: 'test'
+  ...
+# Subtest: rejects caller supplied authority fields
+ok 9 - rejects caller supplied authority fields
+  ---
+  duration_ms: 0.16154
+  type: 'test'
+  ...
+# Subtest: rejects cross-tenant proposals
+ok 10 - rejects cross-tenant proposals
+  ---
+  duration_ms: 0.416548
+  type: 'test'
+  ...
+# Subtest: rejects floating point authority data
+ok 11 - rejects floating point authority data
+  ---
+  duration_ms: 0.234478
+  type: 'test'
+  ...
+# Subtest: rejects unsafe integers
+ok 12 - rejects unsafe integers
+  ---
+  duration_ms: 0.219936
+  type: 'test'
+  ...
+# Subtest: rejects non-NFC strings
+ok 13 - rejects non-NFC strings
+  ---
+  duration_ms: 0.888016
+  type: 'test'
+  ...
+# Subtest: rejects sparse arrays
+ok 14 - rejects sparse arrays
+  ---
+  duration_ms: 0.390399
+  type: 'test'
+  ...
+# Subtest: rejects accessor properties without invoking them
+ok 15 - rejects accessor properties without invoking them
+  ---
+  duration_ms: 0.474373
+  type: 'test'
+  ...
+# Subtest: rejects duplicate evidence references
+ok 16 - rejects duplicate evidence references
+  ---
+  duration_ms: 0.252925
+  type: 'test'
+  ...
+# Subtest: rejects cyclic graphs
+ok 17 - rejects cyclic graphs
+  ---
+  duration_ms: 0.289599
+  type: 'test'
+  ...
+# Subtest: rejects shared object references
+ok 18 - rejects shared object references
+  ---
+  duration_ms: 0.224593
+  type: 'test'
+  ...
+# Subtest: rejects __proto__ as an own property
+ok 19 - rejects __proto__ as an own property
+  ---
+  duration_ms: 0.243091
+  type: 'test'
+  ...
+# Subtest: rejects constructor and prototype keys at any depth
+ok 20 - rejects constructor and prototype keys at any depth
+  ---
+  duration_ms: 0.422567
+  type: 'test'
+  ...
+# Subtest: rejects unpaired Unicode surrogates
+ok 21 - rejects unpaired Unicode surrogates
+  ---
+  duration_ms: 0.177624
+  type: 'test'
+  ...
+# Subtest: acknowledgement must bind proposal and trace
+ok 22 - acknowledgement must bind proposal and trace
+  ---
+  duration_ms: 0.227407
+  type: 'test'
+  ...
+# Subtest: capability manifest contains no transport or execution capability
+ok 23 - capability manifest contains no transport or execution capability
+  ---
+  duration_ms: 0.129683
+  type: 'test'
+  ...
+1..23
+# tests 23
+# suites 0
+# pass 23
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 55.710213

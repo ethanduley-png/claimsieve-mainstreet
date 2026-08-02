@@ -1,0 +1,63 @@
+{
+  "contract_clause_count": 7,
+  "contract_id": "stripe-api-v1-idempotency-2026-08-01",
+  "contract_source_count": 3,
+  "errors": [],
+  "external_effects_created": false,
+  "gate_passed": true,
+  "live_api_called": false,
+  "passed_scenarios": 6,
+  "provider": "Stripe",
+  "release": "0.34.0",
+  "results": {
+    "cached_500_is_indeterminate": {
+      "effect_count": 1,
+      "first_status": 500,
+      "idempotent_replay": true,
+      "passed": true,
+      "replay_status": 500,
+      "terminal_outcome_established": false
+    },
+    "connection_drop_exact_replay": {
+      "creates_new_logical_attempt": false,
+      "effect_count": 1,
+      "first_transport": "network_error",
+      "idempotent_replay": true,
+      "passed": true,
+      "replay_authorized": true
+    },
+    "parameter_mutation_rejected": {
+      "claimsieve_allowed": false,
+      "passed": true,
+      "provider_error": "idempotency key reused with different endpoint or parameters",
+      "provider_rejected": true
+    },
+    "retention_expiry_duplicate_risk": {
+      "bypassed_idempotent_replay": false,
+      "claimsieve_replay_allowed": false,
+      "effect_count_after_bypass": 2,
+      "passed": true
+    },
+    "revocation_and_binding_guards": {
+      "allowed_by_mutation": {
+        "account": false,
+        "budget": false,
+        "endpoint": false,
+        "key": false,
+        "provider_guarantee": false,
+        "request": false,
+        "reservation": false,
+        "revoked": false
+      },
+      "passed": true
+    },
+    "validation_failure_not_cached": {
+      "effect_count": 1,
+      "first_status": 400,
+      "passed": true,
+      "second_idempotent_replay": false
+    }
+  },
+  "scenario_count": 6,
+  "schema_version": "claimsieve.provider_contract_test_report.v1"
+}

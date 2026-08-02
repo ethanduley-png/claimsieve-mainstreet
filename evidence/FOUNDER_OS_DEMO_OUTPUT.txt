@@ -1,0 +1,13 @@
+{
+  "automatic_retry_allowed": false,
+  "independent_outcome": "CONFIRMED_SUCCESS",
+  "ledger_errors": {
+    "decision": [],
+    "evidence": [],
+    "execution": [],
+    "proposal": []
+  },
+  "permit_id": "permit:7cd6db9fcbcd4f0eb1016e377dd075395e6ce8b807bd1631bac9c5354b0a63c7",
+  "proposal_id": "founder-proposal-001",
+  "provider_status": "timeout_unknown"
+}

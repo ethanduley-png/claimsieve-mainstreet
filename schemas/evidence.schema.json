@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://claimsieve.example/schemas/evidence.schema.json",
+  "title": "Signed ClaimSieve Evidence v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "type",
+    "source",
+    "subject",
+    "observed_at_seq",
+    "verified",
+    "content",
+    "issuer_key_id",
+    "signature"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "claimsieve.evidence.v1"
+    },
+    "type": {
+      "type": "string"
+    },
+    "source": {
+      "type": "string",
+      "pattern": "^spiffe://"
+    },
+    "subject": {
+      "type": "string"
+    },
+    "observed_at_seq": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "verified": {
+      "const": true
+    },
+    "content": {
+      "type": "object"
+    },
+    "issuer_key_id": {
+      "type": "string"
+    },
+    "signature": {
+      "type": "string",
+      "pattern": "^ed25519:[A-Za-z0-9_-]+$"
+    }
+  }
+}

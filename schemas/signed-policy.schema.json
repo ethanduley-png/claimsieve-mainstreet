@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://claimsieve.example/schemas/signed-policy.schema.json",
+  "title": "Signed ClaimSieve Policy v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "policy",
+    "signer_key_id",
+    "signature"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "claimsieve.signed_policy.v1"
+    },
+    "policy": {
+      "type": "object"
+    },
+    "signer_key_id": {
+      "type": "string"
+    },
+    "signature": {
+      "type": "string",
+      "pattern": "^ed25519:[A-Za-z0-9_-]+$"
+    }
+  }
+}

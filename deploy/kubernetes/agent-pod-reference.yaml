@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mainstreet-openclaw
+  namespace: mainstreet-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: mainstreet-openclaw
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: mainstreet-openclaw
+    spec:
+      runtimeClassName: gvisor
+      serviceAccountName: mainstreet-proposer
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      containers:
+        - name: agent
+          image: REPLACE_WITH_PINNED_OPENCLAW_IMAGE_DIGEST
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+          env:
+            - name: MAINSTREET_MODE
+              value: proposal-only
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+      volumes:
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 64Mi

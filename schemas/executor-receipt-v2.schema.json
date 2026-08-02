@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://claimsieve.local/schemas/executor-receipt-v2.schema.json",
+  "title": "ClaimSieve Executor Receipt v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "trace_id", "campaign_id", "permit_id", "reservation_id",
+    "action_digest", "request_digest", "idempotency_key", "fencing_token",
+    "containment_epoch", "provider_status", "provider_id", "attempted_at_seq",
+    "executor_key_id", "signature"
+  ],
+  "properties": {
+    "schema_version": {"const": "claimsieve.executor_receipt.v2"},
+    "trace_id": {"type": "string"},
+    "campaign_id": {"type": "string"},
+    "permit_id": {"type": "string"},
+    "reservation_id": {"type": "string"},
+    "action_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "request_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "idempotency_key": {"type": "string"},
+    "fencing_token": {"type": "integer", "minimum": 1},
+    "containment_epoch": {"type": "integer", "minimum": 0},
+    "provider_status": {"enum": ["accepted", "rejected", "timeout_unknown", "stale_fence"]},
+    "provider_id": {"type": ["string", "null"]},
+    "attempted_at_seq": {"type": "integer", "minimum": 0},
+    "executor_key_id": {"type": "string"},
+    "signature": {"type": "string"}
+  }
+}

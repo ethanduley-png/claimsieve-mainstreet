@@ -1,0 +1,8 @@
+Founder OS v0.1 product requirements were mapped onto the v0.33 authority and durable outcome boundary.
+The original HMAC authority is retained only inside the preserved input archive.
+Python tests: 170 passed.
+Node tests: 23 passed.
+Founder OS red-team scenarios: 8 blocked or detected; 0 surviving tested bypasses.
+Rust: 28 tests passed; formatting, warning-denied Clippy, and portable verification passed.
+Rocq: four compilation and audited-assumption gates passed.
+Live GitHub execution: one explicitly authorized issue created; delayed read-only reconciliation confirmed the exact permitted action digest; temporary tokens revoked.

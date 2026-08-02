@@ -1,0 +1,75 @@
+{
+  "schema_version": "claimsieve.provider_contract_snapshot.v1",
+  "contract_id": "stripe-api-v1-idempotency-2026-08-01",
+  "provider": "Stripe",
+  "retrieved_at_utc": "2026-08-02T00:25:00Z",
+  "scope": "Published API v1 POST idempotency and low-level error semantics. This is a contract-derived offline model, not a credentialed live integration.",
+  "sources": [
+    {
+      "id": "STRIPE-IDEMPOTENCY",
+      "url": "https://docs.stripe.com/api/idempotent_requests?lang=curl",
+      "authority": "official provider documentation"
+    },
+    {
+      "id": "STRIPE-ERRORS",
+      "url": "https://docs.stripe.com/error-low-level",
+      "authority": "official provider documentation"
+    },
+    {
+      "id": "STRIPE-WEBHOOKS",
+      "url": "https://docs.stripe.com/webhooks",
+      "authority": "official provider documentation"
+    }
+  ],
+  "clauses": [
+    {
+      "id": "SC-01",
+      "statement": "A POST sent with an idempotency key may be retried after a network error using the same key and identical parameters without creating a second operation inside the retention window.",
+      "source_ids": ["STRIPE-IDEMPOTENCY", "STRIPE-ERRORS"],
+      "executable_scenario": "connection_drop_exact_replay"
+    },
+    {
+      "id": "SC-02",
+      "statement": "The provider returns the first saved status code and response body for an exact replay, including a saved 500 result.",
+      "source_ids": ["STRIPE-IDEMPOTENCY", "STRIPE-ERRORS"],
+      "executable_scenario": "cached_500_is_indeterminate"
+    },
+    {
+      "id": "SC-03",
+      "statement": "Reusing a key with changed parameters is rejected.",
+      "source_ids": ["STRIPE-IDEMPOTENCY", "STRIPE-ERRORS"],
+      "executable_scenario": "parameter_mutation_rejected"
+    },
+    {
+      "id": "SC-04",
+      "statement": "Results are saved only after endpoint execution begins; pre-execution validation failures are retryable and are not modeled as a saved idempotent result.",
+      "source_ids": ["STRIPE-IDEMPOTENCY"],
+      "executable_scenario": "validation_failure_not_cached"
+    },
+    {
+      "id": "SC-05",
+      "statement": "Keys can be removed after at least 24 hours, so reuse outside the conservative 24-hour window can execute a new operation.",
+      "source_ids": ["STRIPE-IDEMPOTENCY", "STRIPE-ERRORS"],
+      "executable_scenario": "retention_expiry_duplicate_risk"
+    },
+    {
+      "id": "SC-06",
+      "statement": "A 500 response remains semantically indeterminate even when its cached response is replayed; later read-back or asynchronous events may reveal side effects.",
+      "source_ids": ["STRIPE-ERRORS", "STRIPE-WEBHOOKS"],
+      "executable_scenario": "cached_500_is_indeterminate"
+    },
+    {
+      "id": "CS-01",
+      "statement": "ClaimSieve additionally requires current authority, exact reservation identity, exact endpoint/account/request binding, and a bounded replay budget before the same transport dispatch may be replayed.",
+      "source_ids": [],
+      "executable_scenario": "revocation_and_binding_guards",
+      "classification": "ClaimSieve design constraint, not a provider guarantee"
+    }
+  ],
+  "explicit_nonclaims": [
+    "No Stripe API credential was used.",
+    "No live object, payment, customer, webhook endpoint, or external side effect was created.",
+    "The model does not establish behavior outside the cited contract or for provider incidents that violate the published contract.",
+    "Webhook delivery, signature verification, event ordering, duplication, and account-context handling are not live-tested in this release."
+  ]
+}

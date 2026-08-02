@@ -1,0 +1,14 @@
+{
+  "name": "@mainstreet/claimsieve-proposal-bridge",
+  "version": "0.34.0",
+  "private": true,
+  "type": "module",
+  "description": "Proposal-only boundary with Founder OS GitHub issue proposal slice",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test",
+    "check": "node --check src/index.js && node --check test/proposal-bridge.test.js"
+  }
+}

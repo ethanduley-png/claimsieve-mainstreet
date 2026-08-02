@@ -1,0 +1,28 @@
+From ClaimSieve Require Import Claimsieve.
+
+Print Assumptions suspended_campaign_not_executable.
+Print Assumptions missing_evidence_fails_closed.
+Print Assumptions stale_evidence_fails_closed.
+Print Assumptions objective_substitution_fails_closed.
+Print Assumptions invalid_required_approval_not_executable.
+Print Assumptions credential_event_suspends.
+Print Assumptions budget_survives_process_reset.
+Print Assumptions revocation_dominates.
+Print Assumptions consumed_permit_cannot_execute.
+Print Assumptions destination_mutation_invalidates.
+Print Assumptions action_mutation_invalidates.
+Print Assumptions decision_artifact_mutation_invalidates.
+Print Assumptions unknown_outcome_never_retries.
+Print Assumptions divergence_never_retries.
+Print Assumptions confirmed_failure_requires_new_authorization.
+Print Assumptions no_outcome_authorizes_automatic_retry.
+Print Assumptions untrusted_policy_root_fails_closed.
+Print Assumptions untrusted_evidence_root_fails_closed.
+Print Assumptions invalid_witness_fails_closed.
+Print Assumptions collapsed_roles_fail_closed.
+Print Assumptions non_allow_verdict_never_executes.
+Print Assumptions matching_predecessor_can_commit.
+Print Assumptions stale_predecessor_is_rejected.
+Print Assumptions second_same_predecessor_is_rejected_after_advance.
+Print Assumptions same_sequence_is_not_a_successor.
+Print Assumptions lower_or_equal_sequence_is_not_a_successor.

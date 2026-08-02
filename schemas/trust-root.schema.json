@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://claimsieve.example/schemas/trust-root.schema.json",
+  "title": "External ClaimSieve Trust Root v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "root_id",
+    "keys",
+    "roles"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "claimsieve.trust_root.v1"
+    },
+    "root_id": {
+      "type": "string"
+    },
+    "keys": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^ed25519-pub:[A-Za-z0-9_-]+$"
+      }
+    },
+    "roles": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "array",
+        "minItems": 1,
+        "uniqueItems": true,
+        "items": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

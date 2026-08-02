@@ -1,0 +1,3 @@
+/mnt/data/_merge_work/claimsieve_mainstreet_v0_34_founder_operations_boundary/vectors/valid_evidence_bundle.json
+/mnt/data/_merge_work/claimsieve_mainstreet_v0_34_founder_operations_boundary/trust/fixture-trust-root.json
+sha256:7a39c201135c7cb875f4a1a9acdff2cf1c2ede9a8752dda8fae9c2f6c2fb221e

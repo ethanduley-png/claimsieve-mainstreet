@@ -1,0 +1,6 @@
+RUST TOOLCHAIN: PASS
+rustc 1.90.0 (project-pinned GNU toolchain)
+cargo fmt --all -- --check: PASS
+cargo clippy --workspace --all-targets --all-features -- -D warnings: PASS
+cargo test --workspace --all-features: PASS (28 tests and documentation tests)
+v0.34 evidence-bundle verification against external trust root: PASS

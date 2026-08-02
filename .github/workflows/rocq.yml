@@ -10,8 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: rocq/rocq-prover:9.2
+      options: --user 0
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: rocq compile -Q . ClaimSieve Claimsieve.v
         working-directory: rocq
       - run: rocq compile -Q . ClaimSieve DurableState.v

@@ -1,0 +1,59 @@
+{
+  "schema_version": "claimsieve.execution_assurance_profile.v1",
+  "profile_id": "claimsieve-open-execution-assurance-v1",
+  "status": "candidate",
+  "scope": "Provider-neutral invariants for consequential action execution. This profile defines observable behavior, not a claim that every production deployment satisfies the threat model.",
+  "invariants": [
+    {
+      "id": "OEA-001",
+      "name": "proposal_is_not_authority",
+      "requirement": "A proposal alone MUST NOT authorize execution. Execution requires a valid permit bound to the evaluated proposal and decision."
+    },
+    {
+      "id": "OEA-002",
+      "name": "exact_action_binding",
+      "requirement": "A permit MUST bind the exact action, destination, and parameters. Post-authorization mutation MUST be rejected before dispatch."
+    },
+    {
+      "id": "OEA-003",
+      "name": "one_use_authority",
+      "requirement": "A permit for a consequential action MUST be consumable at most once as a logical action authority."
+    },
+    {
+      "id": "OEA-004",
+      "name": "unknown_is_not_success_or_failure",
+      "requirement": "Ambiguous transport or incomplete provider evidence MUST remain OUTCOME_UNKNOWN until independent evidence resolves it."
+    },
+    {
+      "id": "OEA-005",
+      "name": "independent_outcome_authority",
+      "requirement": "Executor output MUST NOT be terminal outcome authority. Independently readable provider evidence determines reconciliation."
+    },
+    {
+      "id": "OEA-006",
+      "name": "divergence_contains_authority",
+      "requirement": "An independently observed effect that differs from the authorized action MUST be classified DIVERGENT_EFFECT and trigger containment for the affected campaign."
+    },
+    {
+      "id": "OEA-007",
+      "name": "no_automatic_logical_retry",
+      "requirement": "No reconciliation result, including failure or unknown, MUST automatically authorize a new logical action attempt."
+    },
+    {
+      "id": "OEA-008",
+      "name": "separate_evidence_chains",
+      "requirement": "Proposal, evidence, decision, and execution records MUST remain separately identifiable and independently chain-verifiable in the reference profile."
+    }
+  ],
+  "reference_tests": {
+    "python": "python/tests/test_execution_assurance_profile.py"
+  },
+  "known_out_of_scope": [
+    "multi-node consensus",
+    "hardware-backed key isolation",
+    "infrastructure-independent observer deployment",
+    "provider correctness",
+    "human comprehension or legal sufficiency of approval",
+    "complete Rust observer-receipt v2 parity"
+  ]
+}

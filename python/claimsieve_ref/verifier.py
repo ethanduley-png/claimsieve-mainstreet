@@ -270,6 +270,11 @@ def verify_bundle(bundle: dict[str, Any], trust_root: dict[str, Any] | None = No
 
     executor_receipts: list[dict[str, Any]] = []
     observer_receipts: list[dict[str, Any]] = []
+    observer_v2_fields = {
+        "schema_version", "reservation_id", "permit_id", "campaign_id",
+        "provider_record_digest", "observed_action_digest", "reconciliation",
+        "receipt_conflict", "observed_at_seq", "observer_key_id", "signature",
+    }
     for receipt in receipts:
         if not isinstance(receipt, dict):
             errors.append("receipt must be an object")
@@ -283,11 +288,14 @@ def verify_bundle(bundle: dict[str, Any], trust_root: dict[str, Any] | None = No
                 "executor-receipt-v1", unsigned, receipt.get("signature"), "executor receipt",
             )
             _require_recorded(errors, ledgers, "execution", "EXECUTOR_RECEIPT", receipt, "executor receipt")
-        elif schema == "claimsieve.observer_receipt.v1":
+        elif schema in {"claimsieve.observer_receipt.v1", "claimsieve.observer_receipt.v2"}:
             observer_receipts.append(receipt)
+            if schema == "claimsieve.observer_receipt.v2" and set(receipt) != observer_v2_fields:
+                errors.append("observer receipt v2 fields do not exactly match schema")
             _verify_signature(
                 errors, keys, trust_root, "observer_signers", receipt.get("observer_key_id"),
-                "observer-receipt-v1", unsigned, receipt.get("signature"), "observer receipt",
+                "observer-receipt-v2" if schema.endswith(".v2") else "observer-receipt-v1",
+                unsigned, receipt.get("signature"), "observer receipt",
             )
             _require_recorded(errors, ledgers, "execution", "OBSERVER_RECEIPT", receipt, "observer receipt")
         elif schema == "claimsieve.containment_receipt.v1":
@@ -305,17 +313,57 @@ def verify_bundle(bundle: dict[str, Any], trust_root: dict[str, Any] | None = No
         if executor_receipts and executor_receipts[0].get("action_digest") != permit.get("action_digest"):
             errors.append("executor receipt action digest mismatch")
         if executor_receipts and observer_receipts:
-            if observer_receipts[0].get("executor_receipt_digest") != digest(executor_receipts[0]):
-                errors.append("observer receipt is not bound to executor receipt")
-            observed = observer_receipts[0].get("observed_action_digest")
-            reconciliation = observer_receipts[0].get("reconciliation")
+            observer = observer_receipts[0]
+            schema = observer.get("schema_version")
+            if schema == "claimsieve.observer_receipt.v1":
+                if observer.get("executor_receipt_digest") != digest(executor_receipts[0]):
+                    errors.append("observer receipt is not bound to executor receipt")
+            else:
+                if observer.get("permit_id") != permit.get("permit_id"):
+                    errors.append("observer receipt permit mismatch")
+                if observer.get("campaign_id") != permit.get("campaign_id"):
+                    errors.append("observer receipt campaign mismatch")
+                matching_reservation = next(
+                    (record.get("payload") for record in reservation_records
+                     if isinstance(record.get("payload"), dict)
+                     and record.get("payload", {}).get("permit_id") == permit.get("permit_id")),
+                    None,
+                )
+                if matching_reservation is None or observer.get("reservation_id") != matching_reservation.get("reservation_id"):
+                    errors.append("observer receipt reservation mismatch")
+                provider_record_digest = observer.get("provider_record_digest")
+                reconciliation = observer.get("reconciliation")
+                conflict = observer.get("receipt_conflict")
+                if not isinstance(conflict, bool):
+                    errors.append("observer receipt conflict flag must be boolean")
+                if provider_record_digest is None:
+                    if reconciliation != "OUTCOME_UNKNOWN":
+                        errors.append("observer receipt without provider record must remain OUTCOME_UNKNOWN")
+                    if observer.get("observed_action_digest") is not None:
+                        errors.append("observer receipt without provider record cannot contain observed action")
+                    if conflict is not False:
+                        errors.append("observer receipt without provider record cannot claim conflict")
+                elif not isinstance(provider_record_digest, str):
+                    errors.append("observer provider record digest must be string or null")
+                if reconciliation in {"CONFIRMED_SUCCESS", "CONFIRMED_FAILURE", "DIVERGENT_EFFECT"} and provider_record_digest is None:
+                    errors.append("confirmed observer outcome requires provider record digest")
+                if conflict is True and provider_record_digest is None:
+                    errors.append("observer receipt conflict requires provider record digest")
+
+            observed = observer.get("observed_action_digest")
+            reconciliation = observer.get("reconciliation")
             exact = digest(proposal.get("action"))
             if reconciliation == "CONFIRMED_SUCCESS" and observed != exact:
                 errors.append("successful observation does not match authorized action")
             if reconciliation == "DIVERGENT_EFFECT" and observed in {None, exact}:
                 errors.append("divergent observation lacks a divergent action digest")
-            if reconciliation in {"CONFIRMED_FAILURE", "OUTCOME_UNKNOWN"} and observed is not None:
-                errors.append("non-observed outcome unexpectedly contains an action digest")
+            if reconciliation == "CONFIRMED_FAILURE" and observed is not None:
+                errors.append("failed observation unexpectedly contains an action digest")
+            if reconciliation == "OUTCOME_UNKNOWN" and observed is not None:
+                if schema != "claimsieve.observer_receipt.v2" or observer.get("receipt_conflict") is not True:
+                    errors.append("unknown observation contains an action digest without conflict evidence")
+            if reconciliation not in {"CONFIRMED_SUCCESS", "CONFIRMED_FAILURE", "DIVERGENT_EFFECT", "OUTCOME_UNKNOWN"}:
+                errors.append("observer receipt reconciliation is invalid")
 
     unsigned_manifest = {key: value for key, value in manifest.items() if key != "bundle_digest"}
     if manifest.get("bundle_digest") != digest(unsigned_manifest):

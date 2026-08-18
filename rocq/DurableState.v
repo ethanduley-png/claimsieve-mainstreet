@@ -259,6 +259,77 @@ Proof.
   destruct claim; reflexivity.
 Qed.
 
+(** Reconciliation and containment are separate decisions. Provider conflict
+    remains OutcomeUnknown but still requires containment, while an independently
+    observed divergent effect both reconciles as DivergentEffect and requires
+    containment. This prevents a terminal classification from silently leaving
+    authority active. *)
+Definition observation_requires_containment
+  (observation : provider_observation) : bool :=
+  match observation with
+  | ProviderAcceptedDivergent => true
+  | ProviderConflicting => true
+  | _ => false
+  end.
+
+Definition campaign_active_after_observation
+  (was_active : bool)
+  (observation : provider_observation) : bool :=
+  was_active && negb (observation_requires_containment observation).
+
+Theorem divergent_provider_observation_requires_containment :
+  observation_requires_containment ProviderAcceptedDivergent = true.
+Proof.
+  reflexivity.
+Qed.
+
+Theorem conflicting_provider_observation_requires_containment :
+  observation_requires_containment ProviderConflicting = true.
+Proof.
+  reflexivity.
+Qed.
+
+Theorem contained_observation_cannot_leave_campaign_active :
+  forall was_active observation,
+    observation_requires_containment observation = true ->
+    campaign_active_after_observation was_active observation = false.
+Proof.
+  intros was_active observation Hcontain.
+  unfold campaign_active_after_observation.
+  rewrite Hcontain.
+  destruct was_active; reflexivity.
+Qed.
+
+Theorem divergent_effect_cannot_leave_campaign_active :
+  forall claim was_active,
+    reconcile_from_independent_provider claim ProviderAcceptedDivergent = DivergentEffect /\
+    campaign_active_after_observation was_active ProviderAcceptedDivergent = false.
+Proof.
+  intros claim was_active.
+  split.
+  - destruct claim; reflexivity.
+  - destruct was_active; reflexivity.
+Qed.
+
+Theorem conflicting_evidence_is_unknown_and_contained :
+  forall claim was_active,
+    reconcile_from_independent_provider claim ProviderConflicting = OutcomeUnknown /\
+    campaign_active_after_observation was_active ProviderConflicting = false.
+Proof.
+  intros claim was_active.
+  split.
+  - destruct claim; reflexivity.
+  - destruct was_active; reflexivity.
+Qed.
+
+Theorem exact_success_does_not_force_containment :
+  forall was_active,
+    campaign_active_after_observation was_active ProviderAcceptedExact = was_active.
+Proof.
+  intro was_active.
+  destruct was_active; reflexivity.
+Qed.
+
 (** A transport replay is not a new logical action. It is permitted only for
     the same reservation, key, request, endpoint, and account, while authority
     remains active, the provider contract guarantees idempotency, the retention

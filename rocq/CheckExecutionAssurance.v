@@ -1,0 +1,7 @@
+From ClaimSieve Require Import ExecutionAssurance.
+
+Print Assumptions suspended_campaign_blocks_dispatch.
+Print Assumptions contained_observation_blocks_dispatch.
+Print Assumptions divergent_observation_blocks_preexisting_executing_dispatch.
+Print Assumptions conflicting_observation_blocks_preexisting_executing_dispatch.
+Print Assumptions exact_success_preserves_campaign_activity.

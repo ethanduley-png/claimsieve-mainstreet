@@ -177,6 +177,27 @@ impl DurableState {
         valid_from <= sequence && sequence <= expires
     }
 
+    fn contain_campaign(&mut self, campaign_id: &str) {
+        let already_suspended = self
+            .campaigns
+            .get(campaign_id)
+            .is_some_and(|campaign| campaign.suspended);
+        if !already_suspended {
+            self.containment_epoch = self.containment_epoch.saturating_add(1);
+        }
+        let campaign = self
+            .campaigns
+            .entry(campaign_id.to_owned())
+            .or_insert_with(|| CampaignRecord {
+                campaign_id: campaign_id.to_owned(),
+                state_digest: "GENESIS".to_owned(),
+                last_sequence: 0,
+                revision: 0,
+                suspended: false,
+            });
+        campaign.suspended = true;
+    }
+
     /// Commit exactly one campaign successor.
     pub fn commit_campaign_successor(
         &mut self,
@@ -335,6 +356,11 @@ impl DurableState {
     }
 
     /// Record an authenticated independently reconciled outcome.
+    ///
+    /// A divergent independently observed effect is a containment event: the
+    /// affected campaign is suspended before this transition returns. Replaying
+    /// the same terminal divergence is idempotent and does not advance the
+    /// containment epoch again.
     pub fn reconcile(
         &mut self,
         permit_id: &str,
@@ -348,14 +374,23 @@ impl DurableState {
             .reservations
             .get_mut(permit_id)
             .ok_or(DurableStateError::ReservationNotFound)?;
+        let campaign_id = record.campaign_id.clone();
         if let Some(existing) = &record.outcome {
             if existing != &outcome {
                 return Err(DurableStateError::TerminalOutcomeRewrite);
             }
+            let should_contain = existing == &Outcome::DivergentEffect;
+            if should_contain {
+                self.contain_campaign(&campaign_id);
+            }
             return Ok(());
         }
+        let should_contain = outcome == Outcome::DivergentEffect;
         record.outcome = Some(outcome);
         record.phase = ReservationPhase::Reconciled;
+        if should_contain {
+            self.contain_campaign(&campaign_id);
+        }
         Ok(())
     }
 
@@ -365,6 +400,14 @@ impl DurableState {
         }
         if self.revoked_permits.contains(permit_id) {
             return Err(DurableStateError::PermitRevoked);
+        }
+        if let Some(reservation) = self.reservations.get(permit_id)
+            && self
+                .campaigns
+                .get(&reservation.campaign_id)
+                .is_some_and(|campaign| campaign.suspended)
+        {
+            return Err(DurableStateError::CampaignSuspended);
         }
         Ok(())
     }
@@ -457,5 +500,68 @@ mod tests {
             state.reconcile("p", Outcome::ConfirmedFailure, true),
             Err(DurableStateError::TerminalOutcomeRewrite)
         );
+    }
+
+    #[test]
+    fn divergent_effect_suspends_campaign_and_blocks_new_reservation() {
+        let mut state = DurableState::new();
+        assert!(reserve(&mut state).is_ok());
+        assert!(state.reconcile("p", Outcome::DivergentEffect, true).is_ok());
+        assert!(
+            state
+                .campaigns
+                .get("c")
+                .is_some_and(|campaign| campaign.suspended)
+        );
+        assert_eq!(state.containment_epoch, 1);
+        assert_eq!(
+            state.reserve("p2", "c", "a2", "r2", "resource", 1, 10, 3),
+            Err(DurableStateError::CampaignSuspended)
+        );
+    }
+
+    #[test]
+    fn divergent_effect_blocks_preexisting_executing_reservation() {
+        let mut state = DurableState::new();
+        assert!(reserve(&mut state).is_ok());
+        assert!(
+            state
+                .reserve("p2", "c", "a2", "r2", "resource", 1, 10, 2)
+                .is_ok()
+        );
+        assert!(state.begin_execution("p2", "executor-2", true).is_ok());
+        assert!(state.reconcile("p", Outcome::DivergentEffect, true).is_ok());
+        assert_eq!(
+            state.claim_dispatch("p2", "executor-2", true, 3),
+            Err(DurableStateError::CampaignSuspended)
+        );
+    }
+
+    #[test]
+    fn repeated_divergence_is_idempotent_for_containment_epoch() {
+        let mut state = DurableState::new();
+        assert!(reserve(&mut state).is_ok());
+        assert!(state.reconcile("p", Outcome::DivergentEffect, true).is_ok());
+        let contained_epoch = state.containment_epoch;
+        assert!(state.reconcile("p", Outcome::DivergentEffect, true).is_ok());
+        assert_eq!(state.containment_epoch, contained_epoch);
+    }
+
+    #[test]
+    fn non_divergent_outcome_does_not_suspend_campaign() {
+        let mut state = DurableState::new();
+        assert!(reserve(&mut state).is_ok());
+        assert!(
+            state
+                .reconcile("p", Outcome::ConfirmedFailure, true)
+                .is_ok()
+        );
+        assert!(
+            !state
+                .campaigns
+                .get("c")
+                .is_some_and(|campaign| campaign.suspended)
+        );
+        assert_eq!(state.containment_epoch, 0);
     }
 }

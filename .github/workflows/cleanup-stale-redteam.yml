@@ -86,17 +86,17 @@ jobs:
           '''
           text = text.replace(marker, executed_check + marker)
 
-          stale = '''    (
-              "RUST_OBSERVER_RECEIPT_WIRE_PARITY",
-              "Rust observer receipts remain v1-shaped while the executed Python durable boundary and schema use v2; native Rust and Rocq gates do not remove this wire-format divergence.",
-              "observer receipt v2 validates and matches Python semantics",
-              "Cross-implementation receipt consumers can disagree",
-              "Upgrade the Rust observer receipt and add schema/differential fixtures.",
-          ),
-          '''
-          if text.count(stale) != 1:
-              raise SystemExit('stale limitation anchor changed')
-          text = text.replace(stale, '')
+          stale_start = '    (\n        "RUST_OBSERVER_RECEIPT_WIRE_PARITY",\n'
+          start = text.find(stale_start)
+          if start < 0:
+              raise SystemExit('stale limitation start anchor changed')
+          end = text.find('    ),\n', start)
+          if end < 0:
+              raise SystemExit('stale limitation end anchor changed')
+          end += len('    ),\n')
+          text = text[:start] + text[end:]
+          if 'RUST_OBSERVER_RECEIPT_WIRE_PARITY' in text:
+              raise SystemExit('stale limitation remains after deletion')
           path.write_text(text, encoding='utf-8')
           PY
       - name: Execute durable red team and verify evidence

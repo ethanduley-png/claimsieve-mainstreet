@@ -43,16 +43,43 @@ def evidence_files() -> list[Path]:
     return sorted(result, key=lambda p: p.relative_to(EVIDENCE).as_posix())
 
 
-def source_commit() -> str | None:
-    value = os.environ.get("GITHUB_SHA")
-    if value:
-        return value
+def git_head() -> str | None:
     try:
         return subprocess.check_output(
             ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True, stderr=subprocess.DEVNULL
         ).strip()
     except (OSError, subprocess.CalledProcessError):
         return None
+
+
+def github_event() -> dict[str, object]:
+    event_path = os.environ.get("GITHUB_EVENT_PATH")
+    if not event_path:
+        return {}
+    try:
+        value = json.loads(Path(event_path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return value if isinstance(value, dict) else {}
+
+
+def source_identity() -> dict[str, str | None]:
+    event = github_event()
+    pull_request = event.get("pull_request")
+    head_sha = None
+    base_sha = None
+    if isinstance(pull_request, dict):
+        head = pull_request.get("head")
+        base = pull_request.get("base")
+        if isinstance(head, dict) and isinstance(head.get("sha"), str):
+            head_sha = head["sha"]
+        if isinstance(base, dict) and isinstance(base.get("sha"), str):
+            base_sha = base["sha"]
+    return {
+        "tested_tree_commit": os.environ.get("GITHUB_SHA") or git_head(),
+        "pull_request_head_sha": head_sha,
+        "pull_request_base_sha": base_sha,
+    }
 
 
 def archive_entry(name: str, *, executable: bool = False) -> zipfile.ZipInfo:
@@ -77,9 +104,9 @@ def main() -> int:
     payload_digest = sha256_file(payload)
     selected = evidence_files()
     reference = {
-        "schema_version": "claimsieve.assurance-payload-reference.v1",
+        "schema_version": "claimsieve.assurance-payload-reference.v2",
         "payload": {"name": payload.name, "sha256": payload_digest},
-        "source_commit": source_commit(),
+        "source": source_identity(),
         "workflow": {
             "repository": os.environ.get("GITHUB_REPOSITORY"),
             "run_id": os.environ.get("GITHUB_RUN_ID"),

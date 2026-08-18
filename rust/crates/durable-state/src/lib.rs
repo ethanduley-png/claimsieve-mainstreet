@@ -401,6 +401,14 @@ impl DurableState {
         if self.revoked_permits.contains(permit_id) {
             return Err(DurableStateError::PermitRevoked);
         }
+        if let Some(reservation) = self.reservations.get(permit_id)
+            && self
+                .campaigns
+                .get(&reservation.campaign_id)
+                .is_some_and(|campaign| campaign.suspended)
+        {
+            return Err(DurableStateError::CampaignSuspended);
+        }
         Ok(())
     }
 }
@@ -503,6 +511,23 @@ mod tests {
         assert_eq!(state.containment_epoch, 1);
         assert_eq!(
             state.reserve("p2", "c", "a2", "r2", "resource", 1, 10, 3),
+            Err(DurableStateError::CampaignSuspended)
+        );
+    }
+
+    #[test]
+    fn divergent_effect_blocks_preexisting_executing_reservation() {
+        let mut state = DurableState::new();
+        assert!(reserve(&mut state).is_ok());
+        assert!(
+            state
+                .reserve("p2", "c", "a2", "r2", "resource", 1, 10, 2)
+                .is_ok()
+        );
+        assert!(state.begin_execution("p2", "executor-2", true).is_ok());
+        assert!(state.reconcile("p", Outcome::DivergentEffect, true).is_ok());
+        assert_eq!(
+            state.claim_dispatch("p2", "executor-2", true, 3),
             Err(DurableStateError::CampaignSuspended)
         );
     }

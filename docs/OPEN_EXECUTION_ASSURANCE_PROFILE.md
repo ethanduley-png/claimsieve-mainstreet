@@ -82,7 +82,9 @@ Terminal reconciliation MUST be based on independently readable provider evidenc
 
 If independently observed external state differs from the authorized action, the system MUST classify the effect as `DIVERGENT_EFFECT` rather than success.
 
-The reference profile requires containment of the affected campaign after a divergent effect or internally contradictory provider evidence.
+The full candidate profile requires containment of the affected campaign after a divergent effect or internally contradictory provider evidence.
+
+**Current reference status: partial.** The durable Python Founder OS path correctly emits `DIVERGENT_EFFECT`, but the August 17, 2026 conformance run showed that it does not yet suspend the campaign afterward. The older in-memory runtime does suspend on divergence. The conformance suite preserves this difference as an expected failure rather than silently claiming parity.
 
 ### OEA-007 — No automatic new logical retry
 
@@ -116,7 +118,7 @@ The normal repository gate also discovers this suite:
 PYTHONPATH=python python -m unittest discover -s python/tests -v
 ```
 
-The tests exercise the existing v0.34 durable Founder OS slice as a concrete adapter. Passing those tests demonstrates the listed reference behaviors for the tested simulator scenarios. It does **not** establish that every provider integration or production deployment satisfies the profile.
+The tests exercise the existing v0.34 durable Founder OS slice as a concrete adapter. Passing the suite demonstrates the listed implemented behaviors for the tested simulator scenarios. The OEA-006 durable containment assertion is deliberately marked as an expected failure until that parity gap is closed. A green CI run therefore does **not** mean the durable reference implementation fully conforms to every normative clause in this candidate profile.
 
 ## Existing implementation mapping
 
@@ -128,7 +130,8 @@ The current v0.34 code already contains the main building blocks needed for this
 - a restricted executor;
 - a separately keyed observer;
 - explicit `OUTCOME_UNKNOWN` semantics;
-- divergent-effect containment;
+- divergent-effect detection;
+- containment for contradictory provider evidence, with durable divergent-effect containment still requiring parity work;
 - four signed ledger chains;
 - external trust-root verification in the portable verifier;
 - Rust and Rocq assurance work with documented proof boundaries.
@@ -139,6 +142,7 @@ This profile therefore formalizes an existing architectural direction rather tha
 
 The candidate profile does not erase existing limitations. In particular:
 
+- the durable Python path detects `DIVERGENT_EFFECT` but does not yet suspend the affected campaign, unlike the older in-memory runtime;
 - the Rust runtime still emits observer receipt v1 rather than the complete Python/schema v2 receipt;
 - observer independence is logical in the reference deployment, not an independent infrastructure failure domain;
 - the SQLite durable boundary is not distributed consensus;

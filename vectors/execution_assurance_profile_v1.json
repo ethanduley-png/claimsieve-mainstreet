@@ -61,7 +61,6 @@
     "hardware-backed key isolation",
     "infrastructure-independent observer deployment",
     "provider correctness",
-    "human comprehension or legal sufficiency of approval",
-    "complete Rust observer-receipt v2 parity"
+    "human comprehension or legal sufficiency of approval"
   ]
 }

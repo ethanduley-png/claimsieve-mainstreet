@@ -26,6 +26,7 @@ from claimsieve_ref.durable_state import (  # noqa: E402
 from claimsieve_ref.fixtures import evidence, keypairs, policy, proposal, signed_policy  # noqa: E402
 from claimsieve_ref.kernel import evaluate  # noqa: E402
 from claimsieve_ref.runtime import Authority  # noqa: E402
+from claimsieve_ref.verifier import verify_bundle  # noqa: E402
 
 REPORT: list[dict[str, Any]] = []
 
@@ -621,6 +622,52 @@ record(
     "DETERMINISTIC_MODEL",
 )
 
+# 26. Shared observer receipt v2 wire contract.
+v2_bundle = json.loads(
+    (ROOT / "vectors" / "valid_evidence_bundle_observer_v2.json").read_text(encoding="utf-8")
+)
+v2_schema = json.loads(
+    (ROOT / "schemas" / "observer-receipt-v2.schema.json").read_text(encoding="utf-8")
+)
+trust_root = json.loads(
+    (ROOT / "trust" / "fixture-trust-root.json").read_text(encoding="utf-8")
+)
+v2_receipts = [
+    item
+    for item in v2_bundle.get("receipts", [])
+    if isinstance(item, dict)
+    and item.get("schema_version") == "claimsieve.observer_receipt.v2"
+]
+v2_receipt = v2_receipts[0] if len(v2_receipts) == 1 else None
+v2_required = set(v2_schema.get("required", []))
+v2_fields = set(v2_receipt) if isinstance(v2_receipt, dict) else set()
+v2_errors = verify_bundle(v2_bundle, trust_root)
+v2_contract_ok = (
+    isinstance(v2_receipt, dict)
+    and v2_fields == v2_required
+    and v2_schema.get("additionalProperties") is False
+    and v2_schema.get("properties", {})
+    .get("schema_version", {})
+    .get("const") == "claimsieve.observer_receipt.v2"
+    and not v2_errors
+)
+record(
+    "OBSERVER_RECEIPT_V2_WIRE_DIVERGENCE",
+    "shared v2 vector exactly matches the authoritative schema and portable verifier semantics",
+    (
+        f"receipts={len(v2_receipts)}, exact_fields={v2_fields == v2_required}, "
+        f"verifier_errors={v2_errors}"
+    ),
+    "BLOCKED" if v2_contract_ok else "BYPASS",
+    "Cross-implementation receipt consumers can disagree",
+    {
+        "schema_required": sorted(v2_required),
+        "receipt_fields": sorted(v2_fields),
+        "verifier_errors": v2_errors,
+    },
+    "Authoritative v2 schema plus one shared signed vector; the strict Rust workflow consumes the same vector.",
+)
+
 # Honest limitations.
 for name, detail, expected, impact, control in [
     (
@@ -643,13 +690,6 @@ for name, detail, expected, impact, control in [
         "validate in deployed infrastructure",
         "Infrastructure-specific failure remains untested",
         "Required before live consequential execution.",
-    ),
-    (
-        "RUST_OBSERVER_RECEIPT_WIRE_PARITY",
-        "Rust observer receipts remain v1-shaped while the executed Python durable boundary and schema use v2; native Rust and Rocq gates do not remove this wire-format divergence.",
-        "observer receipt v2 validates and matches Python semantics",
-        "Cross-implementation receipt consumers can disagree",
-        "Upgrade the Rust observer receipt and add schema/differential fixtures.",
     ),
 ]:
     record(

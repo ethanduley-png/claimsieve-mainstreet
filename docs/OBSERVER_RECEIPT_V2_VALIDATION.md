@@ -12,7 +12,7 @@ The validation path intentionally uses multiple boundaries:
 2. The portable Python verifier rejects unknown fields, invalid signatures, broken reservation/campaign/permit bindings, and invalid provider-record/outcome combinations.
 3. The Rust protocol and runtime use the same v2 field shape and `observer-receipt-v2` signing domain.
 4. The Rust portable verifier consumes the Python-generated shared v2 evidence bundle rather than a Rust-only self-generated fixture.
-5. The durable red-team gate checks that the committed v2 vector has exactly the authoritative schema fields and passes the portable verifier.
+5. The durable red-team gate executes the shared v2 contract check: it requires exactly one v2 receipt, an exact match to the authoritative schema fields, and zero portable-verifier errors. The validated run reports 29 scenarios, 26 blocked or detected, 0 bypasses, and 3 infrastructure limitations.
 6. The strict Rust workflow independently runs formatting, Clippy with warnings denied, and workspace tests that include the shared vector.
 
 This is evidence of tested cross-language receipt-contract parity for the covered fixture and adversarial cases. It is not a claim that provider behavior, cryptography, transport, database durability, or observer infrastructure independence has been formally proven.

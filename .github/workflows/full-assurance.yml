@@ -34,8 +34,10 @@ jobs:
               cd /tmp/claimsieve-rocq
               rocq compile -Q . ClaimSieve Claimsieve.v
               rocq compile -Q . ClaimSieve DurableState.v
+              rocq compile -Q . ClaimSieve ExecutionAssurance.v
               rocq compile -Q . ClaimSieve Check.v
               rocq compile -Q . ClaimSieve CheckDurableState.v
+              rocq compile -Q . ClaimSieve CheckExecutionAssurance.v
             ' 2>&1 | tee evidence/ci-rocq/ROCQ_OUTPUT.txt
       - run: python scripts/package_release.py
       - run: python scripts/validate_release_archive.py ../claimsieve_mainstreet_v0_34_founder_operations_boundary.zip

@@ -507,7 +507,12 @@ mod tests {
         let mut state = DurableState::new();
         assert!(reserve(&mut state).is_ok());
         assert!(state.reconcile("p", Outcome::DivergentEffect, true).is_ok());
-        assert!(state.campaigns.get("c").is_some_and(|campaign| campaign.suspended));
+        assert!(
+            state
+                .campaigns
+                .get("c")
+                .is_some_and(|campaign| campaign.suspended)
+        );
         assert_eq!(state.containment_epoch, 1);
         assert_eq!(
             state.reserve("p2", "c", "a2", "r2", "resource", 1, 10, 3),
@@ -546,8 +551,17 @@ mod tests {
     fn non_divergent_outcome_does_not_suspend_campaign() {
         let mut state = DurableState::new();
         assert!(reserve(&mut state).is_ok());
-        assert!(state.reconcile("p", Outcome::ConfirmedFailure, true).is_ok());
-        assert!(!state.campaigns.get("c").is_some_and(|campaign| campaign.suspended));
+        assert!(
+            state
+                .reconcile("p", Outcome::ConfirmedFailure, true)
+                .is_ok()
+        );
+        assert!(
+            !state
+                .campaigns
+                .get("c")
+                .is_some_and(|campaign| campaign.suspended)
+        );
         assert_eq!(state.containment_epoch, 0);
     }
 }

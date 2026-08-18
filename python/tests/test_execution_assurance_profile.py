@@ -138,14 +138,8 @@ class OpenExecutionAssuranceProfileTests(unittest.TestCase):
         self.assertIsNotNone(result.observation["provider_record_digest"])
         self.assertIsNotNone(result.observation["observed_action_digest"])
 
-    @unittest.expectedFailure
     def test_oea_006_durable_reference_contains_divergent_campaign(self) -> None:
-        """Known v0.34 parity gap: durable observer detects divergence but does not suspend.
-
-        The older in-memory runtime contains on divergent effect. Keeping this as
-        an expected failure prevents the open profile from silently claiming that
-        the durable Founder OS path already enforces the same containment rule.
-        """
+        """Independent divergence atomically suspends the durable campaign."""
         workflow = self.workflow("divergent", suffix="contain")
         request = self.request("contain")
         prepared = workflow.prepare_issue(request)

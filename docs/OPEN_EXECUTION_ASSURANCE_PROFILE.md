@@ -86,7 +86,7 @@ If independently observed external state differs from the authorized action, the
 
 The full candidate profile requires containment of the affected campaign after a divergent effect or internally contradictory provider evidence.
 
-**Current reference status: partial.** The durable Python Founder OS path correctly emits `DIVERGENT_EFFECT`, but the August 17, 2026 conformance run showed that it does not yet suspend the campaign afterward. The Rust durable-state path does suspend and prevents pre-existing executing reservations from crossing the dispatch boundary after containment. The conformance suite preserves the Python difference as an expected failure rather than silently claiming parity.
+**Current reference status: demonstrated in both durable reference paths.** The durable Python and Rust state boundaries suspend the affected campaign on independently observed divergence. The Python path records reconciliation and containment in one SQLite transaction, advances the containment epoch only on the first suspension, and rechecks campaign status at reservation, executor claim, and dispatch. Tests also cover a permit that was already in `EXECUTING` state before another action exposed divergence.
 
 ### OEA-007 — No automatic new logical retry
 
@@ -120,7 +120,7 @@ The normal repository gate also discovers this suite:
 PYTHONPATH=python python -m unittest discover -s python/tests -v
 ```
 
-The tests exercise the existing v0.34 durable Founder OS slice as a concrete adapter. Passing the suite demonstrates the listed implemented behaviors for the tested simulator scenarios. The OEA-006 durable Python containment assertion is deliberately marked as an expected failure until that parity gap is closed. A green CI run therefore does **not** mean the durable Python reference implementation fully conforms to every normative clause in this candidate profile.
+The tests exercise the existing v0.34 durable Founder OS slice as a concrete adapter. Passing the suite demonstrates the listed implemented behaviors for the tested simulator scenarios. OEA-006 now includes durable Python divergence containment, idempotent repeated containment, and a pre-existing executing-reservation dispatch block. A green CI run remains evidence only for the modeled and executed scenarios; it is not a claim of complete production safety.
 
 ## Observer receipt v2 interoperability
 
@@ -168,7 +168,7 @@ The current v0.34 code contains the main building blocks needed for this profile
 - a shared Python-generated v2 vector consumed by the Rust verifier;
 - explicit `OUTCOME_UNKNOWN` semantics;
 - divergent-effect detection;
-- Rust durable containment for divergent and contradictory provider evidence, with durable Python campaign-suspension parity still requiring work;
+- durable Rust and Python containment for divergent and contradictory independent provider evidence;
 - four signed ledger chains;
 - external trust-root verification in the portable verifier;
 - deterministic release-payload packaging separated from run-specific assurance evidence;
@@ -180,7 +180,6 @@ This profile therefore formalizes an existing architectural direction rather tha
 
 The candidate profile does not erase existing limitations. In particular:
 
-- the durable Python path detects `DIVERGENT_EFFECT` but does not yet suspend the affected campaign;
 - observer independence is logical in the reference deployment, not an independent infrastructure failure domain;
 - the SQLite durable boundary is not distributed consensus;
 - provider records can be incomplete, stale, false, or semantically misleading;

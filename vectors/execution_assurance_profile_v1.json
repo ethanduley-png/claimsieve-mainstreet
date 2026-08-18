@@ -38,8 +38,7 @@
       "id": "OEA-006",
       "name": "divergence_contains_authority",
       "requirement": "An independently observed effect that differs from the authorized action MUST be classified DIVERGENT_EFFECT and trigger containment for the affected campaign.",
-      "reference_status": "partial",
-      "known_gap": "The durable Python Founder OS path classifies DIVERGENT_EFFECT but does not yet suspend the campaign. The older in-memory runtime does suspend on divergent effect."
+      "reference_status": "demonstrated"
     },
     {
       "id": "OEA-007",

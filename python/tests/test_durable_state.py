@@ -289,6 +289,113 @@ class DurableStateTest(unittest.TestCase):
         observation = observer.reconcile(result["reservation"]["reservation_id"], self.prop, 12)
         self.assertEqual(observation["reconciliation"], "DIVERGENT_EFFECT")
 
+        self.assertEqual(
+            self.state.read_campaign(self.prop["campaign_id"]).state.status,
+            "SUSPENDED",
+        )
+
+    def test_divergent_containment_is_idempotent(self) -> None:
+        provider = DurableProviderSimulator(self.provider_path, "divergent")
+        executor = DurableExecutor(
+            self.state, provider, self.executor.authority_keys, self.executor.executor_key
+        )
+        result = executor.execute(
+            self.permit, self.prop, self.signed, self.ev, self.decision.document, 11
+        )
+        observer = IndependentObserver(
+            self.state, provider, self.observer.observer_key
+        )
+        epoch_before = self.state.containment_status()["epoch"]
+        observer.reconcile(result["reservation"]["reservation_id"], self.prop, 12)
+        first = self.state.read_campaign(self.prop["campaign_id"])
+        epoch_after_first = self.state.containment_status()["epoch"]
+        suspension_events_after_first = [
+            event
+            for event in self.state.journal()
+            if event["event_type"] == "CAMPAIGN_SUSPENDED"
+            and event["object_id"] == self.prop["campaign_id"]
+        ]
+
+        observer.reconcile(result["reservation"]["reservation_id"], self.prop, 13)
+        second = self.state.read_campaign(self.prop["campaign_id"])
+        epoch_after_second = self.state.containment_status()["epoch"]
+        suspension_events_after_second = [
+            event
+            for event in self.state.journal()
+            if event["event_type"] == "CAMPAIGN_SUSPENDED"
+            and event["object_id"] == self.prop["campaign_id"]
+        ]
+
+        self.assertEqual(epoch_after_first, epoch_before + 1)
+        self.assertEqual(epoch_after_second, epoch_after_first)
+        self.assertEqual(second.fencing_token, first.fencing_token)
+        self.assertEqual(len(suspension_events_after_first), 1)
+        self.assertEqual(len(suspension_events_after_second), 1)
+
+    def test_divergence_blocks_preexisting_executing_reservation(self) -> None:
+        first = self.state.reserve(self.permit, self.prop, 11)
+        self.assertIsNotNone(first)
+        first_id = str(first["reservation_id"])
+        self.state.begin_execution(
+            first_id,
+            self.executor.executor_id,
+            11,
+            self.executor._signed_command("BEGIN_EXECUTION", first_id, 11),
+        )
+
+        ev2, prop2, _, signed2, decision2, permit2 = _issue(
+            self.state, 12, "33" * 24
+        )
+        provider = DurableProviderSimulator(self.provider_path, "divergent")
+        executor = DurableExecutor(
+            self.state, provider, self.executor.authority_keys, self.executor.executor_key
+        )
+        second = executor.execute(
+            permit2, prop2, signed2, ev2, decision2.document, 13
+        )
+        observer = IndependentObserver(
+            self.state, provider, self.observer.observer_key
+        )
+        observer.reconcile(second["reservation"]["reservation_id"], prop2, 14)
+
+        with self.assertRaisesRegex(DurableStateError, "campaign suspended"):
+            self.state.claim_dispatch(
+                first_id,
+                15,
+                self.executor._signed_command("CLAIM_DISPATCH", first_id, 15),
+            )
+
+    def test_receipt_conflict_flag_alone_does_not_suspend_campaign(self) -> None:
+        result = self.executor.execute(
+            self.permit, self.prop, self.signed, self.ev, self.decision.document, 11
+        )
+        reservation_id = str(result["reservation"]["reservation_id"])
+        provider_record = self.provider.query(str(result["reservation"]["idempotency_key"]))
+        self.assertIsNotNone(provider_record)
+        unsigned = {
+            "schema_version": "claimsieve.observer_receipt.v2",
+            "reservation_id": reservation_id,
+            "permit_id": self.permit["permit_id"],
+            "campaign_id": self.permit["campaign_id"],
+            "provider_record_digest": digest(provider_record),
+            "observed_action_digest": digest(self.prop["action"]),
+            "reconciliation": "CONFIRMED_SUCCESS",
+            "receipt_conflict": True,
+            "observed_at_seq": 12,
+            "observer_key_id": self.keys["observer"].key_id,
+        }
+        observation = {
+            **unsigned,
+            "signature": self.keys["observer"].sign("observer-receipt-v2", unsigned),
+        }
+        epoch_before = self.state.containment_status()["epoch"]
+        self.state.record_observation(reservation_id, observation, 12)
+        self.assertEqual(
+            self.state.read_campaign(self.prop["campaign_id"]).state.status,
+            "ACTIVE",
+        )
+        self.assertEqual(self.state.containment_status()["epoch"], epoch_before)
+
     def test_revocation_before_dispatch_commit_blocks(self) -> None:
         def revoke() -> None:
             self.state.revoke_permit(self.permit["permit_id"], "operator stop", 11)

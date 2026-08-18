@@ -56,17 +56,19 @@ The repository has strong schemas and architecture documents, but it did not exp
 
 ### 4. Durable divergence-containment parity
 
-The new conformance gate exposed a real semantic inconsistency. The durable Python observer classifies an independently observed mutated effect as `DIVERGENT_EFFECT`, but it does not suspend the campaign afterward. The older in-memory runtime does.
+The conformance gate originally exposed a real semantic inconsistency: the durable Python observer classified an independently observed mutated effect as `DIVERGENT_EFFECT` but did not suspend the campaign. That parity gap is now closed in the reference implementation.
 
-This should be fixed before claiming the durable Founder OS path fully enforces the profile's divergence-containment invariant. The test remains an explicit expected failure until the implementation is aligned.
+Python reconciliation and containment are committed in one SQLite transaction. First containment advances the containment epoch once, repeated terminal divergence is idempotent, and campaign status is rechecked at reservation, executor claim, and dispatch. The conformance tests include a reservation that was already executing before another action exposed divergence.
 
 ### 5. Cross-language receipt parity
 
-The documented Rust observer receipt is still v1 while the durable Python path and JSON schema use v2. The v2 receipt adds reservation, campaign, provider-record digest, and conflict bindings. This should be closed before Rust is presented as a full portable implementation of the durable outcome boundary.
+Rust observer receipts now use the same v2 field contract and `observer-receipt-v2` signing domain as the durable Python boundary and authoritative JSON schema. A shared Python-generated signed v2 vector is consumed by the Rust verifier. Explicit v1 read compatibility remains for older bundles.
+
+This closes the identified receipt-shape parity gap for the tested contract; it does not prove provider correctness, cryptographic implementation security, transport integrity, or infrastructure independence.
 
 ### 6. Portable verifier receipt parity
 
-The portable bundle and verifier path still contain v1 receipt assumptions in places. The receipt protocol should be versioned deliberately rather than allowing the runtime, schema, and bundle verifier to drift independently.
+The portable Python and Rust verifier paths now validate observer receipt v2 while retaining deliberate v1 compatibility. The durable red-team gate checks the shared v2 vector against the authoritative schema and portable verifier instead of carrying a static parity claim.
 
 ### 7. Infrastructure independence
 
@@ -125,14 +127,13 @@ The open version must still be capable of enforcing real consequential actions l
 
 ## Immediate engineering order
 
-1. Keep the execution-assurance profile executable in CI and preserve expected gaps explicitly.
-2. Close durable `DIVERGENT_EFFECT` containment parity.
-3. Close Rust observer-receipt v2 parity.
-4. Add cross-language conformance vectors for all provider outcome classes.
-5. Make the portable verifier accept and validate the durable v2 receipt contract.
-6. Define a minimal gateway interface that owns credentials and accepts only valid exact-action authority.
-7. Split the provider-neutral assurance code from MainStreet product code.
-8. Choose an open-source license and patent policy before making the standalone repository public.
+1. Keep the execution-assurance profile executable in CI and preserve remaining gaps explicitly.
+2. Add cross-language conformance vectors for all provider outcome classes, not only the current shared v2 success fixture and adversarial receipt cases.
+3. Define a minimal gateway interface that owns credentials and accepts only valid exact-action authority.
+4. Split the provider-neutral assurance code from MainStreet product code.
+5. Add independently operated observer deployment guidance and failure-domain tests.
+6. Add configured release signing and independently reproduced cross-host build evidence.
+7. Choose an open-source license and patent policy before making the standalone repository public.
 
 ## Claim discipline
 

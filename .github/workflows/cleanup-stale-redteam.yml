@@ -102,6 +102,7 @@ jobs:
       - name: Execute durable red team and verify evidence
         run: |
           set -euo pipefail
+          python -m pip install --disable-pip-version-check -r python/requirements-test.txt
           PYTHONPATH=python python scripts/run_durable_red_team.py > /tmp/durable-red-team.json
           python - <<'PY'
           import json

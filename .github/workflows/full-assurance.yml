@@ -20,7 +20,7 @@ jobs:
           toolchain: 1.90.0
           components: rustfmt, clippy
       - run: python -m pip install --disable-pip-version-check -r python/requirements-test.txt
-      - run: ./scripts/test_all.sh
+      - run: bash scripts/test_all.sh
       - name: Compile Rocq and print assumptions
         run: |
           mkdir -p evidence/ci-rocq

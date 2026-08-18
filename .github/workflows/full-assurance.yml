@@ -12,6 +12,10 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
+      - name: Build deterministic payload twice and compare
+        run: python scripts/verify_reproducible_payload.py --output ../claimsieve-mainstreet-payload.zip
+      - name: Validate deterministic payload
+        run: python scripts/validate_release_archive.py ../claimsieve-mainstreet-payload.zip
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
@@ -39,15 +43,30 @@ jobs:
               rocq compile -Q . ClaimSieve CheckDurableState.v
               rocq compile -Q . ClaimSieve CheckExecutionAssurance.v
             ' 2>&1 | tee evidence/ci-rocq/ROCQ_OUTPUT.txt
-      - run: python scripts/package_release.py
-      - run: python scripts/validate_release_archive.py ../claimsieve-mainstreet.zip
+      - name: Prove tests did not mutate deterministic payload
+        run: |
+          set -euo pipefail
+          python scripts/package_release.py --output ../claimsieve-mainstreet-posttest-payload.zip
+          cmp ../claimsieve-mainstreet-payload.zip ../claimsieve-mainstreet-posttest-payload.zip
+          echo "POST-TEST PAYLOAD IDENTITY: PASS"
+          sha256sum ../claimsieve-mainstreet-payload.zip
+      - name: Package run-specific assurance evidence
+        run: |
+          python scripts/package_assurance_evidence.py \
+            --payload ../claimsieve-mainstreet-payload.zip \
+            --output ../claimsieve-mainstreet-assurance-evidence.zip
+      - name: Validate assurance evidence archive
+        run: python scripts/validate_release_archive.py ../claimsieve-mainstreet-assurance-evidence.zip
       - name: Stage validated release artifacts
         run: |
           set -euo pipefail
-          mkdir -p evidence/release
-          cp ../claimsieve-mainstreet.zip evidence/release/claimsieve-mainstreet.zip
-          cp ../claimsieve-mainstreet.zip.sha256 evidence/release/claimsieve-mainstreet.zip.sha256
+          mkdir -p release
+          cp ../claimsieve-mainstreet-payload.zip release/claimsieve-mainstreet-payload.zip
+          cp ../claimsieve-mainstreet-payload.zip.sha256 release/claimsieve-mainstreet-payload.zip.sha256
+          cp ../claimsieve-mainstreet-assurance-evidence.zip release/claimsieve-mainstreet-assurance-evidence.zip
+          cp ../claimsieve-mainstreet-assurance-evidence.zip.sha256 release/claimsieve-mainstreet-assurance-evidence.zip.sha256
       - uses: actions/upload-artifact@v4
         with:
           name: claimsieve-mainstreet-v0.34-full-assurance-candidate
-          path: evidence/
+          path: release/
+          if-no-files-found: error

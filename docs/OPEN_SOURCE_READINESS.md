@@ -26,7 +26,7 @@ The Python durable boundary has explicit reservation, fencing, revocation checks
 
 ### Independent outcome semantics
 
-The durable observer uses independently readable provider state rather than treating executor output as terminal truth. Divergent effects and contradictory provider evidence are contained rather than normalized into success.
+The durable observer uses independently readable provider state rather than treating executor output as terminal truth. It correctly distinguishes exact success, confirmed rejection, unknown outcome, contradictory provider evidence, and divergent effects. The review found one important parity gap: contradictory provider evidence triggers durable campaign containment, while a plain `DIVERGENT_EFFECT` is detected but does not yet suspend the campaign in the durable Founder OS path. The older in-memory runtime does suspend on divergence.
 
 ### Evidence architecture
 
@@ -52,25 +52,31 @@ The existing empty `claimsieve` repository is a natural future destination, but 
 
 ### 3. Stable public specification
 
-The repository has strong schemas and architecture documents, but it does not yet expose one concise provider-neutral conformance contract. `docs/OPEN_EXECUTION_ASSURANCE_PROFILE.md` and `vectors/execution_assurance_profile_v1.json` are the first candidate extraction.
+The repository has strong schemas and architecture documents, but it did not expose one concise provider-neutral conformance contract before this review. `docs/OPEN_EXECUTION_ASSURANCE_PROFILE.md` and `vectors/execution_assurance_profile_v1.json` are the first candidate extraction.
 
-### 4. Cross-language parity
+### 4. Durable divergence-containment parity
+
+The new conformance gate exposed a real semantic inconsistency. The durable Python observer classifies an independently observed mutated effect as `DIVERGENT_EFFECT`, but it does not suspend the campaign afterward. The older in-memory runtime does.
+
+This should be fixed before claiming the durable Founder OS path fully enforces the profile's divergence-containment invariant. The test remains an explicit expected failure until the implementation is aligned.
+
+### 5. Cross-language receipt parity
 
 The documented Rust observer receipt is still v1 while the durable Python path and JSON schema use v2. The v2 receipt adds reservation, campaign, provider-record digest, and conflict bindings. This should be closed before Rust is presented as a full portable implementation of the durable outcome boundary.
 
-### 5. Portable verifier receipt parity
+### 6. Portable verifier receipt parity
 
 The portable bundle and verifier path still contain v1 receipt assumptions in places. The receipt protocol should be versioned deliberately rather than allowing the runtime, schema, and bundle verifier to drift independently.
 
-### 6. Infrastructure independence
+### 7. Infrastructure independence
 
 The reference observer is separately keyed but not deployed in an independent infrastructure failure domain. A production profile should distinguish logical separation, process separation, host separation, administrative separation, and organization-level independence.
 
-### 7. Public API and compatibility policy
+### 8. Public API and compatibility policy
 
 The current code is release-oriented rather than library-oriented. A public project needs stable package boundaries, semantic versioning rules, deprecation policy, and conformance-vector compatibility rules.
 
-### 8. Reproducible supply chain
+### 9. Reproducible supply chain
 
 The repository has manifests, lockfiles, provenance templates, and release evidence, but independently reproduced binaries, signed build provenance, and transparency-log publication remain unfinished.
 
@@ -119,13 +125,14 @@ The open version must still be capable of enforcing real consequential actions l
 
 ## Immediate engineering order
 
-1. Make the execution-assurance profile executable in CI.
-2. Close Rust observer-receipt v2 parity.
-3. Add cross-language conformance vectors for all provider outcome classes.
-4. Make the portable verifier accept and validate the durable v2 receipt contract.
-5. Define a minimal gateway interface that owns credentials and accepts only valid exact-action authority.
-6. Split the provider-neutral assurance code from MainStreet product code.
-7. Choose an open-source license and patent policy before making the standalone repository public.
+1. Keep the execution-assurance profile executable in CI and preserve expected gaps explicitly.
+2. Close durable `DIVERGENT_EFFECT` containment parity.
+3. Close Rust observer-receipt v2 parity.
+4. Add cross-language conformance vectors for all provider outcome classes.
+5. Make the portable verifier accept and validate the durable v2 receipt contract.
+6. Define a minimal gateway interface that owns credentials and accepts only valid exact-action authority.
+7. Split the provider-neutral assurance code from MainStreet product code.
+8. Choose an open-source license and patent policy before making the standalone repository public.
 
 ## Claim discipline
 

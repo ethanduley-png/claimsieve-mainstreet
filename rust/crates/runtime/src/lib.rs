@@ -675,7 +675,8 @@ impl ContainmentController {
 }
 
 /// Provider response made available by a provider adapter.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
 pub struct ConnectorResponse {
     /// `accepted`, `rejected`, or `timeout_unknown`.
     pub status: String,
@@ -800,10 +801,13 @@ struct UnsignedExecutorReceipt<'a> {
 #[derive(Serialize)]
 struct UnsignedObserverReceipt<'a> {
     schema_version: &'static str,
-    trace_id: &'a str,
+    reservation_id: &'a str,
     permit_id: &'a str,
+    campaign_id: &'a str,
+    provider_record_digest: &'a Option<String>,
     observed_action_digest: &'a Option<String>,
     reconciliation: Reconciliation,
+    receipt_conflict: bool,
     observed_at_seq: u64,
     observer_key_id: &'a str,
 }
@@ -1256,6 +1260,21 @@ impl<'a, O: ObservationSource> IndependentObserver<'a, O> {
         reservation: &Reservation,
         sequence: u64,
     ) -> Result<ObservationResult, RuntimeError> {
+        self.reconcile_with_executor_receipt(permit, proposal, reservation, None, sequence)
+    }
+
+    /// Reconcile from independent provider state while optionally comparing executor audit evidence.
+    ///
+    /// The executor receipt never controls the outcome classification. When supplied, it is used only
+    /// to surface a receipt conflict after the independently read provider record has been classified.
+    pub fn reconcile_with_executor_receipt(
+        &self,
+        permit: &Permit,
+        proposal: &Proposal,
+        reservation: &Reservation,
+        executor_receipt: Option<&ExecutorReceipt>,
+        sequence: u64,
+    ) -> Result<ObservationResult, RuntimeError> {
         if reservation.permit_id != permit.permit_id
             || reservation.action_digest != permit.action_digest
         {
@@ -1263,40 +1282,82 @@ impl<'a, O: ObservationSource> IndependentObserver<'a, O> {
                 "observer reservation binding mismatch".to_owned(),
             ));
         }
-        let provider = self.source.query(&permit.permit_id)?;
+        if permit.campaign_id != proposal.campaign_id {
+            return Err(RuntimeError::Authorization(
+                "observer campaign binding mismatch".to_owned(),
+            ));
+        }
         let intended_action_digest = digest(&proposal.action)?;
-        let (observed_action_digest, reconciliation, provider_evidence_conflict) = match provider {
-            None => (None, Reconciliation::OutcomeUnknown, false),
+        if permit.action_digest != intended_action_digest {
+            return Err(RuntimeError::Authorization(
+                "observer action binding mismatch".to_owned(),
+            ));
+        }
+        if let Some(receipt) = executor_receipt
+            && (receipt.permit_id != permit.permit_id
+                || receipt.reservation_id != reservation.reservation_id)
+        {
+            return Err(RuntimeError::Authorization(
+                "observer executor-receipt binding mismatch".to_owned(),
+            ));
+        }
+        let provider = self.source.query(&permit.permit_id)?;
+        let (
+            provider_record_digest,
+            observed_action_digest,
+            reconciliation,
+            provider_evidence_conflict,
+            provider_status,
+        ) = match provider {
+            None => (None, None, Reconciliation::OutcomeUnknown, false, None),
             Some(record) => {
+                let provider_record_digest = Some(digest(&record)?);
                 let observed = record.observed_action.as_ref().map(digest).transpose()?;
                 let (outcome, conflict) = classify_provider_observation(
                     record.status.as_str(),
                     observed.as_deref(),
                     &intended_action_digest,
                 );
-                (observed, outcome, conflict)
+                (
+                    provider_record_digest,
+                    observed,
+                    outcome,
+                    conflict,
+                    Some(record.status),
+                )
             }
         };
+        let receipt_conflict = provider_evidence_conflict
+            || matches!(
+                (executor_receipt, provider_status.as_deref()),
+                (Some(receipt), Some(status)) if receipt.provider_status.as_str() != status
+            );
         let unsigned_observer = UnsignedObserverReceipt {
-            schema_version: "claimsieve.observer_receipt.v1",
-            trace_id: &proposal.trace_id,
+            schema_version: "claimsieve.observer_receipt.v2",
+            reservation_id: &reservation.reservation_id,
             permit_id: &permit.permit_id,
+            campaign_id: &permit.campaign_id,
+            provider_record_digest: &provider_record_digest,
             observed_action_digest: &observed_action_digest,
             reconciliation,
+            receipt_conflict,
             observed_at_seq: sequence,
             observer_key_id: &self.observer_key_id,
         };
         let signature = sign(
             &self.observer_signing_key,
-            "observer-receipt-v1",
+            "observer-receipt-v2",
             &unsigned_observer,
         )?;
         let observer_receipt = ObserverReceipt {
-            schema_version: "claimsieve.observer_receipt.v1".to_owned(),
-            trace_id: proposal.trace_id.clone(),
+            schema_version: "claimsieve.observer_receipt.v2".to_owned(),
+            reservation_id: reservation.reservation_id.clone(),
             permit_id: permit.permit_id.clone(),
+            campaign_id: permit.campaign_id.clone(),
+            provider_record_digest,
             observed_action_digest,
             reconciliation,
+            receipt_conflict,
             observed_at_seq: sequence,
             observer_key_id: self.observer_key_id.clone(),
             signature,
@@ -1341,10 +1402,16 @@ pub fn verify_permit_signature(
 #[cfg(test)]
 mod tests {
     use super::{
-        InMemoryReservationStore, ReservationBackend, TransportReplayContext,
+        Connector, ContainmentController, InMemoryReservationStore, IndependentObserver,
+        ReservationBackend, RuntimeError, SimulatedConnector, TransportReplayContext,
         automatic_retry_allowed, classify_provider_observation, transport_replay_allowed,
     };
-    use claimsieve_protocol::Reconciliation;
+    use claimsieve_protocol::{
+        Action, Destination, ExecutorReceipt, Objective, Permit, Proposal, Reconciliation,
+        Reservation, digest,
+    };
+    use ed25519_dalek::SigningKey;
+    use std::collections::BTreeMap;
 
     #[test]
     fn reservation_is_one_use() {
@@ -1391,6 +1458,147 @@ mod tests {
             same_request_digest: false,
             ..context
         }));
+    }
+
+    fn observer_fixture() -> Result<(Proposal, Permit, Reservation), RuntimeError> {
+        let action = Action {
+            kind: "send_message".to_owned(),
+            effect_class: "external_message".to_owned(),
+            destination: Destination {
+                scheme: "sms".to_owned(),
+                authority: "+15550000000".to_owned(),
+                resource: "lead".to_owned(),
+                trust_domain: "crm".to_owned(),
+            },
+            method: "POST".to_owned(),
+            parameters: BTreeMap::new(),
+            reversibility: "reversible".to_owned(),
+        };
+        let action_digest = digest(&action)?;
+        let proposal = Proposal {
+            schema_version: "claimsieve.proposal.v1".to_owned(),
+            proposal_id: "proposal:test".to_owned(),
+            trace_id: "trace:test".to_owned(),
+            tenant_id: "tenant:test".to_owned(),
+            campaign_id: "campaign:test".to_owned(),
+            session_id: "session:test".to_owned(),
+            parent_action_id: None,
+            principal: "spiffe://claimsieve.test/agent".to_owned(),
+            objective: Objective {
+                root: "test".to_owned(),
+                subgoal: "test".to_owned(),
+                expected_effect: "message sent".to_owned(),
+                constraints: Vec::new(),
+            },
+            action,
+            evidence_refs: Vec::new(),
+            approval: None,
+            requested_at_seq: 1,
+            risk_tags: Vec::new(),
+        };
+        let permit = Permit {
+            schema_version: "claimsieve.permit.v1".to_owned(),
+            permit_id: "permit:test".to_owned(),
+            trace_id: proposal.trace_id.clone(),
+            tenant_id: proposal.tenant_id.clone(),
+            campaign_id: proposal.campaign_id.clone(),
+            principal: proposal.principal.clone(),
+            proposal_digest: "sha256:proposal".to_owned(),
+            action_digest: action_digest.clone(),
+            destination_digest: "sha256:destination".to_owned(),
+            parameter_digest: "sha256:parameters".to_owned(),
+            policy_digest: "sha256:policy".to_owned(),
+            signed_policy_digest: "sha256:signed-policy".to_owned(),
+            evidence_root: "sha256:evidence".to_owned(),
+            decision_digest: "sha256:decision".to_owned(),
+            approval_digest: None,
+            prior_campaign_state_digest: "sha256:prior".to_owned(),
+            campaign_state_digest: "sha256:state".to_owned(),
+            valid_from_seq: 1,
+            expires_at_seq: 5,
+            max_uses: 1,
+            nonce: "nonce".to_owned(),
+            authority_key_id: "authority".to_owned(),
+            signature: "fixture".to_owned(),
+        };
+        let reservation = Reservation {
+            schema_version: "claimsieve.reservation.v1".to_owned(),
+            permit_id: permit.permit_id.clone(),
+            action_digest,
+            reserved_at_seq: 2,
+            reservation_id: "reservation:test".to_owned(),
+        };
+        Ok((proposal, permit, reservation))
+    }
+
+    #[test]
+    fn observer_v2_uses_independent_provider_state_and_flags_executor_conflict()
+    -> Result<(), RuntimeError> {
+        let (proposal, permit, reservation) = observer_fixture()?;
+        let connector = SimulatedConnector::new("success");
+        connector.invoke(&proposal.action, &permit.permit_id)?;
+        let containment =
+            ContainmentController::new("containment", SigningKey::from_bytes(&[3_u8; 32]));
+        let observer = IndependentObserver::new(
+            "observer",
+            SigningKey::from_bytes(&[4_u8; 32]),
+            &containment,
+            &connector,
+        )?;
+        let executor_receipt = ExecutorReceipt {
+            schema_version: "claimsieve.executor_receipt.v1".to_owned(),
+            trace_id: proposal.trace_id.clone(),
+            permit_id: permit.permit_id.clone(),
+            reservation_id: reservation.reservation_id.clone(),
+            action_digest: permit.action_digest.clone(),
+            provider_status: "rejected".to_owned(),
+            provider_id: None,
+            attempted_at_seq: 2,
+            executor_key_id: "executor".to_owned(),
+            signature: "fixture".to_owned(),
+        };
+        let result = observer.reconcile_with_executor_receipt(
+            &permit,
+            &proposal,
+            &reservation,
+            Some(&executor_receipt),
+            3,
+        )?;
+        assert_eq!(result.reconciliation, Reconciliation::ConfirmedSuccess);
+        assert!(result.observer_receipt.receipt_conflict);
+        assert_eq!(
+            result.observer_receipt.schema_version,
+            "claimsieve.observer_receipt.v2"
+        );
+        assert_eq!(
+            result.observer_receipt.reservation_id,
+            reservation.reservation_id
+        );
+        assert_eq!(result.observer_receipt.campaign_id, permit.campaign_id);
+        assert!(result.observer_receipt.provider_record_digest.is_some());
+        assert!(result.containment_receipt.is_none());
+        Ok(())
+    }
+
+    #[test]
+    fn observer_rejects_proposal_action_not_bound_by_permit() -> Result<(), RuntimeError> {
+        let (mut proposal, permit, reservation) = observer_fixture()?;
+        proposal.action.destination.authority = "+15551111111".to_owned();
+        let connector = SimulatedConnector::new("ambiguous");
+        let containment =
+            ContainmentController::new("containment", SigningKey::from_bytes(&[5_u8; 32]));
+        let observer = IndependentObserver::new(
+            "observer",
+            SigningKey::from_bytes(&[6_u8; 32]),
+            &containment,
+            &connector,
+        )?;
+        let result = observer.reconcile(&permit, &proposal, &reservation, 3);
+        assert!(matches!(
+            result,
+            Err(RuntimeError::Authorization(message)) if message == "observer action binding mismatch"
+        ));
+        Ok(())
     }
 
     #[test]

@@ -15,4 +15,6 @@ The validation path intentionally uses multiple boundaries:
 5. The durable red-team gate executes the shared v2 contract check: it requires exactly one v2 receipt, an exact match to the authoritative schema fields, and zero portable-verifier errors. The validated run reports 29 scenarios, 26 blocked or detected, 0 bypasses, and 3 infrastructure limitations.
 6. The strict Rust workflow independently runs formatting, Clippy with warnings denied, and workspace tests that include the shared vector.
 
+The durable containment boundary consumes this authenticated observation path. An independently classified divergent effect is a containment event; executor disagreement alone is not.
+
 This is evidence of tested cross-language receipt-contract parity for the covered fixture and adversarial cases. It is not a claim that provider behavior, cryptography, transport, database durability, or observer infrastructure independence has been formally proven.

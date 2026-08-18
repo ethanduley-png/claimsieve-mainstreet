@@ -12,17 +12,19 @@ jobs:
       - uses: actions/checkout@v6
       - name: Compile Rocq model and audit assumptions
         run: |
+          set -euo pipefail
           mkdir -p evidence
           docker run --rm \
-            -v "$PWD:/workspace" \
-            -w /workspace/rocq \
+            -v "$PWD:/workspace:ro" \
             rocq/rocq-prover:9.2 \
             bash -lc '
               set -euo pipefail
+              cp -R /workspace/rocq /tmp/claimsieve-rocq
+              cd /tmp/claimsieve-rocq
               rocq compile -Q . ClaimSieve Claimsieve.v
               rocq compile -Q . ClaimSieve DurableState.v
-              rocq compile -Q . ClaimSieve Check.v | tee ../evidence/ROCQ_ASSUMPTIONS.txt
-              rocq compile -Q . ClaimSieve CheckDurableState.v | tee -a ../evidence/ROCQ_ASSUMPTIONS.txt
-            '
+              rocq compile -Q . ClaimSieve Check.v
+              rocq compile -Q . ClaimSieve CheckDurableState.v
+            ' | tee evidence/ROCQ_ASSUMPTIONS.txt
       - name: Reject unproved assumptions
         run: '! grep -R -n -E "(^|[^A-Za-z])(Admitted|admit|Axiom|Parameter)([^A-Za-z]|$)" --include="*.v" rocq'

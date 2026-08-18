@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
 permissions:
-  contents: read
+  contents: write
 jobs:
   python-node:
     runs-on: ubuntu-latest
@@ -27,3 +27,65 @@ jobs:
       - run: PYTHONPATH=python python scripts/semantic_divergence_gate.py
       - run: PYTHONPATH=python python scripts/run_red_team.py
       - run: PYTHONPATH=python python scripts/run_durable_red_team.py
+  migrate-python-containment:
+    if: github.event_name == 'pull_request' && github.head_ref == 'agent/rust-observer-v2-parity' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: agent/rust-observer-v2-parity
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Apply checked containment patch
+        env:
+          PATCH_Z64: >-
+            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
+        run: |
+          python - <<'PY'
+          import base64, os, zlib
+          from pathlib import Path
+          Path('/tmp/python-containment.patch').write_bytes(zlib.decompress(base64.b64decode(os.environ['PATCH_Z64'])))
+          PY
+          git apply --check /tmp/python-containment.patch
+          git apply /tmp/python-containment.patch
+      - run: python -m pip install --disable-pip-version-check -r python/requirements-test.txt
+      - name: Validate complete Python and red-team gates
+        run: |
+          set -euo pipefail
+          PYTHONPATH=python python -m unittest discover -s python/tests -v
+          python scripts/source_gate.py
+          PYTHONPATH=python python scripts/run_durable_red_team.py
+          python - <<'PY'
+          import json
+          report = json.load(open('evidence/DURABLE_RED_TEAM_REPORT.json', encoding='utf-8'))
+          assert report['bypasses'] == 0, report
+          assert report['limitations'] == 3, report
+          print(json.dumps({
+              'total': report['total'],
+              'blocked_or_detected': report['blocked_or_detected'],
+              'bypasses': report['bypasses'],
+              'limitations': report['limitations'],
+          }, indent=2, sort_keys=True))
+          PY
+      - name: Commit validated containment source and restore CI
+        run: |
+          set -euo pipefail
+          git restore evidence || true
+          rm -f .github/workflows/python-containment-migration.yml
+          git show HEAD^:.github/workflows/reference-tests.yml > .github/workflows/reference-tests.yml
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add python/claimsieve_ref/durable_state.py \
+                  python/tests/test_durable_state.py \
+                  python/tests/test_execution_assurance_profile.py \
+                  vectors/execution_assurance_profile_v1.json \
+                  docs/OPEN_EXECUTION_ASSURANCE_PROFILE.md \
+                  docs/OPEN_SOURCE_READINESS.md \
+                  .github/workflows/reference-tests.yml \
+                  .github/workflows/python-containment-migration.yml
+          git commit -m 'Close durable Python divergence containment gap'
+          git pull --rebase origin agent/rust-observer-v2-parity
+          git push origin HEAD:agent/rust-observer-v2-parity

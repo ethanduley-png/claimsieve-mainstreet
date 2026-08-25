@@ -6,6 +6,7 @@ import unittest
 from mainstreet_crystallization import (
     AgentTrace,
     CrystallizationError,
+    WorkflowCandidate,
     compile_action,
     learn_candidate,
     promotion_gate,
@@ -104,12 +105,29 @@ class WorkflowCrystallizationTests(unittest.TestCase):
             "financial",
             "legal_compliance",
             "employment",
+            "health_safety",
             "credential_security",
             "irreversible_high_impact",
         ):
             with self.subTest(risk=risk):
                 with self.assertRaisesRegex(CrystallizationError, "high-risk"):
                     learn_candidate([trace(i, risk=risk) for i in range(1, 6)])
+
+    def test_unknown_risk_class_fails_closed(self) -> None:
+        history = [trace(i, risk="financal") for i in range(1, 6)]
+        with self.assertRaisesRegex(CrystallizationError, "unknown risk class"):
+            learn_candidate(history)
+
+    def test_candidate_identity_binds_policy_and_bindings(self) -> None:
+        candidate = learn_candidate([trace(i) for i in range(1, 6)])
+        tampered = WorkflowCandidate(
+            **{
+                **candidate.__dict__,
+                "required_policy_digest": "sha256:attacker-policy",
+            }
+        )
+        with self.assertRaisesRegex(CrystallizationError, "candidate identity mismatch"):
+            tampered.validate()
 
     def test_policy_drift_fails_closed(self) -> None:
         history = [trace(i) for i in range(1, 5)]

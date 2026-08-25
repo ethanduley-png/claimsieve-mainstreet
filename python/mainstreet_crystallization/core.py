@@ -1,15 +1,29 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from hashlib import sha256
 import json
 from typing import Any, Iterable, Mapping, Sequence
 
 
+KNOWN_RISK_CLASSES = frozenset({
+    "informational",
+    "internal_reversible",
+    "external_communication",
+    "commercial_commitment",
+    "financial",
+    "legal_compliance",
+    "employment",
+    "health_safety",
+    "credential_security",
+    "irreversible_high_impact",
+})
+
 HIGH_RISK_CLASSES = frozenset({
     "financial",
     "legal_compliance",
     "employment",
+    "health_safety",
     "credential_security",
     "irreversible_high_impact",
 })
@@ -58,6 +72,8 @@ class AgentTrace:
         }.items():
             if not isinstance(value, str) or not value:
                 raise CrystallizationError(f"{name} must be non-empty")
+        if self.risk_class not in KNOWN_RISK_CLASSES:
+            raise CrystallizationError("unknown risk class")
         if not isinstance(self.input_facts, Mapping) or not isinstance(self.proposed_action, Mapping):
             raise CrystallizationError("input_facts and proposed_action must be mappings")
         if "kind" not in self.proposed_action or "destination" not in self.proposed_action:
@@ -124,6 +140,8 @@ class WorkflowCandidate:
             raise CrystallizationError("crystallized consequential workflows must require ClaimSieve")
         if self.autonomous_deployment_allowed:
             raise CrystallizationError("autonomous deployment is forbidden")
+        if self.risk_class not in KNOWN_RISK_CLASSES:
+            raise CrystallizationError("unknown risk class")
         if self.risk_class in HIGH_RISK_CLASSES:
             raise CrystallizationError("high-risk workflows cannot auto-crystallize in v1")
         if self.support_count < 1:
@@ -135,6 +153,22 @@ class WorkflowCandidate:
                 raise CrystallizationError("binding action_path cannot be empty")
             if binding.is_dynamic and binding.source_fact not in self.required_facts:
                 raise CrystallizationError("dynamic binding must reference a required fact")
+
+        identity_payload = {
+            "schema_version": self.schema_version,
+            "capability_id": self.capability_id,
+            "risk_class": self.risk_class,
+            "required_policy_digest": self.required_policy_digest,
+            "bindings": [binding.as_dict() for binding in self.bindings],
+            "required_facts": list(self.required_facts),
+            "support_count": self.support_count,
+            "dataset_digest": self.dataset_digest,
+            "requires_claimsieve": self.requires_claimsieve,
+            "autonomous_deployment_allowed": self.autonomous_deployment_allowed,
+        }
+        expected_id = "workflow:" + sha256(_canonical(identity_payload)).hexdigest()
+        if self.candidate_id != expected_id:
+            raise CrystallizationError("candidate identity mismatch")
 
     def contract(self) -> dict[str, Any]:
         return {

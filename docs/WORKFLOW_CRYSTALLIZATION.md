@@ -1,6 +1,6 @@
 # MainStreet Workflow Crystallization v1
 
-Status: candidate implementation
+Status: candidate implementation + signed-evidence assurance hardening
 
 ## Goal
 
@@ -16,23 +16,20 @@ It can only build a proposal. Consequential actions still require the normal Cla
 agent performs bounded work
         |
         v
-signed/traceable action history
+authenticated execution traces
         |
         v
-eligible trace filter
+positive + negative evidence filter
         |
         v
-pattern/binding discovery
+pattern/binding + safe-guard discovery
         |
         v
-workflow candidate
+workflow candidate + hardened profile
         |
-        +----> historical replay
+        +----> historical/shadow replay
         |
         +----> generated deterministic proposal code
-        |
-        v
-shadow comparison
         |
         v
 promotion gate
@@ -43,6 +40,8 @@ human/operator deployment decision
         v
 deterministic proposal builder
         |
+        +----> drift / envelope mismatch ----> agent fallback
+        |
         v
 ClaimSieve
         |
@@ -52,7 +51,7 @@ restricted executor + independent observer
 
 ## v1 eligibility
 
-A trace may contribute to automatic crystallization only when:
+A positive trace may contribute to automatic crystallization only when:
 
 1. ClaimSieve allowed the action.
 2. Independent reconciliation ended in `CONFIRMED_SUCCESS`.
@@ -97,70 +96,62 @@ Candidate validation recomputes this identity. A caller cannot alter a binding, 
 - returns `requires_claimsieve=True`;
 - returns `autonomous_execution_allowed=False`.
 
-This is the first code-generation boundary. It intentionally replaces agent reasoning, not ClaimSieve authority or the restricted executor.
+This replaces repeated agent reasoning, not ClaimSieve authority or the restricted executor.
 
 ## Shadow gate
 
 A candidate can be considered promotable only after shadow evaluation.
 
-The v1 gate requires:
-
-- enough shadow cases;
-- no safety violations;
-- no action divergences;
-- agreement at or above the configured threshold;
-- ClaimSieve still required;
-- autonomous deployment still forbidden.
+The v1 gate requires enough shadow cases, no safety violations, no action divergences, agreement at or above the configured threshold, ClaimSieve still required, and autonomous deployment still forbidden.
 
 A changed policy is a safety violation, not a normal mismatch.
 
 ## High-risk boundary
 
-v1 refuses automatic crystallization for:
-
-- financial actions;
-- legal/compliance submissions;
-- employment decisions;
-- health/safety actions;
-- credential/security changes;
-- irreversible high-impact actions.
+v1 refuses automatic crystallization for financial actions, legal/compliance submissions, employment decisions, health/safety actions, credential/security changes, and irreversible high-impact actions.
 
 This does not mean deterministic implementations can never exist for those domains. It means they require a separately designed and reviewed assurance profile rather than inheriting trust from repeated agent behavior.
 
+## Signed-evidence assurance hardening
+
+`python/mainstreet_crystallization/assurance.py` adds the next layer:
+
+- `SignedAgentTrace` seals trace payloads with the existing domain-separated Ed25519 ClaimSieve primitive;
+- signer public keys must be explicitly allowlisted;
+- signed datasets, positive evidence, and negative evidence receive canonical SHA-256 digests;
+- hardened learning requires negative/counterfactual examples as well as confirmed successes;
+- safe-input guards are inferred only when positive examples are stable and negative examples demonstrate the boundary;
+- any negative example that the learned guards cannot explain causes hardened crystallization to fail closed;
+- the hardened workflow identity binds the candidate, guards, evidence digests, signer IDs, support counts, ClaimSieve requirement, and autonomous-execution prohibition;
+- policy drift, guard mismatch, missing runtime facts, or a tripped monitor returns `AGENT_FALLBACK` with no deterministic proposal;
+- in-envelope denial/review, unknown/divergent outcomes, invalid signed evidence, capability/risk/policy drift, or excessive confirmed failures/action divergence trip the runtime monitor;
+- once tripped, the deterministic route does not automatically recover.
+
+Outside-envelope cases are expected to use the agent path and do not poison the deterministic behavioral monitor.
+
+See `docs/WORKFLOW_CRYSTALLIZATION_ASSURANCE.md` for the complete assurance semantics and limitation statement.
+
 ## Tests
 
-`python/tests/test_workflow_crystallization.py` covers:
+The crystallization implementation now has two focused suites:
 
-- stable repeated workflows;
-- dynamic input-to-action binding;
-- fields that vary without a deterministic source;
-- denied, unknown, failed, and divergent traces;
-- high-risk exclusions, including health/safety;
-- unknown risk-class rejection;
-- candidate identity tamper detection;
-- policy drift;
-- runtime policy mismatch;
-- missing runtime facts;
-- exact shadow agreement;
-- shadow divergence;
-- shadow policy change;
-- generated deterministic Python equivalence and proposal-only behavior.
+- `python/tests/test_workflow_crystallization.py`: 13 baseline synthesis, identity, shadow, high-risk, and generated-code tests.
+- `python/tests/test_workflow_crystallization_assurance.py`: 14 signed-evidence, counterfactual, guard, tamper, drift, and fallback tests.
 
-The normal repository Python discovery gate executes this test module automatically.
+The normal repository Python discovery gate executes both automatically.
 
-## Next hardening steps
+## Remaining hardening steps
 
-1. Bind candidates to signed trace/evidence bundles rather than in-memory trace objects.
-2. Add schema files for the candidate, shadow report, and promotion decision.
-3. Add temporal and numeric predicates so the candidate can express rules such as elapsed time, amount bounds, consent state, and business-hour windows.
-4. Add negative examples and counterfactual replay so a workflow proves when it must *not* fire.
-5. Add explicit human approval receipts for production promotion.
-6. Store deployed workflow source hashes and bind them into ClaimSieve deployment/governance evidence.
-7. Add rollback, drift detection, and automatic return-to-agent behavior when the deterministic workflow encounters out-of-domain inputs.
-8. Measure token, latency, energy, carbon, and water savings produced by crystallized workflows.
+1. Add schema files for candidates, hardened profiles, shadow reports, and promotion decisions.
+2. Add richer temporal and numeric predicates for elapsed time, amount bounds, consent freshness, and business-hour windows.
+3. Split trace authentication into separate cryptographic attestations for the ClaimSieve adjudication record and the independently observed terminal outcome.
+4. Add explicit signed human approval receipts for production promotion.
+5. Store deployed workflow source hashes and bind them into ClaimSieve deployment/governance evidence.
+6. Add durable rollback and lifecycle state for tripped workflows.
+7. Measure token, latency, energy, carbon, and water savings produced by crystallized workflows.
 
 ## Claim discipline
 
-This implementation demonstrates deterministic candidate synthesis and shadow gating for the covered in-memory trace model.
+This implementation demonstrates deterministic candidate synthesis, authenticated evidence intake, counterfactual guard learning, shadow gating, and deterministic-to-agent fallback for the covered trace model.
 
-It does not establish that arbitrary agent workflows can be safely compiled, that generated source code is secure in all environments, or that production deployment can occur without additional signing, provenance, sandboxing, and operational controls.
+It does not establish that arbitrary agent workflows can be safely compiled, that generated source code is secure in all environments, or that production deployment can occur without additional role-separated signing, provenance, sandboxing, lifecycle controls, and operational review.

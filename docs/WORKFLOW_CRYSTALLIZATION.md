@@ -56,13 +56,15 @@ A trace may contribute to automatic crystallization only when:
 
 1. ClaimSieve allowed the action.
 2. Independent reconciliation ended in `CONFIRMED_SUCCESS`.
-3. The trace is not financial, legal/compliance, employment, credential/security, or irreversible/high-impact work.
+3. The trace is not financial, legal/compliance, employment, health/safety, credential/security, or irreversible/high-impact work.
 4. Every trace in the learning set represents the same capability and risk class.
 5. Every trace was evaluated under the same policy digest.
 6. The proposed action has the same structural shape.
 7. Every field that varies across actions can be deterministically bound to an input fact.
 
 Denied actions, review-only actions, unknown outcomes, confirmed failures, and divergent effects cannot become positive training authority.
+
+Unknown risk-class strings also fail closed. A misspelled or unrecognized risk class cannot silently fall into the lower-risk automatic crystallization path.
 
 ## Binding rule
 
@@ -75,6 +77,12 @@ For every leaf field in the action:
 - otherwise the candidate fails closed.
 
 Input-to-action relationships are preferred over constants. This prevents a value that happened to be constant during learning, such as a message body, from being accidentally frozen when it actually comes from runtime input.
+
+## Candidate identity
+
+The candidate identifier is a SHA-256 binding over the candidate's material contract: capability, risk class, required policy digest, field bindings, required facts, support count, learning-dataset digest, ClaimSieve requirement, and autonomous-deployment prohibition.
+
+Candidate validation recomputes this identity. A caller cannot alter a binding, policy, or authority field while retaining the original candidate identifier.
 
 ## Generated code
 
@@ -113,6 +121,7 @@ v1 refuses automatic crystallization for:
 - financial actions;
 - legal/compliance submissions;
 - employment decisions;
+- health/safety actions;
 - credential/security changes;
 - irreversible high-impact actions.
 
@@ -126,7 +135,9 @@ This does not mean deterministic implementations can never exist for those domai
 - dynamic input-to-action binding;
 - fields that vary without a deterministic source;
 - denied, unknown, failed, and divergent traces;
-- high-risk exclusions;
+- high-risk exclusions, including health/safety;
+- unknown risk-class rejection;
+- candidate identity tamper detection;
 - policy drift;
 - runtime policy mismatch;
 - missing runtime facts;

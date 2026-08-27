@@ -38,10 +38,14 @@ jobs:
             ' 2>&1 | tee evidence/ci-rocq/ROCQ_OUTPUT.txt
       - run: python scripts/package_release.py
       - run: python scripts/validate_release_archive.py ../claimsieve-mainstreet.zip
+      - name: Stage release artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence/release
+          cp ../claimsieve-mainstreet.zip evidence/release/
+          cp ../claimsieve-mainstreet.zip.sha256 evidence/release/
       - uses: actions/upload-artifact@v4
         with:
           name: claimsieve-mainstreet-v0.34-full-assurance-candidate
-          path: |
-            ../claimsieve-mainstreet.zip
-            ../claimsieve-mainstreet.zip.sha256
-            evidence/
+          path: evidence/

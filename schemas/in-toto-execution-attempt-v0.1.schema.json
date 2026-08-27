@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://claimsieve.example/schemas/in-toto-execution-attempt-v0.1.schema.json",
+  "title": "ClaimSieve in-toto execution attempt predicate v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "trace_id", "campaign_id", "permit_id", "reservation_id", "action_digest",
+    "request_digest", "idempotency_key", "fencing_token", "containment_epoch",
+    "provider_status", "provider_id", "attempted_at_seq", "native_record"
+  ],
+  "properties": {
+    "trace_id": {"type": "string", "minLength": 1},
+    "campaign_id": {"type": "string", "minLength": 1},
+    "permit_id": {"type": "string", "minLength": 1},
+    "reservation_id": {"type": "string", "minLength": 1},
+    "action_digest": {"$ref": "#/$defs/sha256"},
+    "request_digest": {"$ref": "#/$defs/sha256"},
+    "idempotency_key": {"type": "string", "minLength": 1},
+    "fencing_token": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+    "containment_epoch": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+    "provider_status": {"enum": ["accepted", "rejected", "timeout_unknown", "stale_fence"]},
+    "provider_id": {"type": ["string", "null"]},
+    "attempted_at_seq": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+    "native_record": {"$ref": "#/$defs/nativeRecord"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "nativeRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "digest", "key_id", "signature", "signature_format", "signature_verification"],
+      "properties": {
+        "schema_version": {"const": "claimsieve.executor_receipt.v2"},
+        "digest": {"$ref": "#/$defs/sha256"},
+        "key_id": {"type": "string", "minLength": 1},
+        "signature": {"type": "string", "minLength": 1},
+        "signature_format": {"const": "claimsieve-native"},
+        "signature_verification": {"const": "NOT_PERFORMED"}
+      }
+    }
+  }
+}

@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 use serde_json::Value;
 use std::fs;
 use std::path::PathBuf;
@@ -7,8 +9,14 @@ fn vector_path() -> PathBuf {
 }
 
 fn load_vector() -> Value {
-    let text = fs::read_to_string(vector_path()).expect("read in-toto conformance vector");
-    serde_json::from_str(&text).expect("parse in-toto conformance vector")
+    let text = match fs::read_to_string(vector_path()) {
+        Ok(value) => value,
+        Err(error) => panic!("read in-toto conformance vector: {error}"),
+    };
+    match serde_json::from_str(&text) {
+        Ok(value) => value,
+        Err(error) => panic!("parse in-toto conformance vector: {error}"),
+    }
 }
 
 fn assert_lower_sha256_hex(value: &str) {
@@ -25,7 +33,10 @@ fn in_toto_vector_has_only_supported_statement_and_predicate_versions() {
     let vector = load_vector();
     assert_eq!(vector["schema_version"], "claimsieve.intoto.conformance.v1");
 
-    let statements = vector["statements"].as_object().expect("statements object");
+    let statements = match vector["statements"].as_object() {
+        Some(value) => value,
+        None => panic!("statements must be an object"),
+    };
     let expected = [
         (
             "permit",
@@ -53,11 +64,14 @@ fn in_toto_vector_has_only_supported_statement_and_predicate_versions() {
         assert_eq!(native["signature_format"], "claimsieve-native");
         assert_eq!(native["signature_verification"], "NOT_PERFORMED");
 
-        let native_digest = native["digest"]
-            .as_str()
-            .expect("native digest string")
-            .strip_prefix("sha256:")
-            .expect("sha256 prefix");
+        let native_digest = match native["digest"].as_str() {
+            Some(value) => value,
+            None => panic!("native digest must be a string"),
+        };
+        let native_digest = match native_digest.strip_prefix("sha256:") {
+            Some(value) => value,
+            None => panic!("native digest must use sha256 prefix"),
+        };
         assert_lower_sha256_hex(native_digest);
         assert_eq!(statement["subject"][0]["digest"]["sha256"], native_digest);
     }
@@ -70,21 +84,27 @@ fn in_toto_action_subjects_match_predicate_bindings() {
 
     for name in ["permit", "execution"] {
         let statement = &statements[name];
-        let action = statement["predicate"]["action_digest"]
-            .as_str()
-            .expect("action digest")
-            .strip_prefix("sha256:")
-            .expect("sha256 prefix");
+        let action = match statement["predicate"]["action_digest"].as_str() {
+            Some(value) => value,
+            None => panic!("action digest must be a string"),
+        };
+        let action = match action.strip_prefix("sha256:") {
+            Some(value) => value,
+            None => panic!("action digest must use sha256 prefix"),
+        };
         assert_lower_sha256_hex(action);
         assert_eq!(statement["subject"][1]["digest"]["sha256"], action);
     }
 
     let observation = &statements["observation"];
-    let observed = observation["predicate"]["observed_action_digest"]
-        .as_str()
-        .expect("observed action digest")
-        .strip_prefix("sha256:")
-        .expect("sha256 prefix");
+    let observed = match observation["predicate"]["observed_action_digest"].as_str() {
+        Some(value) => value,
+        None => panic!("observed action digest must be a string"),
+    };
+    let observed = match observed.strip_prefix("sha256:") {
+        Some(value) => value,
+        None => panic!("observed action digest must use sha256 prefix"),
+    };
     assert_lower_sha256_hex(observed);
     assert_eq!(observation["subject"][1]["digest"]["sha256"], observed);
 }

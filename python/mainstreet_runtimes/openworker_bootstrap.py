@@ -3,34 +3,16 @@ from __future__ import annotations
 from typing import Any, Mapping
 
 from .openworker_adapter import OpenWorkerProposalAdapter
-from .openworker_native_bridge import (
-    OpenWorkerNativeBridgeError,
-    guarded_turn_engine_class,
-    verify_pinned_openworker_runtime,
-)
+from .openworker_context import OpenWorkerProductionContextStore
+from .openworker_ipc import OpenWorkerClaimSieveHTTPSClient
+from .openworker_native_bridge import guarded_turn_engine_class, verify_pinned_openworker_runtime
 
 
 class OpenWorkerBootstrapError(RuntimeError):
     pass
 
 
-def install_production_turn_engine_guard(
-    adapter: OpenWorkerProposalAdapter,
-    *,
-    native_tool_map: Mapping[str, str] | None = None,
-) -> type:
-    """Bind ClaimSieve into OpenWorker's real primary engine construction seam.
-
-    The pinned OpenWorker `coworker.agent.build_engine` resolves its module-global
-    `TurnEngine` when each engine is built. Upstream exposes no engine-factory hook at this
-    commit. We therefore replace exactly that one symbol after verifying the pinned runtime
-    and refuse to install if any other code has already changed the constructor.
-
-    The read-only `explore` subagent has its own direct TurnEngine import and is deliberately
-    not rebound: at this pin its registry contains only read/search/git tools and its
-    PermissionEngine is Mode.PLAN.
-    """
-
+def _native_primary_constructor() -> tuple[Any, Any]:
     verify_pinned_openworker_runtime()
     import coworker.agent as agent_module
     import coworker.engine as engine_module
@@ -39,7 +21,31 @@ def install_production_turn_engine_guard(
         raise OpenWorkerBootstrapError(
             "OpenWorker primary TurnEngine constructor was already modified; refusing ambiguous guard binding"
         )
+    return agent_module, engine_module
 
+
+def install_production_runtime_guard(
+    client: OpenWorkerClaimSieveHTTPSClient,
+    context_store: OpenWorkerProductionContextStore,
+    *,
+    consequential_tools: set[str] | frozenset[str] | None = None,
+    native_tool_map: Mapping[str, str] | None = None,
+) -> type:
+    """Bind the real primary OpenWorker engine to mTLS ClaimSieve with per-call context.
+
+    Every engine instance receives its own adapter whose context provider closes over that
+    engine. At tool-execution time OpenWorker has already populated `engine.audit_context`
+    with the actual session id; a durable monotonic context store allocates the request
+    sequence and derives trace/campaign/work-item identities. No process-wide fixture
+    context or caller-supplied route callback exists on this production path.
+    """
+
+    if not isinstance(client, OpenWorkerClaimSieveHTTPSClient):
+        raise OpenWorkerBootstrapError("production guard requires the fixed mTLS ClaimSieve client")
+    if not isinstance(context_store, OpenWorkerProductionContextStore):
+        raise OpenWorkerBootstrapError("production guard requires the durable context store")
+
+    agent_module, _ = _native_primary_constructor()
     Guarded = guarded_turn_engine_class()
     frozen_map = dict(native_tool_map or {})
 
@@ -51,6 +57,15 @@ def install_production_turn_engine_guard(
                 raise OpenWorkerBootstrapError(
                     "upstream OpenWorker may not override production ClaimSieve guard dependencies"
                 )
+
+            def context_for(tool_call: Mapping[str, Any]):
+                return context_store.context_for_engine_call(self, tool_call)
+
+            adapter = OpenWorkerProposalAdapter(
+                context_for,
+                client.route_intent,
+                consequential_tools=consequential_tools,
+            )
             super().__init__(
                 *args,
                 claimsieve_adapter=adapter,
@@ -62,6 +77,32 @@ def install_production_turn_engine_guard(
     if agent_module.TurnEngine is not ProductionClaimSieveOpenWorkerTurnEngine:
         raise OpenWorkerBootstrapError("OpenWorker primary guard binding did not take effect")
     return ProductionClaimSieveOpenWorkerTurnEngine
+
+
+def install_test_turn_engine_guard(
+    adapter: OpenWorkerProposalAdapter,
+    *,
+    native_tool_map: Mapping[str, str] | None = None,
+) -> type:
+    """Reference-only binding for focused tests that already own an adapter callback."""
+
+    agent_module, _ = _native_primary_constructor()
+    Guarded = guarded_turn_engine_class()
+    frozen_map = dict(native_tool_map or {})
+
+    class TestClaimSieveOpenWorkerTurnEngine(Guarded):
+        __claimsieve_production_guard__ = False
+
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            super().__init__(
+                *args,
+                claimsieve_adapter=adapter,
+                native_tool_map=frozen_map,
+                **kwargs,
+            )
+
+    agent_module.TurnEngine = TestClaimSieveOpenWorkerTurnEngine
+    return TestClaimSieveOpenWorkerTurnEngine
 
 
 def verify_production_turn_engine_guard_installed() -> None:

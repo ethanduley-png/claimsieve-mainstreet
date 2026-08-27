@@ -12,6 +12,8 @@ from .deepagents_adapter import (
     DeepAgentsAdapterError,
     DeepAgentsProposalAdapter,
 )
+from .openworker_adapter import OpenWorkerAdapterError, OpenWorkerProposalAdapter
+from .openworker_claimsieve_intake import OpenWorkerFounderIntake, OpenWorkerIntakeError
 
 __all__ = [
     "ClaimSieveIntakeError",
@@ -20,4 +22,8 @@ __all__ = [
     "DeepAgentsAdapterError",
     "DeepAgentsFounderIntake",
     "DeepAgentsProposalAdapter",
+    "OpenWorkerAdapterError",
+    "OpenWorkerFounderIntake",
+    "OpenWorkerIntakeError",
+    "OpenWorkerProposalAdapter",
 ]

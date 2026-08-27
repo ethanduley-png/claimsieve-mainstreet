@@ -16,12 +16,13 @@ ClaimSieve's runtime semantics are materially richer than the proposed `agent-de
 2. in-toto is used only as an interoperability and evidence-export layer in this increment.
 3. Export occurs only after a native ClaimSieve record exists. Export functions are pure and have no execution capability.
 4. Exported objects are in-toto Statement v1 payloads only. They are not DSSE envelopes and MUST NOT be described as in-toto-authenticated attestations until a separate envelope/signature implementation is added and verified.
-5. Native ClaimSieve signatures are carried inside the predicate as properties of the source record and are explicitly labeled `claimsieve-native`. They do not authenticate the in-toto Statement itself.
-6. Each export includes a subject for the immutable native record digest. When an action digest is available, a second subject binds the Statement to that action digest.
-7. Experimental ClaimSieve predicate URIs use the repository's existing `claimsieve.example` namespace. They are not registered in the in-toto predicate registry.
-8. No inbound path from an arbitrary in-toto Statement to ClaimSieve permit issuance or execution is authorized by this ADR.
-9. The open `agent-decision/v0.1` proposal is treated as research input only. ClaimSieve will not fabricate missing `agent_id`, tool-call, wall-clock, or policy-evaluation fields merely to claim compatibility.
-10. The existing release/build in-toto layout remains separate from runtime attestation interoperability.
+5. Native ClaimSieve signatures are carried inside the predicate as properties of the source record and are explicitly labeled `claimsieve-native`. The exporter does not verify those signatures and records `signature_verification: NOT_PERFORMED`. The embedded signature does not authenticate the in-toto Statement itself.
+6. Every digest-valued binding asserted by the exporter is syntax-validated and fails closed unless it is a canonical lowercase `sha256:<64 hex>` value; nullable native digest fields are permitted only where the native record allows absence.
+7. Each export includes a subject for the immutable native record digest. When an action digest is available, a second subject binds the Statement to that action digest.
+8. Experimental ClaimSieve predicate URIs use the repository's existing `claimsieve.example` namespace. They are not registered in the in-toto predicate registry.
+9. No inbound path from an arbitrary in-toto Statement to ClaimSieve permit issuance or execution is authorized by this ADR.
+10. The open `agent-decision/v0.1` proposal is treated as research input only. ClaimSieve will not fabricate missing `agent_id`, tool-call, wall-clock, or policy-evaluation fields merely to claim compatibility.
+11. The existing release/build in-toto layout remains separate from runtime attestation interoperability.
 
 ## Exported predicate types
 
@@ -31,7 +32,7 @@ ClaimSieve's runtime semantics are materially richer than the proposed `agent-de
 
 ## Security properties preserved
 
-The permit export preserves destination and parameter binding, evidence and approval commitments, policy and signed-policy commitments, predecessor/current campaign state, validity bounds, nonce, and single-use metadata.
+The permit export preserves destination and parameter binding, evidence and approval commitments, policy and signed-policy commitments, predecessor/current campaign state, validity bounds, nonce, and single-use metadata. The exporter also requires `max_uses == 1` rather than exporting a weakened permit shape.
 
 The execution export preserves request binding, idempotency key, fencing token, containment epoch, provider status, provider identifier, and attempt sequence.
 
@@ -47,15 +48,15 @@ Mitigation: export native record digests plus ClaimSieve-specific predicates; do
 
 ### Signature confusion
 
-Risk: a consumer mistakes the embedded native signature for an in-toto envelope signature.
+Risk: a consumer mistakes the embedded native signature for either a verified native signature or an in-toto envelope signature.
 
-Mitigation: payload-only export; explicit `signature_format: claimsieve-native`; no `payload`, `payloadType`, or `signatures` fields.
+Mitigation: payload-only export; explicit `signature_format: claimsieve-native` and `signature_verification: NOT_PERFORMED`; no `payload`, `payloadType`, or `signatures` fields. Native signature verification remains a separate prerequisite when a consumer needs authenticity.
 
-### Subject substitution
+### Subject or binding substitution
 
-Risk: an exporter binds the predicate to a malformed or attacker-selected digest.
+Risk: an exporter binds the Statement or predicate to a malformed or attacker-selected digest.
 
-Mitigation: fail closed unless every exported subject digest matches `sha256:<64 lowercase hex>`.
+Mitigation: fail closed unless every exported non-null digest binding matches `sha256:<64 lowercase hex>`. Subject digests are derived from those validated values or from the canonical digest of the complete native record.
 
 ### Replay or stale authority
 

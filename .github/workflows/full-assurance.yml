@@ -37,11 +37,11 @@ jobs:
               rocq compile -Q . ClaimSieve CheckDurableState.v
             ' 2>&1 | tee evidence/ci-rocq/ROCQ_OUTPUT.txt
       - run: python scripts/package_release.py
-      - run: python scripts/validate_release_archive.py ../claimsieve_mainstreet_v0_34_founder_operations_boundary.zip
+      - run: python scripts/validate_release_archive.py ../claimsieve-mainstreet.zip
       - uses: actions/upload-artifact@v4
         with:
           name: claimsieve-mainstreet-v0.34-full-assurance-candidate
           path: |
-            ../claimsieve_mainstreet_v0_34_founder_operations_boundary.zip
-            ../claimsieve_mainstreet_v0_34_founder_operations_boundary.zip.sha256
+            ../claimsieve-mainstreet.zip
+            ../claimsieve-mainstreet.zip.sha256
             evidence/

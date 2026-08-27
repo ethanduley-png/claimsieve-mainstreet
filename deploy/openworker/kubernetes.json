@@ -30,8 +30,11 @@
                 "imagePullPolicy": "IfNotPresent",
                 "ports": [{"containerPort": 8080, "protocol": "TCP"}],
                 "env": [
-                  {"name": "MAINSTREET_CLAIMSIEVE_ENDPOINT", "value": "https://claimsieve-intake.mainstreet-system.svc.cluster.local:8443"},
+                  {"name": "MAINSTREET_CLAIMSIEVE_ENDPOINT", "value": "https://claimsieve-intake.mainstreet-system.svc.cluster.local:8443/v1/runtime/openworker/intents"},
                   {"name": "MAINSTREET_MODEL_GATEWAY_ENDPOINT", "value": "https://model-gateway.mainstreet-system.svc.cluster.local:8443"},
+                  {"name": "MAINSTREET_MTLS_CA_FILE", "value": "/var/run/mainstreet/mtls/ca.crt"},
+                  {"name": "MAINSTREET_MTLS_CERT_FILE", "value": "/var/run/mainstreet/mtls/tls.crt"},
+                  {"name": "MAINSTREET_MTLS_KEY_FILE", "value": "/var/run/mainstreet/mtls/tls.key"},
                   {"name": "OPENWORKER_RUNTIME_COMMIT", "value": "86c57f0692a5a318e55d1b9e0188d798b9fc5690"}
                 ],
                 "securityContext": {
@@ -43,7 +46,8 @@
                 },
                 "volumeMounts": [
                   {"name": "runtime-tmp", "mountPath": "/tmp"},
-                  {"name": "runtime-state", "mountPath": "/var/lib/mainstreet/openworker"}
+                  {"name": "runtime-state", "mountPath": "/var/lib/mainstreet/openworker"},
+                  {"name": "claimsieve-mtls", "mountPath": "/var/run/mainstreet/mtls", "readOnly": true}
                 ],
                 "resources": {
                   "requests": {"cpu": "100m", "memory": "256Mi"},
@@ -53,7 +57,8 @@
             ],
             "volumes": [
               {"name": "runtime-tmp", "emptyDir": {"sizeLimit": "256Mi"}},
-              {"name": "runtime-state", "persistentVolumeClaim": {"claimName": "openworker-runtime-state"}}
+              {"name": "runtime-state", "persistentVolumeClaim": {"claimName": "openworker-runtime-state"}},
+              {"name": "claimsieve-mtls", "secret": {"secretName": "openworker-claimsieve-mtls", "defaultMode": 256}}
             ]
           }
         }
@@ -77,34 +82,16 @@
         "policyTypes": ["Egress"],
         "egress": [
           {
-            "to": [
-              {
-                "namespaceSelector": {"matchLabels": {"kubernetes.io/metadata.name": "mainstreet-system"}},
-                "podSelector": {"matchLabels": {"app": "claimsieve-intake"}}
-              }
-            ],
+            "to": [{"namespaceSelector": {"matchLabels": {"kubernetes.io/metadata.name": "mainstreet-system"}}, "podSelector": {"matchLabels": {"app": "claimsieve-intake"}}}],
             "ports": [{"protocol": "TCP", "port": 8443}]
           },
           {
-            "to": [
-              {
-                "namespaceSelector": {"matchLabels": {"kubernetes.io/metadata.name": "mainstreet-system"}},
-                "podSelector": {"matchLabels": {"app": "model-gateway"}}
-              }
-            ],
+            "to": [{"namespaceSelector": {"matchLabels": {"kubernetes.io/metadata.name": "mainstreet-system"}}, "podSelector": {"matchLabels": {"app": "model-gateway"}}}],
             "ports": [{"protocol": "TCP", "port": 8443}]
           },
           {
-            "to": [
-              {
-                "namespaceSelector": {"matchLabels": {"kubernetes.io/metadata.name": "kube-system"}},
-                "podSelector": {"matchLabels": {"k8s-app": "kube-dns"}}
-              }
-            ],
-            "ports": [
-              {"protocol": "UDP", "port": 53},
-              {"protocol": "TCP", "port": 53}
-            ]
+            "to": [{"namespaceSelector": {"matchLabels": {"kubernetes.io/metadata.name": "kube-system"}}, "podSelector": {"matchLabels": {"k8s-app": "kube-dns"}}}],
+            "ports": [{"protocol": "UDP", "port": 53}, {"protocol": "TCP", "port": 53}]
           }
         ]
       }

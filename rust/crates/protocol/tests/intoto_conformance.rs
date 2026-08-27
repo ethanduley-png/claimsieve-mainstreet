@@ -33,8 +33,8 @@ mod tests {
     }
 
     #[test]
-    fn in_toto_vector_has_only_supported_statement_and_predicate_versions(
-    ) -> Result<(), Box<dyn Error>> {
+    fn in_toto_vector_has_only_supported_statement_and_predicate_versions()
+    -> Result<(), Box<dyn Error>> {
         let vector = load_vector()?;
         assert_eq!(vector["schema_version"], "claimsieve.intoto.conformance.v1");
 
@@ -110,8 +110,8 @@ mod tests {
     }
 
     #[test]
-    fn in_toto_vector_preserves_authorization_execution_and_observation_boundaries(
-    ) -> Result<(), Box<dyn Error>> {
+    fn in_toto_vector_preserves_authorization_execution_and_observation_boundaries()
+    -> Result<(), Box<dyn Error>> {
         let vector = load_vector()?;
         let statements = &vector["statements"];
 

@@ -32,6 +32,13 @@ def _sha256_hex(value: Any, field: str) -> str:
     return match.group(1)
 
 
+def _validate_digest(record: Mapping[str, Any], field: str, *, nullable: bool = False) -> None:
+    value = _require(record, field)
+    if value is None and nullable:
+        return
+    _sha256_hex(value, field)
+
+
 def _subject(name: str, digest_value: str) -> dict[str, Any]:
     return {"name": name, "digest": {"sha256": _sha256_hex(digest_value, name)}}
 
@@ -68,17 +75,35 @@ def _native_record(
         "key_id": key_id,
         "signature": signature,
         "signature_format": "claimsieve-native",
+        "signature_verification": "NOT_PERFORMED",
     }
 
 
 def permit_statement(permit: Mapping[str, Any]) -> dict[str, Any]:
     """Export a native ClaimSieve permit as an in-toto Statement v1 payload.
 
-    This does not create a DSSE envelope and does not grant or verify authority.
-    The native permit remains the authoritative authorization object.
+    This does not create a DSSE envelope, verify the native signature, or grant
+    authority. The native permit remains the authoritative authorization object.
     """
     if _require(permit, "schema_version") != "claimsieve.permit.v1":
         raise InTotoExportError("unsupported permit schema_version")
+
+    for field in (
+        "proposal_digest",
+        "action_digest",
+        "destination_digest",
+        "parameter_digest",
+        "policy_digest",
+        "signed_policy_digest",
+        "prior_campaign_state_digest",
+        "campaign_state_digest",
+        "evidence_root",
+        "decision_digest",
+    ):
+        _validate_digest(permit, field)
+    _validate_digest(permit, "approval_digest", nullable=True)
+    if _require(permit, "max_uses") != 1:
+        raise InTotoExportError("permit max_uses must be exactly 1")
 
     permit_digest = digest(dict(permit))
     action_digest = _require(permit, "action_digest")
@@ -118,6 +143,9 @@ def executor_receipt_statement(receipt: Mapping[str, Any]) -> dict[str, Any]:
     if _require(receipt, "schema_version") != "claimsieve.executor_receipt.v2":
         raise InTotoExportError("unsupported executor receipt schema_version")
 
+    _validate_digest(receipt, "action_digest")
+    _validate_digest(receipt, "request_digest")
+
     receipt_digest = digest(dict(receipt))
     action_digest = _require(receipt, "action_digest")
     subjects = [
@@ -150,6 +178,9 @@ def observer_receipt_statement(receipt: Mapping[str, Any]) -> dict[str, Any]:
     """Export an independent observer receipt, including unknown outcomes."""
     if _require(receipt, "schema_version") != "claimsieve.observer_receipt.v2":
         raise InTotoExportError("unsupported observer receipt schema_version")
+
+    _validate_digest(receipt, "provider_record_digest", nullable=True)
+    _validate_digest(receipt, "observed_action_digest", nullable=True)
 
     receipt_digest = digest(dict(receipt))
     subjects = [

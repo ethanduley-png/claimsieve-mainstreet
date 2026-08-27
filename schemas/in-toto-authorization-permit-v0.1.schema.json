@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://claimsieve.example/schemas/in-toto-authorization-permit-v0.1.schema.json",
+  "title": "ClaimSieve in-toto authorization permit predicate v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "permit_id", "trace_id", "tenant_id", "campaign_id", "principal",
+    "proposal_digest", "action_digest", "destination_digest", "parameter_digest",
+    "policy_digest", "signed_policy_digest", "prior_campaign_state_digest",
+    "campaign_state_digest", "evidence_root", "decision_digest", "approval_digest",
+    "valid_from_seq", "expires_at_seq", "max_uses", "nonce", "native_record"
+  ],
+  "properties": {
+    "permit_id": {"type": "string", "minLength": 1},
+    "trace_id": {"type": "string", "minLength": 1},
+    "tenant_id": {"type": "string", "minLength": 1},
+    "campaign_id": {"type": "string", "minLength": 1},
+    "principal": {"type": "string", "pattern": "^spiffe://"},
+    "proposal_digest": {"$ref": "#/$defs/sha256"},
+    "action_digest": {"$ref": "#/$defs/sha256"},
+    "destination_digest": {"$ref": "#/$defs/sha256"},
+    "parameter_digest": {"$ref": "#/$defs/sha256"},
+    "policy_digest": {"$ref": "#/$defs/sha256"},
+    "signed_policy_digest": {"$ref": "#/$defs/sha256"},
+    "prior_campaign_state_digest": {"$ref": "#/$defs/sha256"},
+    "campaign_state_digest": {"$ref": "#/$defs/sha256"},
+    "evidence_root": {"$ref": "#/$defs/sha256"},
+    "decision_digest": {"$ref": "#/$defs/sha256"},
+    "approval_digest": {"anyOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
+    "valid_from_seq": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+    "expires_at_seq": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+    "max_uses": {"const": 1},
+    "nonce": {"type": "string", "pattern": "^[a-f0-9]{32,128}$"},
+    "native_record": {"$ref": "#/$defs/nativeRecord"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "nativeRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "digest", "key_id", "signature", "signature_format", "signature_verification"],
+      "properties": {
+        "schema_version": {"const": "claimsieve.permit.v1"},
+        "digest": {"$ref": "#/$defs/sha256"},
+        "key_id": {"type": "string", "minLength": 1},
+        "signature": {"type": "string", "minLength": 1},
+        "signature_format": {"const": "claimsieve-native"},
+        "signature_verification": {"const": "NOT_PERFORMED"}
+      }
+    }
+  }
+}

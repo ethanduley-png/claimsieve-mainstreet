@@ -113,7 +113,9 @@ class OpenWorkerNativeRuntimeTests(unittest.IsolatedAsyncioTestCase):
             },
         )
 
-    def make_engine(self, *, mode=Mode.BYPASS_APPROVALS, approver=None, tool_map=None):
+    def make_engine(self, *, mode=None, approver=None, tool_map=None):
+        if mode is None:
+            mode = Mode.BYPASS_APPROVALS
         Engine = guarded_turn_engine_class()
         return Engine(
             provider=self._Provider(),

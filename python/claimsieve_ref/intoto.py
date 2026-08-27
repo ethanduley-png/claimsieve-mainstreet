@@ -10,11 +10,22 @@ STATEMENT_TYPE = "https://in-toto.io/Statement/v1"
 PERMIT_PREDICATE_TYPE = "https://claimsieve.example/attestation/authorization-permit/v0.1"
 EXECUTION_PREDICATE_TYPE = "https://claimsieve.example/attestation/execution-attempt/v0.1"
 OBSERVATION_PREDICATE_TYPE = "https://claimsieve.example/attestation/outcome-observation/v0.1"
+SUPPORTED_PREDICATE_TYPES = frozenset(
+    {
+        PERMIT_PREDICATE_TYPE,
+        EXECUTION_PREDICATE_TYPE,
+        OBSERVATION_PREDICATE_TYPE,
+    }
+)
 _SHA256 = re.compile(r"^sha256:([0-9a-f]{64})$")
 
 
 class InTotoExportError(ValueError):
     """Raised when a native ClaimSieve record cannot be exported losslessly enough."""
+
+
+class InTotoVerificationError(ValueError):
+    """Raised when a ClaimSieve in-toto Statement is structurally unsupported or inconsistent."""
 
 
 def _require(record: Mapping[str, Any], field: str) -> Any:
@@ -32,9 +43,8 @@ def _sha256_hex(value: Any, field: str) -> str:
     return match.group(1)
 
 
-def _validate_digest(record: Mapping[str, Any], field: str, *, nullable: bool = False) -> None:
-    value = _require(record, field)
-    if value is None and nullable:
+def _validate_optional_digest(value: Any, field: str) -> None:
+    if value is None:
         return
     _sha256_hex(value, field)
 
@@ -82,13 +92,13 @@ def _native_record(
 def permit_statement(permit: Mapping[str, Any]) -> dict[str, Any]:
     """Export a native ClaimSieve permit as an in-toto Statement v1 payload.
 
-    This does not create a DSSE envelope, verify the native signature, or grant
-    authority. The native permit remains the authoritative authorization object.
+    This does not create a DSSE envelope and does not grant or verify authority.
+    The native permit remains the authoritative authorization object.
     """
     if _require(permit, "schema_version") != "claimsieve.permit.v1":
         raise InTotoExportError("unsupported permit schema_version")
 
-    for field in (
+    digest_fields = (
         "proposal_digest",
         "action_digest",
         "destination_digest",
@@ -99,11 +109,10 @@ def permit_statement(permit: Mapping[str, Any]) -> dict[str, Any]:
         "campaign_state_digest",
         "evidence_root",
         "decision_digest",
-    ):
-        _validate_digest(permit, field)
-    _validate_digest(permit, "approval_digest", nullable=True)
-    if _require(permit, "max_uses") != 1:
-        raise InTotoExportError("permit max_uses must be exactly 1")
+    )
+    for field in digest_fields:
+        _sha256_hex(_require(permit, field), field)
+    _validate_optional_digest(_require(permit, "approval_digest"), "approval_digest")
 
     permit_digest = digest(dict(permit))
     action_digest = _require(permit, "action_digest")
@@ -143,8 +152,8 @@ def executor_receipt_statement(receipt: Mapping[str, Any]) -> dict[str, Any]:
     if _require(receipt, "schema_version") != "claimsieve.executor_receipt.v2":
         raise InTotoExportError("unsupported executor receipt schema_version")
 
-    _validate_digest(receipt, "action_digest")
-    _validate_digest(receipt, "request_digest")
+    for field in ("action_digest", "request_digest"):
+        _sha256_hex(_require(receipt, field), field)
 
     receipt_digest = digest(dict(receipt))
     action_digest = _require(receipt, "action_digest")
@@ -179,8 +188,8 @@ def observer_receipt_statement(receipt: Mapping[str, Any]) -> dict[str, Any]:
     if _require(receipt, "schema_version") != "claimsieve.observer_receipt.v2":
         raise InTotoExportError("unsupported observer receipt schema_version")
 
-    _validate_digest(receipt, "provider_record_digest", nullable=True)
-    _validate_digest(receipt, "observed_action_digest", nullable=True)
+    _validate_optional_digest(_require(receipt, "provider_record_digest"), "provider_record_digest")
+    _validate_optional_digest(_require(receipt, "observed_action_digest"), "observed_action_digest")
 
     receipt_digest = digest(dict(receipt))
     subjects = [
@@ -206,3 +215,107 @@ def observer_receipt_statement(receipt: Mapping[str, Any]) -> dict[str, Any]:
     predicate = {field: deepcopy(_require(receipt, field)) for field in fields}
     predicate["native_record"] = _native_record(receipt, "observer_key_id")
     return _statement(subjects, OBSERVATION_PREDICATE_TYPE, predicate)
+
+
+def verify_exported_statement(statement: Mapping[str, Any]) -> None:
+    """Fail closed on unsupported or internally inconsistent exported Statements.
+
+    This verifies only the ClaimSieve interoperability profile. It does not verify
+    DSSE, Sigstore, or the embedded native ClaimSieve signature, and therefore
+    does not establish runtime authority.
+    """
+    if not isinstance(statement, Mapping):
+        raise InTotoVerificationError("statement must be an object")
+    if set(statement) != {"_type", "subject", "predicateType", "predicate"}:
+        raise InTotoVerificationError("unexpected Statement fields")
+    if statement.get("_type") != STATEMENT_TYPE:
+        raise InTotoVerificationError("unsupported Statement type")
+
+    predicate_type = statement.get("predicateType")
+    if predicate_type not in SUPPORTED_PREDICATE_TYPES:
+        raise InTotoVerificationError("unsupported predicate type")
+    subjects = statement.get("subject")
+    predicate = statement.get("predicate")
+    if not isinstance(subjects, list) or not subjects:
+        raise InTotoVerificationError("Statement requires subjects")
+    if not isinstance(predicate, Mapping):
+        raise InTotoVerificationError("predicate must be an object")
+
+    for subject in subjects:
+        if not isinstance(subject, Mapping) or set(subject) != {"name", "digest"}:
+            raise InTotoVerificationError("invalid subject shape")
+        if not isinstance(subject.get("name"), str) or not subject["name"]:
+            raise InTotoVerificationError("invalid subject name")
+        digests = subject.get("digest")
+        if not isinstance(digests, Mapping) or set(digests) != {"sha256"}:
+            raise InTotoVerificationError("only sha256 subject digests are accepted")
+        value = digests.get("sha256")
+        if not isinstance(value, str) or re.fullmatch(r"[0-9a-f]{64}", value) is None:
+            raise InTotoVerificationError("invalid subject sha256")
+
+    native = predicate.get("native_record")
+    if not isinstance(native, Mapping):
+        raise InTotoVerificationError("native_record is required")
+    expected_native_fields = {
+        "schema_version",
+        "digest",
+        "key_id",
+        "signature",
+        "signature_format",
+        "signature_verification",
+    }
+    if set(native) != expected_native_fields:
+        raise InTotoVerificationError("unexpected native_record fields")
+    if native.get("signature_format") != "claimsieve-native":
+        raise InTotoVerificationError("unsupported native signature format")
+    if native.get("signature_verification") != "NOT_PERFORMED":
+        raise InTotoVerificationError("exporter must not claim native signature verification")
+    try:
+        native_hex = _sha256_hex(native.get("digest"), "native_record.digest")
+    except InTotoExportError as exc:
+        raise InTotoVerificationError(str(exc)) from exc
+
+    first_digest = subjects[0]["digest"]["sha256"]
+    if first_digest != native_hex:
+        raise InTotoVerificationError("native record subject digest mismatch")
+
+    expected_schema = {
+        PERMIT_PREDICATE_TYPE: "claimsieve.permit.v1",
+        EXECUTION_PREDICATE_TYPE: "claimsieve.executor_receipt.v2",
+        OBSERVATION_PREDICATE_TYPE: "claimsieve.observer_receipt.v2",
+    }[predicate_type]
+    if native.get("schema_version") != expected_schema:
+        raise InTotoVerificationError("predicate/native schema mismatch")
+
+    if predicate_type == PERMIT_PREDICATE_TYPE:
+        try:
+            action_hex = _sha256_hex(predicate.get("action_digest"), "action_digest")
+        except InTotoExportError as exc:
+            raise InTotoVerificationError(str(exc)) from exc
+        if len(subjects) != 2 or subjects[1].get("name") != "claimsieve-authorized-action":
+            raise InTotoVerificationError("permit Statement requires authorized-action subject")
+        if subjects[1]["digest"]["sha256"] != action_hex:
+            raise InTotoVerificationError("authorized action subject mismatch")
+    elif predicate_type == EXECUTION_PREDICATE_TYPE:
+        try:
+            action_hex = _sha256_hex(predicate.get("action_digest"), "action_digest")
+        except InTotoExportError as exc:
+            raise InTotoVerificationError(str(exc)) from exc
+        if len(subjects) != 2 or subjects[1].get("name") != "claimsieve-attempted-action":
+            raise InTotoVerificationError("execution Statement requires attempted-action subject")
+        if subjects[1]["digest"]["sha256"] != action_hex:
+            raise InTotoVerificationError("attempted action subject mismatch")
+    else:
+        observed = predicate.get("observed_action_digest")
+        if observed is None:
+            if len(subjects) != 1:
+                raise InTotoVerificationError("unknown outcome must not invent observed-action subject")
+        else:
+            try:
+                observed_hex = _sha256_hex(observed, "observed_action_digest")
+            except InTotoExportError as exc:
+                raise InTotoVerificationError(str(exc)) from exc
+            if len(subjects) != 2 or subjects[1].get("name") != "claimsieve-observed-action":
+                raise InTotoVerificationError("observation Statement requires observed-action subject")
+            if subjects[1]["digest"]["sha256"] != observed_hex:
+                raise InTotoVerificationError("observed action subject mismatch")

@@ -20,16 +20,17 @@ jobs:
           toolchain: 1.90.0
           components: rustfmt, clippy
       - run: python -m pip install --disable-pip-version-check -r python/requirements-test.txt
-      - run: ./scripts/test_all.sh
+      - run: bash scripts/test_all.sh
       - name: Compile Rocq and print assumptions
         run: |
           mkdir -p evidence/ci-rocq
           docker run --rm \
-            -v "$PWD:/workspace" \
-            -w /workspace/rocq \
+            -v "$PWD:/workspace:ro" \
             rocq/rocq-prover:9.2 \
             bash -lc '
               set -euo pipefail
+              cp -R /workspace/rocq /tmp/claimsieve-rocq
+              cd /tmp/claimsieve-rocq
               rocq compile -Q . ClaimSieve Claimsieve.v
               rocq compile -Q . ClaimSieve DurableState.v
               rocq compile -Q . ClaimSieve Check.v

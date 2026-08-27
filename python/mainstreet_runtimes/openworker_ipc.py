@@ -7,30 +7,25 @@ from pathlib import Path
 from typing import Any, Mapping
 from urllib.parse import urlsplit
 
+from .deepagents_adapter import ClaimSieveRuntimeContext
+from .openworker_adapter import OpenWorkerProposalAdapter
 from .openworker_claimsieve_intake import OpenWorkerFounderIntake, OpenWorkerIntakeError
 
 CLAIMSIEVE_INTAKE_HOST = "claimsieve-intake.mainstreet-system.svc.cluster.local"
 CLAIMSIEVE_INTAKE_PORT = 8443
 CLAIMSIEVE_INTAKE_PATH = "/v1/runtime/openworker/intents"
+CLAIMSIEVE_INTAKE_ENDPOINT = (
+    f"https://{CLAIMSIEVE_INTAKE_HOST}:{CLAIMSIEVE_INTAKE_PORT}{CLAIMSIEVE_INTAKE_PATH}"
+)
 MAX_INTENT_BYTES = 64 * 1024
 MAX_RECEIPT_BYTES = 128 * 1024
 
 _RECEIPT_FIELDS = frozenset(
     {
-        "schema_version",
-        "status",
-        "permit_id",
-        "proposal_id",
-        "runtime_name",
-        "runtime_version",
-        "runtime_principal",
-        "runtime_manifest_digest",
-        "proposal_digest",
-        "action_digest",
-        "destination_digest",
-        "parameter_digest",
-        "expires_at_seq",
-        "external_action_executed",
+        "schema_version", "status", "permit_id", "proposal_id", "runtime_name",
+        "runtime_version", "runtime_principal", "runtime_manifest_digest",
+        "proposal_digest", "action_digest", "destination_digest", "parameter_digest",
+        "expires_at_seq", "external_action_executed",
     }
 )
 
@@ -61,16 +56,19 @@ def _decode_closed_json(raw: bytes, maximum: int) -> dict[str, Any]:
 
 
 class OpenWorkerIntakeService:
-    """Framework-neutral ClaimSieve intake handler behind authenticated TLS termination.
+    """Framework-neutral ClaimSieve handler behind authenticated TLS termination.
 
-    The TLS/server layer must provide the authenticated SPIFFE identity from the client
-    certificate; this handler never accepts caller identity from the JSON body or an
-    untrusted HTTP header.
+    The server/TLS layer supplies the authenticated SPIFFE principal from the verified
+    client certificate. Caller identity is never accepted from request JSON or HTTP headers.
     """
 
     def __init__(self, intake: OpenWorkerFounderIntake) -> None:
         self._intake = intake
-        self._expected_principal = intake._runtime_profile.principal  # bounded internal composition
+        profile = getattr(intake, "_runtime_profile", None)
+        principal = getattr(profile, "principal", None)
+        if not isinstance(principal, str) or not principal:
+            raise OpenWorkerIPCError("ClaimSieve intake lacks a bound runtime principal")
+        self._expected_principal = principal
 
     def handle(self, raw_body: bytes, authenticated_principal: str) -> bytes:
         if authenticated_principal != self._expected_principal:
@@ -87,7 +85,7 @@ class OpenWorkerIntakeService:
 
 
 class OpenWorkerClaimSieveHTTPSClient:
-    """mTLS client for the only production OpenWorker consequential-action egress path."""
+    """mTLS client for the only production consequential-action egress from OpenWorker."""
 
     def __init__(
         self,
@@ -109,8 +107,15 @@ class OpenWorkerClaimSieveHTTPSClient:
             or parts.username is not None
             or parts.password is not None
         ):
-            raise OpenWorkerIPCError("ClaimSieve intake endpoint must match the fixed production mTLS endpoint")
-        if not isinstance(timeout_seconds, (int, float)) or isinstance(timeout_seconds, bool) or timeout_seconds <= 0 or timeout_seconds > 30:
+            raise OpenWorkerIPCError(
+                "ClaimSieve intake endpoint must match the fixed production mTLS endpoint"
+            )
+        if (
+            not isinstance(timeout_seconds, (int, float))
+            or isinstance(timeout_seconds, bool)
+            or timeout_seconds <= 0
+            or timeout_seconds > 30
+        ):
             raise OpenWorkerIPCError("ClaimSieve intake timeout must be in (0, 30] seconds")
         files = [Path(ca_file), Path(client_cert_file), Path(client_key_file)]
         if any(not path.is_file() for path in files):
@@ -127,7 +132,9 @@ class OpenWorkerClaimSieveHTTPSClient:
     @staticmethod
     def _validate_receipt(receipt: Mapping[str, Any]) -> dict[str, Any]:
         if frozenset(receipt) != _RECEIPT_FIELDS:
-            raise OpenWorkerIPCError("ClaimSieve intake receipt fields do not match the closed schema")
+            raise OpenWorkerIPCError(
+                "ClaimSieve intake receipt fields do not match the closed schema"
+            )
         if receipt.get("schema_version") != "mainstreet.claimsieve_intake_receipt.v1":
             raise OpenWorkerIPCError("unsupported ClaimSieve intake receipt schema")
         if receipt.get("status") != "PERMIT_ISSUED_EXECUTION_PENDING":
@@ -135,7 +142,9 @@ class OpenWorkerClaimSieveHTTPSClient:
         if receipt.get("runtime_name") != "openworker":
             raise OpenWorkerIPCError("ClaimSieve receipt runtime mismatch")
         if receipt.get("external_action_executed") is not False:
-            raise OpenWorkerIPCError("ClaimSieve receipt cannot report execution on proposal intake")
+            raise OpenWorkerIPCError(
+                "ClaimSieve receipt cannot report execution on proposal intake"
+            )
         return dict(receipt)
 
     def route_intent(self, intent: dict[str, Any]) -> dict[str, Any]:
@@ -161,7 +170,9 @@ class OpenWorkerClaimSieveHTTPSClient:
             )
             response = conn.getresponse()
             if response.status != 200:
-                raise OpenWorkerIPCError(f"ClaimSieve intake returned HTTP {response.status}; redirects and fallback are forbidden")
+                raise OpenWorkerIPCError(
+                    f"ClaimSieve intake returned HTTP {response.status}; redirects and fallback are forbidden"
+                )
             raw = response.read(MAX_RECEIPT_BYTES + 1)
             if len(raw) > MAX_RECEIPT_BYTES:
                 raise OpenWorkerIPCError("ClaimSieve intake receipt exceeds size limit")
@@ -170,3 +181,32 @@ class OpenWorkerClaimSieveHTTPSClient:
             raise OpenWorkerIPCError("ClaimSieve intake transport failed closed") from exc
         finally:
             conn.close()
+
+
+def build_production_openworker_adapter(
+    context: ClaimSieveRuntimeContext,
+    *,
+    ca_file: str | Path,
+    client_cert_file: str | Path,
+    client_key_file: str | Path,
+    consequential_tools: set[str] | frozenset[str] | None = None,
+    timeout_seconds: float = 5.0,
+) -> OpenWorkerProposalAdapter:
+    """Construct the production adapter with no caller-supplied route callback.
+
+    This is the supported production construction path: consequential calls can route only
+    to the fixed, hostname-verified, mutual-TLS ClaimSieve intake endpoint.
+    """
+
+    client = OpenWorkerClaimSieveHTTPSClient(
+        endpoint=CLAIMSIEVE_INTAKE_ENDPOINT,
+        ca_file=ca_file,
+        client_cert_file=client_cert_file,
+        client_key_file=client_key_file,
+        timeout_seconds=timeout_seconds,
+    )
+    return OpenWorkerProposalAdapter(
+        context,
+        client.route_intent,
+        consequential_tools=consequential_tools,
+    )

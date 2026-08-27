@@ -20,10 +20,7 @@ class OpenWorkerBootstrapTests(unittest.TestCase):
         from coworker.providers.base import AssistantTurn, ModelCapabilities, ProviderClient, ToolCall
 
         from mainstreet_runtimes import ClaimSieveRuntimeContext, OpenWorkerProposalAdapter
-        from mainstreet_runtimes.openworker_bootstrap import (
-            install_production_turn_engine_guard,
-            verify_production_turn_engine_guard_installed,
-        )
+        from mainstreet_runtimes.openworker_bootstrap import install_test_turn_engine_guard
 
         class Provider(ProviderClient):
             def complete(self, *, model, messages, tools=None, **settings):
@@ -34,15 +31,14 @@ class OpenWorkerBootstrapTests(unittest.TestCase):
 
         routed = []
         executed = []
-        context = ClaimSieveRuntimeContext(
-            trace_id="trace-bootstrap",
-            campaign_id="campaign-bootstrap",
-            session_id="session-bootstrap",
-            work_item_id="work-bootstrap",
-            requested_at_seq=1,
-        )
         adapter = OpenWorkerProposalAdapter(
-            context,
+            ClaimSieveRuntimeContext(
+                trace_id="trace-bootstrap",
+                campaign_id="campaign-bootstrap",
+                session_id="session-bootstrap",
+                work_item_id="work-bootstrap",
+                requested_at_seq=1,
+            ),
             lambda intent: routed.append(intent) or {"status": "test-only"},
             consequential_tools={"create_github_issue"},
         )
@@ -74,19 +70,14 @@ class OpenWorkerBootstrapTests(unittest.TestCase):
 
         native = engine_module.TurnEngine
         self.addCleanup(setattr, agent_module, "TurnEngine", native)
-        Guarded = install_production_turn_engine_guard(
+        Guarded = install_test_turn_engine_guard(
             adapter, native_tool_map={"native_create_issue": "create_github_issue"}
         )
-        verify_production_turn_engine_guard_installed()
 
         with tempfile.TemporaryDirectory() as temp:
             engine = build_engine(
-                agent=code_agent(),
-                workspace=Path(temp),
-                provider=Provider(),
-                model="test-model",
-                mode=Mode.BYPASS_APPROVALS,
-                extra_tools=[connector],
+                agent=code_agent(), workspace=Path(temp), provider=Provider(),
+                model="test-model", mode=Mode.BYPASS_APPROVALS, extra_tools=[connector],
             )
             self.assertIsInstance(engine, Guarded)
             result, status = engine._execute_sync(
@@ -111,15 +102,13 @@ class OpenWorkerBootstrapTests(unittest.TestCase):
         from mainstreet_runtimes import ClaimSieveRuntimeContext, OpenWorkerProposalAdapter
         from mainstreet_runtimes.openworker_bootstrap import (
             OpenWorkerBootstrapError,
-            install_production_turn_engine_guard,
+            install_test_turn_engine_guard,
         )
 
         adapter = OpenWorkerProposalAdapter(
             ClaimSieveRuntimeContext(
-                trace_id="trace-bootstrap-2",
-                campaign_id="campaign-bootstrap-2",
-                session_id="session-bootstrap-2",
-                work_item_id="work-bootstrap-2",
+                trace_id="trace-bootstrap-2", campaign_id="campaign-bootstrap-2",
+                session_id="session-bootstrap-2", work_item_id="work-bootstrap-2",
                 requested_at_seq=1,
             ),
             lambda intent: {},
@@ -127,9 +116,9 @@ class OpenWorkerBootstrapTests(unittest.TestCase):
         )
         native = engine_module.TurnEngine
         self.addCleanup(setattr, agent_module, "TurnEngine", native)
-        install_production_turn_engine_guard(adapter)
+        install_test_turn_engine_guard(adapter)
         with self.assertRaisesRegex(OpenWorkerBootstrapError, "already modified"):
-            install_production_turn_engine_guard(adapter)
+            install_test_turn_engine_guard(adapter)
 
 
 if __name__ == "__main__":

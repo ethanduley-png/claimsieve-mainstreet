@@ -15,14 +15,19 @@ jobs:
         with:
           node-version: '24'
       - run: python -m pip install --disable-pip-version-check -r python/requirements-test.txt
-      - run: ./scripts/test_all.sh
+      - run: bash scripts/test_all.sh
       - run: python scripts/package_release.py
+      - name: Stage release artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence/release
+          cp ../claimsieve-mainstreet.zip evidence/release/
+          cp ../claimsieve-mainstreet.zip.sha256 evidence/release/
       - uses: actions/upload-artifact@v4
         with:
           name: claimsieve-mainstreet-v0.34-founder-operations-evidence
           path: |
-            ../claimsieve_mainstreet_v0_34_founder_operations_boundary.zip
-            ../claimsieve_mainstreet_v0_34_founder_operations_boundary.zip.sha256
             evidence/
             vectors/valid_evidence_bundle.json
             MANIFEST.sha256

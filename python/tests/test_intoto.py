@@ -19,65 +19,35 @@ D2 = "sha256:" + "b" * 64
 
 def permit():
     return {
-        "schema_version": "claimsieve.permit.v1",
-        "permit_id": "p1",
-        "trace_id": "t1",
-        "tenant_id": "tenant",
-        "campaign_id": "c1",
-        "principal": "spiffe://example/principal",
-        "proposal_digest": D,
-        "action_digest": D2,
-        "destination_digest": D,
-        "parameter_digest": D2,
-        "policy_digest": D,
-        "signed_policy_digest": D2,
-        "prior_campaign_state_digest": D,
-        "campaign_state_digest": D2,
-        "evidence_root": D,
-        "decision_digest": D2,
-        "approval_digest": None,
-        "valid_from_seq": 10,
-        "expires_at_seq": 20,
-        "max_uses": 1,
-        "nonce": "ab" * 16,
-        "authority_key_id": "authority-1",
-        "signature": "ed25519:abc",
+        "schema_version": "claimsieve.permit.v1", "permit_id": "p1", "trace_id": "t1",
+        "tenant_id": "tenant", "campaign_id": "c1", "principal": "spiffe://example/principal",
+        "proposal_digest": D, "action_digest": D2, "destination_digest": D,
+        "parameter_digest": D2, "policy_digest": D, "signed_policy_digest": D2,
+        "prior_campaign_state_digest": D, "campaign_state_digest": D2,
+        "evidence_root": D, "decision_digest": D2, "approval_digest": None,
+        "valid_from_seq": 10, "expires_at_seq": 20, "max_uses": 1,
+        "nonce": "ab" * 16, "authority_key_id": "authority-1", "signature": "ed25519:abc",
     }
 
 
 def executor_receipt():
     return {
-        "schema_version": "claimsieve.executor_receipt.v2",
-        "trace_id": "t1",
-        "campaign_id": "c1",
-        "permit_id": "p1",
-        "reservation_id": "r1",
-        "action_digest": D2,
-        "request_digest": D,
-        "idempotency_key": "idem-1",
-        "fencing_token": 3,
-        "containment_epoch": 1,
-        "provider_status": "accepted",
-        "provider_id": "provider-1",
-        "attempted_at_seq": 12,
-        "executor_key_id": "executor-1",
-        "signature": "ed25519:def",
+        "schema_version": "claimsieve.executor_receipt.v2", "trace_id": "t1",
+        "campaign_id": "c1", "permit_id": "p1", "reservation_id": "r1",
+        "action_digest": D2, "request_digest": D, "idempotency_key": "idem-1",
+        "fencing_token": 3, "containment_epoch": 1, "provider_status": "accepted",
+        "provider_id": "provider-1", "attempted_at_seq": 12,
+        "executor_key_id": "executor-1", "signature": "ed25519:def",
     }
 
 
 def observer_receipt(observed=D2):
     return {
-        "schema_version": "claimsieve.observer_receipt.v2",
-        "reservation_id": "r1",
-        "permit_id": "p1",
-        "campaign_id": "c1",
-        "provider_record_digest": D,
-        "observed_action_digest": observed,
-        "reconciliation": "CONFIRMED_SUCCESS",
-        "receipt_conflict": False,
-        "observed_at_seq": 13,
-        "observer_key_id": "observer-1",
-        "signature": "ed25519:ghi",
+        "schema_version": "claimsieve.observer_receipt.v2", "reservation_id": "r1",
+        "permit_id": "p1", "campaign_id": "c1", "provider_record_digest": D,
+        "observed_action_digest": observed, "reconciliation": "CONFIRMED_SUCCESS",
+        "receipt_conflict": False, "observed_at_seq": 13,
+        "observer_key_id": "observer-1", "signature": "ed25519:ghi",
     }
 
 
@@ -91,10 +61,8 @@ class InTotoExportTests(unittest.TestCase):
         self.assertEqual(statement["predicate"]["destination_digest"], D)
         self.assertEqual(statement["predicate"]["parameter_digest"], D2)
         self.assertEqual(statement["predicate"]["native_record"]["digest"], digest(native))
-        self.assertEqual(
-            statement["predicate"]["native_record"]["signature_format"],
-            "claimsieve-native",
-        )
+        self.assertEqual(statement["predicate"]["native_record"]["signature_format"], "claimsieve-native")
+        self.assertEqual(statement["predicate"]["native_record"]["signature_verification"], "NOT_PERFORMED")
 
     def test_statement_is_payload_only_not_a_dsse_envelope(self):
         statement = permit_statement(permit())
@@ -129,6 +97,24 @@ class InTotoExportTests(unittest.TestCase):
         native["action_digest"] = "sha256:NOTHEX"
         with self.assertRaises(InTotoExportError):
             permit_statement(native)
+
+    def test_non_subject_binding_digest_fails_closed(self):
+        native = permit()
+        native["destination_digest"] = "sha256:BAD"
+        with self.assertRaises(InTotoExportError):
+            permit_statement(native)
+
+    def test_executor_request_digest_fails_closed(self):
+        native = executor_receipt()
+        native["request_digest"] = "sha256:BAD"
+        with self.assertRaises(InTotoExportError):
+            executor_receipt_statement(native)
+
+    def test_observer_provider_digest_fails_closed(self):
+        native = observer_receipt()
+        native["provider_record_digest"] = "sha256:BAD"
+        with self.assertRaises(InTotoExportError):
+            observer_receipt_statement(native)
 
     def test_missing_native_signature_fails_closed(self):
         native = permit()

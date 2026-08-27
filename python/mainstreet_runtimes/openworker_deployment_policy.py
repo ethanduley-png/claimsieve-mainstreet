@@ -97,7 +97,7 @@ def _validate(manifest: dict[str, Any], *, allow_image_placeholder: bool) -> Non
             _require(volume.get("name") == "claimsieve-mtls", "OpenWorker may receive only the ClaimSieve mTLS identity Secret")
             secret = volume.get("secret", {})
             _require(secret.get("secretName") == "openworker-claimsieve-mtls", "OpenWorker mTLS Secret name is fixed")
-            _require(secret.get("defaultMode") == 256, "OpenWorker mTLS Secret files must be mode 0400")
+            _require(secret.get("defaultMode") == 288, "OpenWorker mTLS Secret files must be mode 0440 for the fixed fsGroup")
             mtls_volumes.append(volume)
     _require(len(mtls_volumes) == 1, "OpenWorker requires exactly one ClaimSieve mTLS identity Secret")
 

@@ -9,6 +9,18 @@ from unittest.mock import patch
 
 COWORKER_AVAILABLE = importlib.util.find_spec("coworker") is not None
 
+BASE_RESPONSE = {
+    "schema_version": "mainstreet.openworker_model_response.v1",
+    "text": "ok",
+    "tool_calls": [
+        {"id": "call-1", "name": "create_github_issue", "arguments": {"repository": "example/repo"}}
+    ],
+    "finish_reason": "tool_calls",
+    "reasoning": None,
+    "extras": {},
+    "usage": {"input": 10, "output": 3, "cache_read": 0, "cache_write": 0},
+}
+
 
 @unittest.skipUnless(COWORKER_AVAILABLE, "pinned OpenWorker is installed only in its CI gate")
 class OpenWorkerModelGatewayTests(unittest.TestCase):
@@ -23,21 +35,7 @@ class OpenWorkerModelGatewayTests(unittest.TestCase):
 
     class _Response:
         status = 200
-        payload = {
-            "schema_version": "mainstreet.openworker_model_response.v1",
-            "text": "ok",
-            "tool_calls": [
-                {
-                    "id": "call-1",
-                    "name": "create_github_issue",
-                    "arguments": {"repository": "example/repo"},
-                }
-            ],
-            "finish_reason": "tool_calls",
-            "reasoning": None,
-            "extras": {},
-            "usage": {"input": 10, "output": 3, "cache_read": 0, "cache_write": 0},
-        }
+        payload = BASE_RESPONSE
 
         def read(self, amount):
             return json.dumps(type(self).payload).encode()[:amount]
@@ -64,14 +62,16 @@ class OpenWorkerModelGatewayTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         for name in ("ca.crt", "tls.crt", "tls.key"):
             (self.root / name).write_text("fixture", encoding="utf-8")
+        self._Response.status = 200
+        self._Response.payload = json.loads(json.dumps(BASE_RESPONSE))
+        self._Connection.response = None
+        self._Connection.request_seen = None
 
     def tearDown(self) -> None:
         self.temp.cleanup()
 
     def provider(self):
-        from mainstreet_runtimes.openworker_model_gateway import (
-            MainStreetOpenWorkerModelGatewayProvider,
-        )
+        from mainstreet_runtimes.openworker_model_gateway import MainStreetOpenWorkerModelGatewayProvider
         with patch(
             "mainstreet_runtimes.openworker_model_gateway.ssl.create_default_context",
             return_value=self._TLS(),
@@ -90,10 +90,7 @@ class OpenWorkerModelGatewayTests(unittest.TestCase):
         from mainstreet_runtimes.openworker_model_gateway import MODEL_GATEWAY_PATH
         self._Connection.response = self._Response()
         provider = self.provider()
-        with patch(
-            "mainstreet_runtimes.openworker_model_gateway.http.client.HTTPSConnection",
-            self._Connection,
-        ):
+        with patch("mainstreet_runtimes.openworker_model_gateway.http.client.HTTPSConnection", self._Connection):
             turn = provider.complete(
                 model="openai:gpt-test",
                 messages=[{"role": "user", "content": "test"}],
@@ -115,26 +112,17 @@ class OpenWorkerModelGatewayTests(unittest.TestCase):
         for key in ("api_key", "base_url", "authorization", "provider", "headers"):
             with self.subTest(key=key):
                 with self.assertRaisesRegex(OpenWorkerModelGatewayError, "forbidden"):
-                    provider.complete(
-                        model="test",
-                        messages=[],
-                        **{key: "attacker-controlled"},
-                    )
+                    provider.complete(model="test", messages=[], **{key: "attacker-controlled"})
 
     def test_duplicate_tool_call_identity_from_gateway_fails_closed(self) -> None:
         from mainstreet_runtimes.openworker_model_gateway import OpenWorkerModelGatewayError
-        payload = dict(self._Response.payload)
-        payload["tool_calls"] = [
+        self._Response.payload["tool_calls"] = [
             {"id": "dup", "name": "a", "arguments": {}},
             {"id": "dup", "name": "b", "arguments": {}},
         ]
-        self._Response.payload = payload
         self._Connection.response = self._Response()
         provider = self.provider()
-        with patch(
-            "mainstreet_runtimes.openworker_model_gateway.http.client.HTTPSConnection",
-            self._Connection,
-        ):
+        with patch("mainstreet_runtimes.openworker_model_gateway.http.client.HTTPSConnection", self._Connection):
             with self.assertRaisesRegex(OpenWorkerModelGatewayError, "duplicated"):
                 provider.complete(model="test", messages=[])
 
@@ -150,14 +138,11 @@ class OpenWorkerModelGatewayTests(unittest.TestCase):
                 client_cert_file=self.root / "tls.crt",
                 client_key_file=self.root / "tls.key",
             )
-
-        self._Connection.response = self._Response()
-        self._Connection.response.status = 302
+        response = self._Response()
+        response.status = 302
+        self._Connection.response = response
         provider = self.provider()
-        with patch(
-            "mainstreet_runtimes.openworker_model_gateway.http.client.HTTPSConnection",
-            self._Connection,
-        ):
+        with patch("mainstreet_runtimes.openworker_model_gateway.http.client.HTTPSConnection", self._Connection):
             with self.assertRaisesRegex(OpenWorkerModelGatewayError, "fallback are forbidden"):
                 provider.complete(model="test", messages=[])
 

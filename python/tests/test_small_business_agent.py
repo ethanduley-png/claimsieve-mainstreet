@@ -141,6 +141,19 @@ class SmallBusinessAgentTests(unittest.TestCase):
         self.assertTrue(item.requires_human_approval)
         self.assertEqual(item.risk, ActionRisk.IRREVERSIBLE_HIGH_IMPACT)
 
+    def test_health_safety_request_is_governed_and_human_gated(self):
+        plan = plan_intent(
+            Intent(
+                text="Customer has chest pain and asks if it is safe to work out",
+                tenant_id="tenant-test",
+                principal_id="founder",
+            )
+        )
+        item = next(item for item in plan.items if item.capability_id == "health_safety_escalation")
+        self.assertEqual(item.risk, ActionRisk.HEALTH_SAFETY)
+        self.assertTrue(item.requires_claimsieve)
+        self.assertTrue(item.requires_human_approval)
+
     def test_keyword_matching_uses_token_boundaries(self):
         plan = plan_intent(
             Intent(

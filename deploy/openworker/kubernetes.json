@@ -1,0 +1,113 @@
+{
+  "apiVersion": "v1",
+  "kind": "List",
+  "items": [
+    {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "metadata": {"name": "mainstreet-openworker", "namespace": "mainstreet-runtime"},
+      "spec": {
+        "replicas": 1,
+        "selector": {"matchLabels": {"app": "mainstreet-openworker"}},
+        "template": {
+          "metadata": {"labels": {"app": "mainstreet-openworker"}},
+          "spec": {
+            "automountServiceAccountToken": false,
+            "hostNetwork": false,
+            "hostPID": false,
+            "hostIPC": false,
+            "securityContext": {
+              "runAsNonRoot": true,
+              "runAsUser": 65532,
+              "runAsGroup": 65532,
+              "fsGroup": 65532,
+              "seccompProfile": {"type": "RuntimeDefault"}
+            },
+            "containers": [
+              {
+                "name": "openworker",
+                "image": "mainstreet/openworker@sha256:REPLACE_WITH_RELEASE_IMAGE_DIGEST",
+                "imagePullPolicy": "IfNotPresent",
+                "ports": [{"containerPort": 8080, "protocol": "TCP"}],
+                "env": [
+                  {"name": "MAINSTREET_CLAIMSIEVE_ENDPOINT", "value": "https://claimsieve-intake.mainstreet-system.svc.cluster.local:8443"},
+                  {"name": "MAINSTREET_MODEL_GATEWAY_ENDPOINT", "value": "https://model-gateway.mainstreet-system.svc.cluster.local:8443"},
+                  {"name": "OPENWORKER_RUNTIME_COMMIT", "value": "86c57f0692a5a318e55d1b9e0188d798b9fc5690"}
+                ],
+                "securityContext": {
+                  "allowPrivilegeEscalation": false,
+                  "readOnlyRootFilesystem": true,
+                  "runAsNonRoot": true,
+                  "capabilities": {"drop": ["ALL"]},
+                  "seccompProfile": {"type": "RuntimeDefault"}
+                },
+                "volumeMounts": [
+                  {"name": "runtime-tmp", "mountPath": "/tmp"},
+                  {"name": "runtime-state", "mountPath": "/var/lib/mainstreet/openworker"}
+                ],
+                "resources": {
+                  "requests": {"cpu": "100m", "memory": "256Mi"},
+                  "limits": {"cpu": "2", "memory": "2Gi"}
+                }
+              }
+            ],
+            "volumes": [
+              {"name": "runtime-tmp", "emptyDir": {"sizeLimit": "256Mi"}},
+              {"name": "runtime-state", "persistentVolumeClaim": {"claimName": "openworker-runtime-state"}}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "networking.k8s.io/v1",
+      "kind": "NetworkPolicy",
+      "metadata": {"name": "openworker-default-deny", "namespace": "mainstreet-runtime"},
+      "spec": {
+        "podSelector": {"matchLabels": {"app": "mainstreet-openworker"}},
+        "policyTypes": ["Ingress", "Egress"]
+      }
+    },
+    {
+      "apiVersion": "networking.k8s.io/v1",
+      "kind": "NetworkPolicy",
+      "metadata": {"name": "openworker-allow-governed-egress", "namespace": "mainstreet-runtime"},
+      "spec": {
+        "podSelector": {"matchLabels": {"app": "mainstreet-openworker"}},
+        "policyTypes": ["Egress"],
+        "egress": [
+          {
+            "to": [
+              {
+                "namespaceSelector": {"matchLabels": {"kubernetes.io/metadata.name": "mainstreet-system"}},
+                "podSelector": {"matchLabels": {"app": "claimsieve-intake"}}
+              }
+            ],
+            "ports": [{"protocol": "TCP", "port": 8443}]
+          },
+          {
+            "to": [
+              {
+                "namespaceSelector": {"matchLabels": {"kubernetes.io/metadata.name": "mainstreet-system"}},
+                "podSelector": {"matchLabels": {"app": "model-gateway"}}
+              }
+            ],
+            "ports": [{"protocol": "TCP", "port": 8443}]
+          },
+          {
+            "to": [
+              {
+                "namespaceSelector": {"matchLabels": {"kubernetes.io/metadata.name": "kube-system"}},
+                "podSelector": {"matchLabels": {"k8s-app": "kube-dns"}}
+              }
+            ],
+            "ports": [
+              {"protocol": "UDP", "port": 53},
+              {"protocol": "TCP", "port": 53}
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

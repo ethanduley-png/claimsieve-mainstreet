@@ -1,0 +1,39 @@
+name: Deep Agents Adapter
+
+on:
+  pull_request:
+    paths:
+      - "python/mainstreet_runtimes/**"
+      - "python/tests/test_deepagents_*.py"
+      - "python/requirements-deepagents.txt"
+      - ".github/workflows/deepagents-adapter.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compatibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            python/requirements-test.txt
+            python/requirements-deepagents.txt
+      - name: Install test and Deep Agents dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r python/requirements-test.txt -r python/requirements-deepagents.txt
+      - name: Run proposal adapter and middleware tests
+        env:
+          PYTHONPATH: python
+        run: |
+          python -m unittest discover \
+            -s python/tests \
+            -p 'test_deepagents_*.py' \
+            -v

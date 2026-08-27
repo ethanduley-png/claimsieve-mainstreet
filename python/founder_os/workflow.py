@@ -28,6 +28,8 @@ from claimsieve_ref.runtime import Authority, PermitError
 from claimsieve_ref.trust import sign_evidence, sign_policy
 
 _REPOSITORY_RE = re.compile(r"^[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}$")
+_RUNTIME_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{0,63}$")
+_SHA256_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 
 
 class FounderOSInputError(ValueError):
@@ -84,6 +86,129 @@ class FounderActionResult:
     ledgers: dict[str, list[dict[str, Any]]]
 
 
+@dataclass(frozen=True)
+class FounderRuntimeProfile:
+    """Exact proposal-runtime identity bound into policy and deployment evidence."""
+
+    tenant_id: str
+    runtime_name: str
+    runtime_version: str
+    principal: str
+    runtime_manifest_digest: str
+    skills_manifest_digest: str
+    network_profile_digest: str
+
+    def validate(self) -> None:
+        if not isinstance(self.tenant_id, str) or not self.tenant_id:
+            raise FounderOSInputError("runtime profile tenant_id must be non-empty")
+        if not isinstance(self.runtime_name, str) or not _RUNTIME_NAME_RE.fullmatch(self.runtime_name):
+            raise FounderOSInputError("runtime profile runtime_name must be a lowercase stable identifier")
+        if (
+            not isinstance(self.runtime_version, str)
+            or not self.runtime_version
+            or len(self.runtime_version) > 128
+        ):
+            raise FounderOSInputError("runtime profile runtime_version must be non-empty and at most 128 characters")
+        expected_principal = (
+            f"spiffe://mainstreet.local/{self.tenant_id}/agent/{self.runtime_name}"
+        )
+        if self.principal != expected_principal:
+            raise FounderOSInputError(
+                "runtime profile principal must exactly bind tenant_id and runtime_name"
+            )
+        for field_name in (
+            "runtime_manifest_digest",
+            "skills_manifest_digest",
+            "network_profile_digest",
+        ):
+            value = getattr(self, field_name)
+            if not isinstance(value, str) or not _SHA256_RE.fullmatch(value):
+                raise FounderOSInputError(
+                    f"runtime profile {field_name} must be an exact sha256 digest"
+                )
+
+    def binding(self) -> dict[str, str]:
+        self.validate()
+        return {
+            "runtime_name": self.runtime_name,
+            "runtime_version": self.runtime_version,
+            "principal": self.principal,
+            "runtime_manifest_digest": self.runtime_manifest_digest,
+            "skills_manifest_digest": self.skills_manifest_digest,
+            "network_profile_digest": self.network_profile_digest,
+        }
+
+
+def founder_runtime_profile(
+    tenant_id: str = "tenant-founder",
+    runtime_name: str = "openclaw",
+    runtime_version: str | None = None,
+) -> FounderRuntimeProfile:
+    if not isinstance(tenant_id, str) or not tenant_id:
+        raise FounderOSInputError("tenant_id must be non-empty")
+    if not isinstance(runtime_name, str) or not _RUNTIME_NAME_RE.fullmatch(runtime_name):
+        raise FounderOSInputError("runtime_name must be a lowercase stable runtime identifier")
+    if runtime_version is not None and (
+        not isinstance(runtime_version, str)
+        or not runtime_version
+        or len(runtime_version) > 128
+    ):
+        raise FounderOSInputError("runtime_version must be a non-empty string of at most 128 characters")
+
+    skills = ["founder-os-github-issue-proposal"]
+    skills_digest = digest(skills)
+    network_digest = digest({"egress": ["claimsieve-intake"]})
+    principal = f"spiffe://mainstreet.local/{tenant_id}/agent/{runtime_name}"
+
+    if runtime_name == "openclaw" and runtime_version is None:
+        # Preserve the v0.34 reference manifest exactly for backward compatibility.
+        version = "pinned"
+        runtime_digest = digest(
+            {
+                "mainstreet_bridge_version": "0.34.0",
+                "openclaw": "proposal-only; pinned build required",
+                "tenant_id": tenant_id,
+                "skills": skills,
+                "direct_provider_execution": False,
+            }
+        )
+    else:
+        version = runtime_version or "unspecified"
+        runtime_digest = digest(
+            {
+                "mainstreet_bridge_version": "0.34.0",
+                "runtime_name": runtime_name,
+                "runtime_version": version,
+                "runtime_mode": "proposal-only",
+                "tenant_id": tenant_id,
+                "skills": skills,
+                "direct_provider_execution": False,
+            }
+        )
+
+    profile = FounderRuntimeProfile(
+        tenant_id=tenant_id,
+        runtime_name=runtime_name,
+        runtime_version=version,
+        principal=principal,
+        runtime_manifest_digest=runtime_digest,
+        skills_manifest_digest=skills_digest,
+        network_profile_digest=network_digest,
+    )
+    profile.validate()
+    return profile
+
+
+def _runtime_for_tenant(
+    tenant_id: str,
+    runtime_profile: FounderRuntimeProfile | None,
+) -> FounderRuntimeProfile:
+    profile = runtime_profile or founder_runtime_profile(tenant_id)
+    profile.validate()
+    if profile.tenant_id != tenant_id:
+        raise FounderOSInputError("runtime profile tenant does not match Founder OS tenant")
+    return profile
+
 
 def founder_fixture_keys() -> dict[str, KeyPair]:
     """Deterministic fixture keys for tests only; never production key material."""
@@ -97,14 +222,18 @@ def founder_fixture_keys() -> dict[str, KeyPair]:
     return keys
 
 
-
-def founder_policy(keys: dict[str, KeyPair], tenant_id: str = "tenant-founder") -> dict[str, Any]:
+def founder_policy(
+    keys: dict[str, KeyPair],
+    tenant_id: str = "tenant-founder",
+    runtime_profile: FounderRuntimeProfile | None = None,
+) -> dict[str, Any]:
+    profile = _runtime_for_tenant(tenant_id, runtime_profile)
     return {
         "schema_version": "claimsieve.policy.v1",
         "policy_id": "mainstreet-founder-os-github-issue",
         "version": 1,
         "tenant_id": tenant_id,
-        "allowed_principals": [f"spiffe://mainstreet.local/{tenant_id}/agent/openclaw"],
+        "allowed_principals": [profile.principal],
         "allowed_action_kinds": ["run_connector"],
         "allowed_effect_classes": ["external_write"],
         "allowed_trust_domains": ["github.com"],
@@ -155,28 +284,20 @@ def founder_policy(keys: dict[str, KeyPair], tenant_id: str = "tenant-founder") 
     }
 
 
-
 def _runtime_manifest_digest(tenant_id: str) -> str:
-    return digest(
-        {
-            "mainstreet_bridge_version": "0.34.0",
-            "openclaw": "proposal-only; pinned build required",
-            "tenant_id": tenant_id,
-            "skills": ["founder-os-github-issue-proposal"],
-            "direct_provider_execution": False,
-        }
-    )
-
+    return founder_runtime_profile(tenant_id).runtime_manifest_digest
 
 
 def founder_evidence(
     request: GitHubIssueRequest,
     keys: dict[str, KeyPair],
     tenant_id: str = "tenant-founder",
+    runtime_profile: FounderRuntimeProfile | None = None,
 ) -> list[dict[str, Any]]:
     request.validate()
+    profile = _runtime_for_tenant(tenant_id, runtime_profile)
     seq = request.requested_at_seq
-    runtime_digest = _runtime_manifest_digest(tenant_id)
+    runtime_digest = profile.runtime_manifest_digest
     requested_effect = {
         "repository": request.repository,
         "title": request.title,
@@ -216,25 +337,51 @@ def founder_evidence(
         },
         keys["github_registry_evidence"],
     )
+    deployment_content: dict[str, Any] = {
+        "status": "ACTIVE",
+        "valid_from_seq": max(0, seq - 1),
+        "expires_at_seq": seq + 100,
+        "runtime_manifest_digest": runtime_digest,
+        "skills_manifest_digest": profile.skills_manifest_digest,
+        "network_profile_digest": profile.network_profile_digest,
+    }
+    deployment_subject = f"mainstreet-{tenant_id}-founder-os"
+    if profile.runtime_name != "openclaw" or runtime_profile is not None:
+        deployment_content.update(
+            {
+                "runtime_name": profile.runtime_name,
+                "runtime_version": profile.runtime_version,
+                "runtime_principal": profile.principal,
+                "runtime_identity_digest": digest(profile.binding()),
+            }
+        )
+        deployment_subject = f"mainstreet-{tenant_id}-runtime-{profile.runtime_name}"
     deployment = sign_evidence(
         {
             "schema_version": "claimsieve.evidence.v1",
             "type": "deployment_certificate",
             "source": "spiffe://claimsieve.local/deployment-certifier",
-            "subject": f"mainstreet-{tenant_id}-founder-os",
+            "subject": deployment_subject,
             "observed_at_seq": seq,
             "verified": True,
-            "content": {
-                "status": "ACTIVE",
-                "valid_from_seq": max(0, seq - 1),
-                "expires_at_seq": seq + 100,
-                "runtime_manifest_digest": runtime_digest,
-                "skills_manifest_digest": digest(["founder-os-github-issue-proposal"]),
-                "network_profile_digest": digest({"egress": ["claimsieve-intake"]}),
-            },
+            "content": deployment_content,
         },
         keys["deployment_evidence"],
     )
+    epoch_content: dict[str, Any] = {
+        "status": "ACTIVE",
+        "policy_version": 1,
+        "deployment_certificate_digest": digest(deployment),
+        "runtime_manifest_digest": runtime_digest,
+    }
+    if profile.runtime_name != "openclaw" or runtime_profile is not None:
+        epoch_content.update(
+            {
+                "runtime_name": profile.runtime_name,
+                "runtime_principal": profile.principal,
+                "runtime_identity_digest": digest(profile.binding()),
+            }
+        )
     epoch = sign_evidence(
         {
             "schema_version": "claimsieve.evidence.v1",
@@ -243,17 +390,11 @@ def founder_evidence(
             "subject": f"{tenant_id}-founder-os-epoch-1",
             "observed_at_seq": seq,
             "verified": True,
-            "content": {
-                "status": "ACTIVE",
-                "policy_version": 1,
-                "deployment_certificate_digest": digest(deployment),
-                "runtime_manifest_digest": runtime_digest,
-            },
+            "content": epoch_content,
         },
         keys["epoch_evidence"],
     )
     return [work_item, registry, deployment, epoch]
-
 
 
 def founder_proposal(
@@ -262,11 +403,29 @@ def founder_proposal(
     keys: dict[str, KeyPair],
     tenant_id: str = "tenant-founder",
     approve: bool = True,
+    runtime_profile: FounderRuntimeProfile | None = None,
 ) -> dict[str, Any]:
     request.validate()
+    profile = _runtime_for_tenant(tenant_id, runtime_profile)
     evidence_list = list(evidence_items)
     seq = request.requested_at_seq
     correlation_marker = f"claimsieve:{request.proposal_id}"
+    if profile.runtime_name == "openclaw" and runtime_profile is None:
+        constraints = [
+            "No direct GitHub credential access from MainStreet or OpenClaw",
+            "No repository substitution",
+            "No payload mutation after approval",
+            "Ambiguous outcomes remain unknown until independent reconciliation",
+        ]
+    else:
+        constraints = [
+            f"No direct GitHub credential access from MainStreet or {profile.runtime_name}",
+            "No repository substitution",
+            "No payload mutation after approval",
+            "Ambiguous outcomes remain unknown until independent reconciliation",
+            f"Runtime principal is {profile.principal}",
+            f"Runtime manifest is {profile.runtime_manifest_digest}",
+        ]
     value: dict[str, Any] = {
         "schema_version": "claimsieve.proposal.v1",
         "proposal_id": request.proposal_id,
@@ -275,17 +434,12 @@ def founder_proposal(
         "campaign_id": request.campaign_id,
         "session_id": request.session_id,
         "parent_action_id": None,
-        "principal": f"spiffe://mainstreet.local/{tenant_id}/agent/openclaw",
+        "principal": profile.principal,
         "objective": {
             "root": "Operate the ClaimSieve and MainStreet company through reviewable governed work.",
             "subgoal": "create_project_issue",
             "expected_effect": "Exactly one GitHub issue is created in the approved repository.",
-            "constraints": [
-                "No direct GitHub credential access from MainStreet or OpenClaw",
-                "No repository substitution",
-                "No payload mutation after approval",
-                "Ambiguous outcomes remain unknown until independent reconciliation",
-            ],
+            "constraints": constraints,
         },
         "action": {
             "kind": "run_connector",
@@ -310,6 +464,8 @@ def founder_proposal(
         "requested_at_seq": seq,
         "risk_tags": [],
     }
+    if profile.runtime_name != "openclaw" or runtime_profile is not None:
+        value["runtime_identity"] = profile.binding()
     if approve:
         approver = keys["approver"]
         unsigned = {
@@ -344,6 +500,8 @@ class FounderOSReferenceWorkflow:
         provider_mode: str = "success",
         tenant_id: str = "tenant-founder",
         provider: DurableProvider | None = None,
+        runtime_name: str = "openclaw",
+        runtime_version: str | None = None,
     ) -> None:
         self.workspace = Path(workspace)
         self.workspace.mkdir(parents=True, exist_ok=True)
@@ -351,6 +509,16 @@ class FounderOSReferenceWorkflow:
         if not self.allowed_repositories or any(not _REPOSITORY_RE.fullmatch(repo) for repo in self.allowed_repositories):
             raise FounderOSInputError("at least one valid owner/name repository is required")
         self.tenant_id = tenant_id
+        self.runtime_profile = founder_runtime_profile(
+            tenant_id,
+            runtime_name=runtime_name,
+            runtime_version=runtime_version,
+        )
+        self._runtime_profile_argument = (
+            None
+            if runtime_name == "openclaw" and runtime_version is None
+            else self.runtime_profile
+        )
         self._keys = founder_fixture_keys()
         self._state = DurableStateService(
             self.workspace / "founder-state.sqlite3",
@@ -393,10 +561,26 @@ class FounderOSReferenceWorkflow:
         request.validate()
         if request.repository not in self.allowed_repositories:
             raise FounderOSInputError("repository is not in the Founder OS allowlist")
-        policy = founder_policy(self._keys, self.tenant_id)
+        policy = founder_policy(
+            self._keys,
+            self.tenant_id,
+            self._runtime_profile_argument,
+        )
         signed = sign_policy(policy, self._keys["policy_authority"])
-        evidence_items = founder_evidence(request, self._keys, self.tenant_id)
-        proposal = founder_proposal(request, evidence_items, self._keys, self.tenant_id, approve=True)
+        evidence_items = founder_evidence(
+            request,
+            self._keys,
+            self.tenant_id,
+            self._runtime_profile_argument,
+        )
+        proposal = founder_proposal(
+            request,
+            evidence_items,
+            self._keys,
+            self.tenant_id,
+            approve=True,
+            runtime_profile=self._runtime_profile_argument,
+        )
         prior = self._state.read_campaign(request.campaign_id).state
         decision = evaluate(proposal, policy, evidence_items, prior, request.requested_at_seq)
         if decision.document.get("verdict") != "ALLOW":

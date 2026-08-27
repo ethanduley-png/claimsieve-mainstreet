@@ -57,6 +57,24 @@ class InTotoSchemaAndVectorTests(unittest.TestCase):
         with self.assertRaises(InTotoVerificationError):
             verify_exported_statement(statement)
 
+    def test_unknown_predicate_field_fails_closed(self):
+        statement = copy.deepcopy(self.vector["statements"]["permit"])
+        statement["predicate"]["authority_override"] = True
+        with self.assertRaises(InTotoVerificationError):
+            verify_exported_statement(statement)
+
+    def test_non_subject_binding_digest_fails_closed_in_verifier(self):
+        statement = copy.deepcopy(self.vector["statements"]["permit"])
+        statement["predicate"]["destination_digest"] = "sha256:NOTHEX"
+        with self.assertRaises(InTotoVerificationError):
+            verify_exported_statement(statement)
+
+    def test_invalid_provider_status_fails_closed(self):
+        statement = copy.deepcopy(self.vector["statements"]["execution"])
+        statement["predicate"]["provider_status"] = "success"
+        with self.assertRaises(InTotoVerificationError):
+            verify_exported_statement(statement)
+
     def test_subject_substitution_fails_closed(self):
         statement = copy.deepcopy(self.vector["statements"]["permit"])
         statement["subject"][1]["digest"]["sha256"] = "c" * 64

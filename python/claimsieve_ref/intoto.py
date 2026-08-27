@@ -4,7 +4,7 @@ import re
 from copy import deepcopy
 from typing import Any, Mapping
 
-from .canonical import digest
+from .canonical import MAX_SAFE_INTEGER, digest
 
 STATEMENT_TYPE = "https://in-toto.io/Statement/v1"
 PERMIT_PREDICATE_TYPE = "https://claimsieve.example/attestation/authorization-permit/v0.1"
@@ -18,6 +18,58 @@ SUPPORTED_PREDICATE_TYPES = frozenset(
     }
 )
 _SHA256 = re.compile(r"^sha256:([0-9a-f]{64})$")
+_NONCE = re.compile(r"^[a-f0-9]{32,128}$")
+_PROVIDER_STATUSES = frozenset({"accepted", "rejected", "timeout_unknown", "stale_fence"})
+_RECONCILIATIONS = frozenset(
+    {"CONFIRMED_SUCCESS", "CONFIRMED_FAILURE", "DIVERGENT_EFFECT", "OUTCOME_UNKNOWN"}
+)
+
+_PERMIT_FIELDS = (
+    "permit_id",
+    "trace_id",
+    "tenant_id",
+    "campaign_id",
+    "principal",
+    "proposal_digest",
+    "action_digest",
+    "destination_digest",
+    "parameter_digest",
+    "policy_digest",
+    "signed_policy_digest",
+    "prior_campaign_state_digest",
+    "campaign_state_digest",
+    "evidence_root",
+    "decision_digest",
+    "approval_digest",
+    "valid_from_seq",
+    "expires_at_seq",
+    "max_uses",
+    "nonce",
+)
+_EXECUTION_FIELDS = (
+    "trace_id",
+    "campaign_id",
+    "permit_id",
+    "reservation_id",
+    "action_digest",
+    "request_digest",
+    "idempotency_key",
+    "fencing_token",
+    "containment_epoch",
+    "provider_status",
+    "provider_id",
+    "attempted_at_seq",
+)
+_OBSERVATION_FIELDS = (
+    "reservation_id",
+    "permit_id",
+    "campaign_id",
+    "provider_record_digest",
+    "observed_action_digest",
+    "reconciliation",
+    "receipt_conflict",
+    "observed_at_seq",
+)
 
 
 class InTotoExportError(ValueError):
@@ -120,29 +172,7 @@ def permit_statement(permit: Mapping[str, Any]) -> dict[str, Any]:
         _subject(f"claimsieve-permit:{_require(permit, 'permit_id')}", permit_digest),
         _subject("claimsieve-authorized-action", action_digest),
     ]
-    fields = (
-        "permit_id",
-        "trace_id",
-        "tenant_id",
-        "campaign_id",
-        "principal",
-        "proposal_digest",
-        "action_digest",
-        "destination_digest",
-        "parameter_digest",
-        "policy_digest",
-        "signed_policy_digest",
-        "prior_campaign_state_digest",
-        "campaign_state_digest",
-        "evidence_root",
-        "decision_digest",
-        "approval_digest",
-        "valid_from_seq",
-        "expires_at_seq",
-        "max_uses",
-        "nonce",
-    )
-    predicate = {field: deepcopy(_require(permit, field)) for field in fields}
+    predicate = {field: deepcopy(_require(permit, field)) for field in _PERMIT_FIELDS}
     predicate["native_record"] = _native_record(permit, "authority_key_id")
     return _statement(subjects, PERMIT_PREDICATE_TYPE, predicate)
 
@@ -164,21 +194,7 @@ def executor_receipt_statement(receipt: Mapping[str, Any]) -> dict[str, Any]:
         ),
         _subject("claimsieve-attempted-action", action_digest),
     ]
-    fields = (
-        "trace_id",
-        "campaign_id",
-        "permit_id",
-        "reservation_id",
-        "action_digest",
-        "request_digest",
-        "idempotency_key",
-        "fencing_token",
-        "containment_epoch",
-        "provider_status",
-        "provider_id",
-        "attempted_at_seq",
-    )
-    predicate = {field: deepcopy(_require(receipt, field)) for field in fields}
+    predicate = {field: deepcopy(_require(receipt, field)) for field in _EXECUTION_FIELDS}
     predicate["native_record"] = _native_record(receipt, "executor_key_id")
     return _statement(subjects, EXECUTION_PREDICATE_TYPE, predicate)
 
@@ -202,19 +218,105 @@ def observer_receipt_statement(receipt: Mapping[str, Any]) -> dict[str, Any]:
     if observed_action_digest is not None:
         subjects.append(_subject("claimsieve-observed-action", observed_action_digest))
 
-    fields = (
-        "reservation_id",
-        "permit_id",
-        "campaign_id",
-        "provider_record_digest",
-        "observed_action_digest",
-        "reconciliation",
-        "receipt_conflict",
-        "observed_at_seq",
-    )
-    predicate = {field: deepcopy(_require(receipt, field)) for field in fields}
+    predicate = {field: deepcopy(_require(receipt, field)) for field in _OBSERVATION_FIELDS}
     predicate["native_record"] = _native_record(receipt, "observer_key_id")
     return _statement(subjects, OBSERVATION_PREDICATE_TYPE, predicate)
+
+
+def _verification_error_from_export(callable_: Any, *args: Any) -> Any:
+    try:
+        return callable_(*args)
+    except InTotoExportError as exc:
+        raise InTotoVerificationError(str(exc)) from exc
+
+
+def _require_nonempty_string(predicate: Mapping[str, Any], field: str) -> str:
+    value = predicate.get(field)
+    if not isinstance(value, str) or not value:
+        raise InTotoVerificationError(f"{field} must be a non-empty string")
+    return value
+
+
+def _require_sequence(predicate: Mapping[str, Any], field: str, minimum: int = 0) -> int:
+    value = predicate.get(field)
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise InTotoVerificationError(f"{field} must be an integer")
+    if value < minimum or value > MAX_SAFE_INTEGER:
+        raise InTotoVerificationError(f"{field} outside accepted range")
+    return value
+
+
+def _require_exact_fields(predicate: Mapping[str, Any], fields: tuple[str, ...]) -> None:
+    expected = set(fields) | {"native_record"}
+    if set(predicate) != expected:
+        raise InTotoVerificationError("unexpected predicate fields")
+
+
+def _verify_permit_predicate(predicate: Mapping[str, Any]) -> None:
+    _require_exact_fields(predicate, _PERMIT_FIELDS)
+    for field in ("permit_id", "trace_id", "tenant_id", "campaign_id"):
+        _require_nonempty_string(predicate, field)
+    principal = _require_nonempty_string(predicate, "principal")
+    if not principal.startswith("spiffe://"):
+        raise InTotoVerificationError("principal must use spiffe:// identity")
+    for field in (
+        "proposal_digest",
+        "action_digest",
+        "destination_digest",
+        "parameter_digest",
+        "policy_digest",
+        "signed_policy_digest",
+        "prior_campaign_state_digest",
+        "campaign_state_digest",
+        "evidence_root",
+        "decision_digest",
+    ):
+        _verification_error_from_export(_sha256_hex, predicate.get(field), field)
+    _verification_error_from_export(
+        _validate_optional_digest, predicate.get("approval_digest"), "approval_digest"
+    )
+    valid_from = _require_sequence(predicate, "valid_from_seq")
+    expires_at = _require_sequence(predicate, "expires_at_seq")
+    if expires_at < valid_from:
+        raise InTotoVerificationError("permit expiry precedes validity start")
+    if predicate.get("max_uses") != 1 or isinstance(predicate.get("max_uses"), bool):
+        raise InTotoVerificationError("max_uses must be exactly 1")
+    nonce = predicate.get("nonce")
+    if not isinstance(nonce, str) or _NONCE.fullmatch(nonce) is None:
+        raise InTotoVerificationError("invalid permit nonce")
+
+
+def _verify_execution_predicate(predicate: Mapping[str, Any]) -> None:
+    _require_exact_fields(predicate, _EXECUTION_FIELDS)
+    for field in ("trace_id", "campaign_id", "permit_id", "reservation_id", "idempotency_key"):
+        _require_nonempty_string(predicate, field)
+    for field in ("action_digest", "request_digest"):
+        _verification_error_from_export(_sha256_hex, predicate.get(field), field)
+    _require_sequence(predicate, "fencing_token", minimum=1)
+    _require_sequence(predicate, "containment_epoch")
+    _require_sequence(predicate, "attempted_at_seq")
+    if predicate.get("provider_status") not in _PROVIDER_STATUSES:
+        raise InTotoVerificationError("unsupported provider_status")
+    provider_id = predicate.get("provider_id")
+    if provider_id is not None and (not isinstance(provider_id, str) or not provider_id):
+        raise InTotoVerificationError("provider_id must be null or non-empty string")
+
+
+def _verify_observation_predicate(predicate: Mapping[str, Any]) -> None:
+    _require_exact_fields(predicate, _OBSERVATION_FIELDS)
+    for field in ("reservation_id", "permit_id", "campaign_id"):
+        _require_nonempty_string(predicate, field)
+    _verification_error_from_export(
+        _validate_optional_digest, predicate.get("provider_record_digest"), "provider_record_digest"
+    )
+    _verification_error_from_export(
+        _validate_optional_digest, predicate.get("observed_action_digest"), "observed_action_digest"
+    )
+    if predicate.get("reconciliation") not in _RECONCILIATIONS:
+        raise InTotoVerificationError("unsupported reconciliation")
+    if not isinstance(predicate.get("receipt_conflict"), bool):
+        raise InTotoVerificationError("receipt_conflict must be boolean")
+    _require_sequence(predicate, "observed_at_seq")
 
 
 def verify_exported_statement(statement: Mapping[str, Any]) -> None:
@@ -241,6 +343,13 @@ def verify_exported_statement(statement: Mapping[str, Any]) -> None:
     if not isinstance(predicate, Mapping):
         raise InTotoVerificationError("predicate must be an object")
 
+    if predicate_type == PERMIT_PREDICATE_TYPE:
+        _verify_permit_predicate(predicate)
+    elif predicate_type == EXECUTION_PREDICATE_TYPE:
+        _verify_execution_predicate(predicate)
+    else:
+        _verify_observation_predicate(predicate)
+
     for subject in subjects:
         if not isinstance(subject, Mapping) or set(subject) != {"name", "digest"}:
             raise InTotoVerificationError("invalid subject shape")
@@ -266,14 +375,15 @@ def verify_exported_statement(statement: Mapping[str, Any]) -> None:
     }
     if set(native) != expected_native_fields:
         raise InTotoVerificationError("unexpected native_record fields")
+    if not isinstance(native.get("key_id"), str) or not native.get("key_id"):
+        raise InTotoVerificationError("native key_id must be a non-empty string")
+    if not isinstance(native.get("signature"), str) or not native.get("signature"):
+        raise InTotoVerificationError("native signature must be a non-empty string")
     if native.get("signature_format") != "claimsieve-native":
         raise InTotoVerificationError("unsupported native signature format")
     if native.get("signature_verification") != "NOT_PERFORMED":
         raise InTotoVerificationError("exporter must not claim native signature verification")
-    try:
-        native_hex = _sha256_hex(native.get("digest"), "native_record.digest")
-    except InTotoExportError as exc:
-        raise InTotoVerificationError(str(exc)) from exc
+    native_hex = _verification_error_from_export(_sha256_hex, native.get("digest"), "native_record.digest")
 
     first_digest = subjects[0]["digest"]["sha256"]
     if first_digest != native_hex:
@@ -288,19 +398,13 @@ def verify_exported_statement(statement: Mapping[str, Any]) -> None:
         raise InTotoVerificationError("predicate/native schema mismatch")
 
     if predicate_type == PERMIT_PREDICATE_TYPE:
-        try:
-            action_hex = _sha256_hex(predicate.get("action_digest"), "action_digest")
-        except InTotoExportError as exc:
-            raise InTotoVerificationError(str(exc)) from exc
+        action_hex = _verification_error_from_export(_sha256_hex, predicate.get("action_digest"), "action_digest")
         if len(subjects) != 2 or subjects[1].get("name") != "claimsieve-authorized-action":
             raise InTotoVerificationError("permit Statement requires authorized-action subject")
         if subjects[1]["digest"]["sha256"] != action_hex:
             raise InTotoVerificationError("authorized action subject mismatch")
     elif predicate_type == EXECUTION_PREDICATE_TYPE:
-        try:
-            action_hex = _sha256_hex(predicate.get("action_digest"), "action_digest")
-        except InTotoExportError as exc:
-            raise InTotoVerificationError(str(exc)) from exc
+        action_hex = _verification_error_from_export(_sha256_hex, predicate.get("action_digest"), "action_digest")
         if len(subjects) != 2 or subjects[1].get("name") != "claimsieve-attempted-action":
             raise InTotoVerificationError("execution Statement requires attempted-action subject")
         if subjects[1]["digest"]["sha256"] != action_hex:
@@ -311,10 +415,9 @@ def verify_exported_statement(statement: Mapping[str, Any]) -> None:
             if len(subjects) != 1:
                 raise InTotoVerificationError("unknown outcome must not invent observed-action subject")
         else:
-            try:
-                observed_hex = _sha256_hex(observed, "observed_action_digest")
-            except InTotoExportError as exc:
-                raise InTotoVerificationError(str(exc)) from exc
+            observed_hex = _verification_error_from_export(
+                _sha256_hex, observed, "observed_action_digest"
+            )
             if len(subjects) != 2 or subjects[1].get("name") != "claimsieve-observed-action":
                 raise InTotoVerificationError("observation Statement requires observed-action subject")
             if subjects[1]["digest"]["sha256"] != observed_hex:

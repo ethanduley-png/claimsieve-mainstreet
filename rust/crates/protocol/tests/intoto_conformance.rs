@@ -3,8 +3,7 @@ use std::fs;
 use std::path::PathBuf;
 
 fn vector_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../../vectors/in_toto_interop_v1.json")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../vectors/in_toto_interop_v1.json")
 }
 
 fn load_vector() -> Value {
@@ -14,16 +13,17 @@ fn load_vector() -> Value {
 
 fn assert_lower_sha256_hex(value: &str) {
     assert_eq!(value.len(), 64);
-    assert!(value.bytes().all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase()));
+    assert!(
+        value
+            .bytes()
+            .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
+    );
 }
 
 #[test]
 fn in_toto_vector_has_only_supported_statement_and_predicate_versions() {
     let vector = load_vector();
-    assert_eq!(
-        vector["schema_version"],
-        "claimsieve.intoto.conformance.v1"
-    );
+    assert_eq!(vector["schema_version"], "claimsieve.intoto.conformance.v1");
 
     let statements = vector["statements"].as_object().expect("statements object");
     let expected = [

@@ -7,11 +7,14 @@ from pathlib import Path
 from types import SimpleNamespace
 
 COWORKER_AVAILABLE = importlib.util.find_spec("coworker") is not None
+ProviderClientBase = object
 
 if COWORKER_AVAILABLE:
     from coworker.permissions import Mode, PermissionEngine
     from coworker.providers.base import AssistantTurn, ModelCapabilities, ProviderClient, ToolCall
     from coworker.tools.registry import ToolRegistry
+
+    ProviderClientBase = ProviderClient
 
     from founder_os import FounderOSReferenceWorkflow
     from mainstreet_runtimes import ClaimSieveRuntimeContext, OpenWorkerProposalAdapter
@@ -24,7 +27,7 @@ if COWORKER_AVAILABLE:
 
 @unittest.skipUnless(COWORKER_AVAILABLE, "pinned OpenWorker is installed only in its CI gate")
 class OpenWorkerNativeFailClosedTests(unittest.TestCase):
-    class _Provider(ProviderClient):
+    class _Provider(ProviderClientBase):
         def complete(self, *, model, messages, tools=None, **settings):
             return AssistantTurn(text="unused")
 

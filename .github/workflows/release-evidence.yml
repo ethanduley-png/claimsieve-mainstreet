@@ -15,7 +15,7 @@ jobs:
         with:
           node-version: '24'
       - run: python -m pip install --disable-pip-version-check -r python/requirements-test.txt
-      - run: ./scripts/test_all.sh
+      - run: bash scripts/test_all.sh
       - run: python scripts/package_release.py
       - uses: actions/upload-artifact@v4
         with:

@@ -35,7 +35,9 @@ The runtime authority chain is separate:
 | `claimsieve.executor_receipt.v2` | `execution-attempt/v0.1` | native executor-receipt digest + attempted action digest | request digest, idempotency key, fencing token, containment epoch, provider status/id, attempt sequence |
 | `claimsieve.observer_receipt.v2` | `outcome-observation/v0.1` | native observer-receipt digest + observed action digest when known | provider-record digest, observed action, reconciliation, conflict flag, observation sequence |
 
-Each predicate also carries the digest, key identifier, and signature of the native source record under `native_record`. That native signature is evidence about the ClaimSieve source object; it is not an in-toto envelope signature.
+Each predicate also carries the digest, key identifier, and signature of the native source record under `native_record`. The exporter explicitly records `signature_verification: NOT_PERFORMED`: it transports the native signature but does not verify it. That signature is not an in-toto envelope signature and does not authenticate the exported Statement.
+
+All non-null digest bindings asserted by the exporter are required to match the repository's lowercase `sha256:<64 hex>` representation. A malformed destination, parameter, request, provider-record, action, policy, evidence, state, decision, or approval digest fails closed rather than being exported as a portable assertion.
 
 ## Why we do not emit the proposed agent-decision predicate yet
 
@@ -50,6 +52,7 @@ If compatibility is later added, it should be a separately tested mapping from a
 - No DSSE signing.
 - No Sigstore integration.
 - No inbound attestation-to-permit conversion.
+- No native-signature verification inside the exporter.
 - No change to ClaimSieve trust roots.
 - No change to Rust or Rocq authority semantics.
 - No claim of registered ClaimSieve predicate URIs.

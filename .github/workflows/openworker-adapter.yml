@@ -47,11 +47,9 @@ jobs:
               PINNED_OPENWORKER_COMMIT,
               verify_pinned_openworker_runtime,
           )
-
           resolved = verify_pinned_openworker_runtime()
           if resolved != PINNED_OPENWORKER_COMMIT:
               raise SystemExit(f"unexpected OpenWorker commit: {resolved}")
-
           raw = metadata.distribution("aisuite").read_text("direct_url.json")
           if not raw:
               raise SystemExit("aisuite has no PEP 610 provenance")
@@ -60,16 +58,24 @@ jobs:
               raise SystemExit(f"unexpected aisuite provenance: {vcs}")
           print(f"verified OpenWorker commit {resolved} and aisuite commit {vcs['commit_id']}")
           PY
-      - name: Validate production isolation manifest
+      - name: Validate deployment template and production renderer
         env:
           PYTHONPATH: python
         run: |
           python - <<'PY'
+          import json
+          from pathlib import Path
           from mainstreet_runtimes.openworker_deployment_policy import (
-              validate_openworker_production_manifest_file,
+              render_openworker_production_manifest,
+              validate_openworker_deployment_template_file,
+              validate_openworker_production_manifest,
           )
-          validate_openworker_production_manifest_file("deploy/openworker/kubernetes.json")
-          print("verified OpenWorker production isolation manifest")
+          path = Path("deploy/openworker/kubernetes.json")
+          validate_openworker_deployment_template_file(path)
+          template = json.loads(path.read_text())
+          rendered = render_openworker_production_manifest(template, "sha256:" + "1" * 64)
+          validate_openworker_production_manifest(rendered)
+          print("verified OpenWorker isolated deployment template and production renderer")
           PY
       - name: Run OpenWorker contract and native adversarial tests
         env:

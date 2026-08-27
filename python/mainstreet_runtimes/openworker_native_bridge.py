@@ -10,6 +10,7 @@ from .openworker_adapter import OpenWorkerProposalAdapter
 
 PINNED_OPENWORKER_COMMIT = "86c57f0692a5a318e55d1b9e0188d798b9fc5690"
 EXPECTED_TOOL_CALL_FIELDS = ("id", "name", "arguments")
+_EXTERNAL_TOOL_CATEGORIES = frozenset({"connector", "mcp"})
 
 
 class OpenWorkerNativeBridgeError(RuntimeError):
@@ -106,16 +107,18 @@ def translate_native_tool_call(
 
 
 def guarded_turn_engine_class():
-    """Return a pinned TurnEngine subclass that intercepts configured consequential calls.
+    """Return a pinned TurnEngine subclass that gates external and consequential execution.
 
     The subclass is created lazily so ordinary ClaimSieve tests do not acquire an OpenWorker
-    dependency. Only _execute_sync is specialized: authorization remains OpenWorker's own
-    concern, while execution of configured consequential tools is replaced by routing into
-    the existing ClaimSieve proposal/permit path.
+    dependency. Only _execute_sync is specialized. Explicitly mapped consequential calls are
+    translated and routed into ClaimSieve. Any other OpenWorker call that is consequential by
+    OpenWorker's base risk model, or belongs to an external connector/MCP category, fails closed
+    rather than falling through to ToolRegistry.execute. Pure local reads retain native behavior.
     """
 
     verify_pinned_openworker_runtime()
     from coworker.engine import TurnEngine
+    from coworker.risk import classify, is_consequential
 
     class ClaimSieveGuardedOpenWorkerTurnEngine(TurnEngine):
         def __init__(
@@ -128,32 +131,49 @@ def guarded_turn_engine_class():
             super().__init__(*args, **kwargs)
             self._claimsieve_adapter = claimsieve_adapter
             self._native_tool_map = dict(native_tool_map or {})
-            self._guarded_native_names = {
-                native
-                for native, canonical in self._native_tool_map.items()
-                if self._claimsieve_adapter.is_consequential(canonical)
-            }
 
-        def _is_claimsieve_guarded(self, tool_call: Any) -> bool:
-            return (
-                self._claimsieve_adapter.is_consequential(tool_call.name)
-                or tool_call.name in self._guarded_native_names
+        def _canonical_name(self, native_name: str) -> str:
+            return self._native_tool_map.get(native_name, native_name)
+
+        def _routes_to_claimsieve(self, tool_call: Any) -> bool:
+            return self._claimsieve_adapter.is_consequential(
+                self._canonical_name(tool_call.name)
             )
 
+        def _native_call_must_not_fall_through(self, tool_call: Any) -> bool:
+            spec = self.registry.get(tool_call.name)
+            metadata_value = spec.metadata if spec else None
+            category = str(getattr(metadata_value, "category", "") or "").lower()
+            if category in _EXTERNAL_TOOL_CATEGORIES:
+                return True
+            # Deliberately ignore user-local risk overrides here. A local OpenWorker override
+            # may make its own approval UX quieter, but it cannot downgrade MainStreet's
+            # execution-boundary decision about whether native execution is allowed.
+            return is_consequential(classify(tool_call.name, metadata_value, None))
+
         def _execute_sync(self, tool_call: Any) -> tuple[Any, str]:
-            if not self._is_claimsieve_guarded(tool_call):
-                return super()._execute_sync(tool_call)
-            try:
-                boundary = translate_native_tool_call(
-                    tool_call,
-                    tool_map=self._native_tool_map,
-                )
-                routed = self._claimsieve_adapter.route_tool_call(boundary)
-                return routed, "ok"
-            except Exception as exc:
-                # Match OpenWorker's native execution contract: tool failures become an error
-                # result rather than escaping the worker thread. No fallback to registry.execute
-                # is permitted for a guarded consequential call.
-                return {"error": str(exc), "error_type": type(exc).__name__}, "error"
+            if self._routes_to_claimsieve(tool_call):
+                try:
+                    boundary = translate_native_tool_call(
+                        tool_call,
+                        tool_map=self._native_tool_map,
+                    )
+                    routed = self._claimsieve_adapter.route_tool_call(boundary)
+                    return routed, "ok"
+                except Exception as exc:
+                    # Match OpenWorker's native execution contract: tool failures become an
+                    # error result. Crucially, there is no fallback to registry.execute.
+                    return {"error": str(exc), "error_type": type(exc).__name__}, "error"
+
+            if self._native_call_must_not_fall_through(tool_call):
+                return {
+                    "error": (
+                        "unmapped consequential OpenWorker tool is blocked from native "
+                        f"execution: {tool_call.name}"
+                    ),
+                    "error_type": "OpenWorkerNativeBridgeError",
+                }, "error"
+
+            return super()._execute_sync(tool_call)
 
     return ClaimSieveGuardedOpenWorkerTurnEngine

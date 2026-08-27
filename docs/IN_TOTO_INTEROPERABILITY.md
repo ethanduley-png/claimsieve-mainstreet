@@ -35,9 +35,19 @@ The runtime authority chain is separate:
 | `claimsieve.executor_receipt.v2` | `execution-attempt/v0.1` | native executor-receipt digest + attempted action digest | request digest, idempotency key, fencing token, containment epoch, provider status/id, attempt sequence |
 | `claimsieve.observer_receipt.v2` | `outcome-observation/v0.1` | native observer-receipt digest + observed action digest when known | provider-record digest, observed action, reconciliation, conflict flag, observation sequence |
 
-Each predicate also carries the digest, key identifier, and signature of the native source record under `native_record`. The exporter explicitly records `signature_verification: NOT_PERFORMED`: it transports the native signature but does not verify it. That signature is not an in-toto envelope signature and does not authenticate the exported Statement.
+Each predicate also carries the digest, key identifier, and signature of the native source record under `native_record`. That native signature is evidence about the ClaimSieve source object; it is not an in-toto envelope signature. The exporter does not verify the embedded native signature and marks `signature_verification: NOT_PERFORMED`; native signature verification remains a separate ClaimSieve verifier responsibility.
 
-All non-null digest bindings asserted by the exporter are required to match the repository's lowercase `sha256:<64 hex>` representation. A malformed destination, parameter, request, provider-record, action, policy, evidence, state, decision, or approval digest fails closed rather than being exported as a portable assertion.
+## Conformance increment
+
+The branch now includes:
+
+- closed JSON Schemas for all three experimental predicates;
+- a deterministic vector at `vectors/in_toto_interop_v1.json` containing native source records plus expected Statement exports;
+- Python tests that regenerate the committed vector exactly and validate every predicate schema;
+- a strict interoperability verifier that rejects unknown predicate versions and subject/signature-shape confusion;
+- Rust tests that consume the same committed vector and check version, source-record subject, action-subject, and selected boundary semantics.
+
+Rust remains a test consumer only in this increment. No Rust runtime path accepts an in-toto Statement as authority.
 
 ## Why we do not emit the proposed agent-decision predicate yet
 
@@ -49,10 +59,10 @@ If compatibility is later added, it should be a separately tested mapping from a
 
 ## Deliberate non-goals in this increment
 
-- No DSSE signing.
+- No DSSE signing or verification.
 - No Sigstore integration.
-- No inbound attestation-to-permit conversion.
 - No native-signature verification inside the exporter.
+- No inbound attestation-to-permit conversion.
 - No change to ClaimSieve trust roots.
 - No change to Rust or Rocq authority semantics.
 - No claim of registered ClaimSieve predicate URIs.
@@ -61,24 +71,24 @@ If compatibility is later added, it should be a separately tested mapping from a
 
 ## Security review questions
 
-1. Is the native record digest always computed over exactly the bytes/semantic object that native signature verification expects?
+1. Is the native record digest always computed over exactly the semantic object that native signature verification expects?
 2. Should exported Statements include only the native record as subject and move action digests into references, or is the current multi-subject model preferable for policy engines?
 3. Should future DSSE signing use the same identity as native ClaimSieve signing, or a separate attestation identity to preserve separation of powers?
 4. How should key rotation and revocation be represented without allowing a historical Statement to become executable authority?
 5. How should logical sequence time coexist with RFC 3339 wall-clock fields when interoperability requires both?
 6. Can an external verifier distinguish `OUTCOME_UNKNOWN` from absence of an observer record without consulting the ClaimSieve ledger?
-7. What cross-language canonicalization profile should be required before Rust emits or verifies the same Statement payloads?
+7. Should future Rust verification independently recompute ClaimSieve canonical source-record digests, or consume only already-verified native records from the native verifier boundary?
 
 ## Next engineering increment
 
-After review of this first bridge:
+After independent review of this bridge:
 
-1. add JSON Schema for the three ClaimSieve predicates;
-2. add deterministic conformance vectors;
-3. verify Python/Rust byte-for-byte Statement agreement;
-4. add a verifier that rejects unknown predicate versions by default;
-5. design DSSE signing with an explicit trust-root and signer-separation model;
-6. re-run the full adversarial suite against signature confusion, subject substitution, stale/replayed attestations, and semantic downgrade attacks.
+1. add negative Rust mutation vectors for downgrade and subject substitution;
+2. decide whether Rust should independently implement source-record canonical digest verification or stay downstream of native verification;
+3. design DSSE signing and verification with explicit trust-root and signer-separation rules;
+4. model key rotation and revocation;
+5. re-run the full adversarial suite against replay, mix-and-match, stale attestation, downgrade, and trust-root substitution attacks;
+6. re-review in-toto issue #554 before any compatibility claim.
 
 ## References
 

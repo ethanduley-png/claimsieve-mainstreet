@@ -58,7 +58,7 @@
             "volumes": [
               {"name": "runtime-tmp", "emptyDir": {"sizeLimit": "256Mi"}},
               {"name": "runtime-state", "persistentVolumeClaim": {"claimName": "openworker-runtime-state"}},
-              {"name": "claimsieve-mtls", "secret": {"secretName": "openworker-claimsieve-mtls", "defaultMode": 256}}
+              {"name": "claimsieve-mtls", "secret": {"secretName": "openworker-claimsieve-mtls", "defaultMode": 288}}
             ]
           }
         }

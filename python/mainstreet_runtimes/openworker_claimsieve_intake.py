@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+import copy
+import json
+import sqlite3
 import threading
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+from pathlib import Path
 from typing import Any, Mapping
 
+from claimsieve_ref.canonical import digest
 from founder_os import FounderActionResult, FounderOSReferenceWorkflow, GitHubIssueRequest, PreparedFounderAction
 
 
@@ -11,18 +16,243 @@ class OpenWorkerIntakeError(ValueError):
     """Raised when an OpenWorker proposal cannot enter the ClaimSieve path."""
 
 
-@dataclass
-class _PendingAction:
-    prepared: PreparedFounderAction
-    execution_started: bool = False
+@dataclass(frozen=True)
+class _StoredPendingAction:
+    tool_call_id: str
+    state: str
+    permit_id: str | None
+    prepared: PreparedFounderAction | None
+
+
+class _DurableOpenWorkerIntakeStore:
+    """Transactional replay and pending-action journal for the native OpenWorker boundary.
+
+    A tool-call identity is reserved before ClaimSieve permit preparation starts. A crash at
+    any later point therefore cannot make the same OpenWorker call look new after restart.
+    Execution is similarly reserved durably before the provider boundary is entered; a crash
+    after reservation is treated as indeterminate and automatic retry stays blocked.
+    """
+
+    SCHEMA_VERSION = 1
+    ADMITTING = "ADMITTING"
+    PENDING = "PENDING"
+    EXECUTION_RESERVED = "EXECUTION_RESERVED"
+    COMPLETE = "COMPLETE"
+    FAILED_CLOSED = "FAILED_CLOSED"
+
+    def __init__(self, path: str | Path) -> None:
+        self.path = Path(path)
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self._init_schema()
+
+    def _connect(self) -> sqlite3.Connection:
+        conn = sqlite3.connect(self.path, timeout=30.0, isolation_level=None)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA synchronous=FULL")
+        conn.execute("PRAGMA foreign_keys=ON")
+        return conn
+
+    def _init_schema(self) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS openworker_intake (
+                    tool_call_id TEXT PRIMARY KEY,
+                    intent_digest TEXT NOT NULL,
+                    state TEXT NOT NULL,
+                    permit_id TEXT UNIQUE,
+                    prepared_json TEXT,
+                    prepared_digest TEXT,
+                    failure_reason TEXT,
+                    schema_version INTEGER NOT NULL
+                )
+                """
+            )
+
+    @staticmethod
+    def _prepared_document(prepared: PreparedFounderAction) -> dict[str, Any]:
+        return {
+            "request": asdict(prepared.request),
+            "evidence": copy.deepcopy(prepared.evidence),
+            "policy": copy.deepcopy(prepared.policy),
+            "signed_policy": copy.deepcopy(prepared.signed_policy),
+            "proposal": copy.deepcopy(prepared.proposal),
+            "decision": copy.deepcopy(prepared.decision),
+            "permit": copy.deepcopy(prepared.permit),
+        }
+
+    @classmethod
+    def _serialize_prepared(cls, prepared: PreparedFounderAction) -> tuple[str, str]:
+        document = cls._prepared_document(prepared)
+        encoded = json.dumps(document, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+        return encoded, digest(document)
+
+    @classmethod
+    def _deserialize_prepared(cls, encoded: str, expected_digest: str) -> PreparedFounderAction:
+        try:
+            document = json.loads(encoded)
+        except json.JSONDecodeError as exc:
+            raise OpenWorkerIntakeError("durable OpenWorker pending action is malformed") from exc
+        if not isinstance(document, dict) or digest(document) != expected_digest:
+            raise OpenWorkerIntakeError("durable OpenWorker pending action failed integrity verification")
+        request_document = document.get("request")
+        if not isinstance(request_document, dict):
+            raise OpenWorkerIntakeError("durable OpenWorker request is malformed")
+        try:
+            request = GitHubIssueRequest(**request_document)
+            request.validate()
+        except (TypeError, ValueError) as exc:
+            raise OpenWorkerIntakeError("durable OpenWorker request failed validation") from exc
+        required = {"evidence", "policy", "signed_policy", "proposal", "decision", "permit"}
+        if not required.issubset(document):
+            raise OpenWorkerIntakeError("durable OpenWorker prepared action is incomplete")
+        return PreparedFounderAction(
+            request=request,
+            evidence=copy.deepcopy(document["evidence"]),
+            policy=copy.deepcopy(document["policy"]),
+            signed_policy=copy.deepcopy(document["signed_policy"]),
+            proposal=copy.deepcopy(document["proposal"]),
+            decision=copy.deepcopy(document["decision"]),
+            permit=copy.deepcopy(document["permit"]),
+        )
+
+    def reserve_admission(self, tool_call_id: str, intent_digest: str) -> None:
+        conn = self._connect()
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            existing = conn.execute(
+                "SELECT state FROM openworker_intake WHERE tool_call_id = ?",
+                (tool_call_id,),
+            ).fetchone()
+            if existing is not None:
+                raise OpenWorkerIntakeError("duplicate OpenWorker tool call identity")
+            conn.execute(
+                """
+                INSERT INTO openworker_intake
+                    (tool_call_id, intent_digest, state, schema_version)
+                VALUES (?, ?, ?, ?)
+                """,
+                (tool_call_id, intent_digest, self.ADMITTING, self.SCHEMA_VERSION),
+            )
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
+
+    def fail_closed(self, tool_call_id: str, reason: str) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                """
+                UPDATE openworker_intake
+                SET state = ?, failure_reason = ?
+                WHERE tool_call_id = ? AND state = ?
+                """,
+                (self.FAILED_CLOSED, reason[:1000], tool_call_id, self.ADMITTING),
+            )
+
+    def finalize_pending(self, tool_call_id: str, prepared: PreparedFounderAction) -> None:
+        permit_id = str(prepared.permit["permit_id"])
+        encoded, prepared_digest = self._serialize_prepared(prepared)
+        conn = self._connect()
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute(
+                "SELECT state FROM openworker_intake WHERE tool_call_id = ?",
+                (tool_call_id,),
+            ).fetchone()
+            if row is None or row["state"] != self.ADMITTING:
+                raise OpenWorkerIntakeError("OpenWorker admission reservation is not active")
+            conn.execute(
+                """
+                UPDATE openworker_intake
+                SET state = ?, permit_id = ?, prepared_json = ?, prepared_digest = ?
+                WHERE tool_call_id = ?
+                """,
+                (self.PENDING, permit_id, encoded, prepared_digest, tool_call_id),
+            )
+            conn.commit()
+        except sqlite3.IntegrityError as exc:
+            conn.rollback()
+            raise OpenWorkerIntakeError("duplicate permit identity") from exc
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
+
+    def reserve_execution(self, permit_id: str) -> PreparedFounderAction:
+        conn = self._connect()
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute(
+                """
+                SELECT tool_call_id, state, prepared_json, prepared_digest, schema_version
+                FROM openworker_intake WHERE permit_id = ?
+                """,
+                (permit_id,),
+            ).fetchone()
+            if row is None:
+                raise OpenWorkerIntakeError("unknown pending permit")
+            if row["schema_version"] != self.SCHEMA_VERSION:
+                raise OpenWorkerIntakeError("unsupported durable OpenWorker intake schema")
+            if row["state"] != self.PENDING:
+                if row["state"] == self.EXECUTION_RESERVED:
+                    raise OpenWorkerIntakeError(
+                        "pending permit execution already reserved; outcome may be indeterminate"
+                    )
+                raise OpenWorkerIntakeError("pending permit is not executable")
+            encoded = row["prepared_json"]
+            expected_digest = row["prepared_digest"]
+            if not isinstance(encoded, str) or not isinstance(expected_digest, str):
+                raise OpenWorkerIntakeError("durable OpenWorker pending action is incomplete")
+            prepared = self._deserialize_prepared(encoded, expected_digest)
+            conn.execute(
+                "UPDATE openworker_intake SET state = ? WHERE permit_id = ? AND state = ?",
+                (self.EXECUTION_RESERVED, permit_id, self.PENDING),
+            )
+            conn.commit()
+            return prepared
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
+
+    def mark_complete(self, permit_id: str) -> None:
+        with self._connect() as conn:
+            changed = conn.execute(
+                "UPDATE openworker_intake SET state = ? WHERE permit_id = ? AND state = ?",
+                (self.COMPLETE, permit_id, self.EXECUTION_RESERVED),
+            ).rowcount
+            if changed != 1:
+                raise OpenWorkerIntakeError("durable OpenWorker execution state changed unexpectedly")
+
+    def pending_permits(self) -> tuple[str, ...]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT permit_id FROM openworker_intake WHERE state = ? ORDER BY permit_id",
+                (self.PENDING,),
+            ).fetchall()
+        return tuple(str(row["permit_id"]) for row in rows)
+
+    def state_for_tool_call(self, tool_call_id: str) -> str | None:
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT state FROM openworker_intake WHERE tool_call_id = ?",
+                (tool_call_id,),
+            ).fetchone()
+        return None if row is None else str(row["state"])
 
 
 class OpenWorkerFounderIntake:
-    """Reference OpenWorker intake into the existing Founder OS authority path.
+    """Durable OpenWorker intake into the existing Founder OS authority path.
 
-    This is proposal-side integration only. A routed intent may result in a
-    ClaimSieve permit, but provider execution remains a separate explicit step.
-    Replay/pending state is process-local in this reference implementation.
+    OpenWorker remains proposal-side only. Tool-call replay identity and pending execution
+    state are persisted transactionally so process restart does not create a fresh authority
+    opportunity. Provider execution remains a separate explicit step.
     """
 
     INTENT_SCHEMA = "mainstreet.consequential_tool_intent.v1"
@@ -48,10 +278,12 @@ class OpenWorkerFounderIntake:
             raise OpenWorkerIntakeError(
                 "OpenWorker intake runtime version does not match the pinned upstream commit"
             )
+        workspace = getattr(workflow, "workspace", None)
+        if not isinstance(workspace, Path):
+            raise OpenWorkerIntakeError("OpenWorker intake requires a durable Founder OS workspace")
         self._workflow = workflow
         self._runtime_profile = profile
-        self._pending: dict[str, _PendingAction] = {}
-        self._seen_tool_calls: set[str] = set()
+        self._store = _DurableOpenWorkerIntakeStore(workspace / "openworker-intake.sqlite3")
         self._lock = threading.RLock()
 
     @staticmethod
@@ -81,9 +313,6 @@ class OpenWorkerFounderIntake:
             raise OpenWorkerIntakeError("unsupported consequential tool")
 
         tool_call_id = self._nonempty_string(intent.get("tool_call_id"), "tool_call_id", 110)
-        if tool_call_id in self._seen_tool_calls:
-            raise OpenWorkerIntakeError("duplicate OpenWorker tool call identity")
-
         arguments = self._exact_mapping(intent.get("arguments"), "arguments")
         if frozenset(arguments) != self.REQUIRED_ARGUMENTS:
             raise OpenWorkerIntakeError(
@@ -115,8 +344,19 @@ class OpenWorkerFounderIntake:
         )
 
     def route_intent(self, intent: dict[str, Any]) -> dict[str, Any]:
+        request = self._request_from_intent(intent)
+        tool_call_id = str(intent["tool_call_id"])
+        try:
+            intent_digest = digest(intent)
+        except ValueError as exc:
+            raise OpenWorkerIntakeError("runtime intent is not canonically digestible") from exc
+
+        # The local lock keeps same-process behavior deterministic; the SQLite reservation is
+        # the actual cross-process/restart replay boundary.
         with self._lock:
-            request = self._request_from_intent(intent)
+            self._store.reserve_admission(tool_call_id, intent_digest)
+
+        try:
             prepared = self._workflow.prepare_issue(request)
             if prepared.proposal.get("principal") != self._runtime_profile.principal:
                 raise OpenWorkerIntakeError("prepared proposal principal is not bound to OpenWorker")
@@ -124,39 +364,38 @@ class OpenWorkerFounderIntake:
                 raise OpenWorkerIntakeError("issued permit principal is not bound to OpenWorker")
             if prepared.proposal.get("runtime_identity") != self._runtime_profile.binding():
                 raise OpenWorkerIntakeError("prepared proposal runtime identity binding mismatch")
+            self._store.finalize_pending(tool_call_id, prepared)
+        except Exception as exc:
+            self._store.fail_closed(tool_call_id, f"{type(exc).__name__}: {exc}")
+            raise
 
-            permit_id = str(prepared.permit["permit_id"])
-            if permit_id in self._pending:
-                raise OpenWorkerIntakeError("duplicate permit identity")
-            self._seen_tool_calls.add(str(intent["tool_call_id"]))
-            self._pending[permit_id] = _PendingAction(prepared=prepared)
-            return {
-                "schema_version": "mainstreet.claimsieve_intake_receipt.v1",
-                "status": "PERMIT_ISSUED_EXECUTION_PENDING",
-                "permit_id": permit_id,
-                "proposal_id": request.proposal_id,
-                "runtime_name": self._runtime_profile.runtime_name,
-                "runtime_version": self._runtime_profile.runtime_version,
-                "runtime_principal": self._runtime_profile.principal,
-                "runtime_manifest_digest": self._runtime_profile.runtime_manifest_digest,
-                "proposal_digest": prepared.permit["proposal_digest"],
-                "action_digest": prepared.permit["action_digest"],
-                "destination_digest": prepared.permit["destination_digest"],
-                "parameter_digest": prepared.permit["parameter_digest"],
-                "expires_at_seq": prepared.permit["expires_at_seq"],
-                "external_action_executed": False,
-            }
+        permit_id = str(prepared.permit["permit_id"])
+        return {
+            "schema_version": "mainstreet.claimsieve_intake_receipt.v1",
+            "status": "PERMIT_ISSUED_EXECUTION_PENDING",
+            "permit_id": permit_id,
+            "proposal_id": request.proposal_id,
+            "runtime_name": self._runtime_profile.runtime_name,
+            "runtime_version": self._runtime_profile.runtime_version,
+            "runtime_principal": self._runtime_profile.principal,
+            "runtime_manifest_digest": self._runtime_profile.runtime_manifest_digest,
+            "proposal_digest": prepared.permit["proposal_digest"],
+            "action_digest": prepared.permit["action_digest"],
+            "destination_digest": prepared.permit["destination_digest"],
+            "parameter_digest": prepared.permit["parameter_digest"],
+            "expires_at_seq": prepared.permit["expires_at_seq"],
+            "external_action_executed": False,
+        }
 
     def execute_pending(self, permit_id: str, execute_seq: int, observe_seq: int) -> FounderActionResult:
-        with self._lock:
-            pending = self._pending.get(permit_id)
-            if pending is None:
-                raise OpenWorkerIntakeError("unknown pending permit")
-            if pending.execution_started:
-                raise OpenWorkerIntakeError("pending permit execution already started")
-            pending.execution_started = True
-        return self._workflow.execute_issue(pending.prepared, execute_seq, observe_seq)
+        prepared = self._store.reserve_execution(permit_id)
+        result = self._workflow.execute_issue(prepared, execute_seq, observe_seq)
+        self._store.mark_complete(permit_id)
+        return result
 
     def pending_permits(self) -> tuple[str, ...]:
-        with self._lock:
-            return tuple(sorted(self._pending))
+        return self._store.pending_permits()
+
+    def durable_state_for_tool_call(self, tool_call_id: str) -> str | None:
+        """Expose bounded state for tests/operations without exposing stored action payloads."""
+        return self._store.state_for_tool_call(tool_call_id)

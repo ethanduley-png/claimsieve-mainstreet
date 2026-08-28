@@ -7,8 +7,9 @@ from pathlib import Path
 from typing import Any
 
 PINNED_OPENWORKER_COMMIT = "86c57f0692a5a318e55d1b9e0188d798b9fc5690"
-IMAGE_PLACEHOLDER = "mainstreet/openworker@sha256:REPLACE_WITH_RELEASE_IMAGE_DIGEST"
-_IMAGE_RE = re.compile(r"^mainstreet/openworker@sha256:[0-9a-f]{64}$")
+IMAGE_REPOSITORY = "ghcr.io/ethanduley-png/claimsieve-openworker"
+IMAGE_PLACEHOLDER = f"{IMAGE_REPOSITORY}@sha256:REPLACE_WITH_RELEASE_IMAGE_DIGEST"
+_IMAGE_RE = re.compile(r"^ghcr\.io/ethanduley-png/claimsieve-openworker@sha256:[0-9a-f]{64}$")
 _ALLOWED_EGRESS_APPS = frozenset({"claimsieve-intake", "model-gateway"})
 _REQUIRED_COMMAND = ["python", "-m", "mainstreet_runtimes.openworker_production_server"]
 _REQUIRED_ARGS = ["--host", "0.0.0.0", "--port", "8080"]
@@ -100,7 +101,7 @@ def _validate(manifest: dict[str, Any], *, allow_image_placeholder: bool) -> Non
     if allow_image_placeholder:
         _require(image == IMAGE_PLACEHOLDER or (isinstance(image, str) and _IMAGE_RE.fullmatch(image) is not None), "OpenWorker template image must be the release placeholder or an exact sha256 image")
     else:
-        _require(isinstance(image, str) and _IMAGE_RE.fullmatch(image) is not None, "OpenWorker production release image must contain an exact 64-hex sha256 digest")
+        _require(isinstance(image, str) and _IMAGE_RE.fullmatch(image) is not None, "OpenWorker production release image must contain the exact GHCR repository and a 64-hex sha256 digest")
 
     env = container.get("env", [])
     _require(isinstance(env, list), "OpenWorker env must be a list")
@@ -183,7 +184,7 @@ def render_openworker_production_manifest(template: dict[str, Any], image_digest
     _require(re.fullmatch(r"sha256:[0-9a-f]{64}", image_digest) is not None, "release image digest must be sha256 followed by exactly 64 lowercase hex characters")
     rendered = copy.deepcopy(template)
     deployment = next(item for item in _items(rendered) if item.get("kind") == "Deployment")
-    deployment["spec"]["template"]["spec"]["containers"][0]["image"] = f"mainstreet/openworker@{image_digest}"
+    deployment["spec"]["template"]["spec"]["containers"][0]["image"] = f"{IMAGE_REPOSITORY}@{image_digest}"
     validate_openworker_production_manifest(rendered)
     return rendered
 

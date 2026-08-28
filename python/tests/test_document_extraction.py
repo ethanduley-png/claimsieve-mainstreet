@@ -63,6 +63,7 @@ class DocumentExtractionTests(unittest.TestCase):
         self.assertEqual(extraction.spans[1].polygon[0], (10.0, 30.0))
         self.assertEqual(extraction.spans[1].bounding_box, (10.0, 30.0, 120.0, 45.0))
         self.assertEqual(extraction.spans[1].page_index, 0)
+        self.assertTrue(extraction.extraction_digest.startswith("sha256:"))
         self.assertTrue(engine.path_existed_during_predict)
         self.assertEqual(engine.seen_bytes, source)
         self.assertFalse(os.path.exists(engine.seen_path))
@@ -169,6 +170,7 @@ class DocumentExtractionTests(unittest.TestCase):
             span_indices=(0, 1),
         )
         self.assertEqual(claim.source_sha256, extraction.source_sha256)
+        self.assertEqual(claim.extraction_digest, extraction.extraction_digest)
         self.assertEqual(claim.span_indices, (0, 1))
         self.assertEqual(claim.authority, UNVERIFIED_CANDIDATE)
         self.assertFalse(claim.is_authoritative)
@@ -177,10 +179,41 @@ class DocumentExtractionTests(unittest.TestCase):
             type(claim)(
                 text=claim.text,
                 source_sha256=claim.source_sha256,
+                extraction_digest=claim.extraction_digest,
                 span_indices=claim.span_indices,
                 extraction_provider=claim.extraction_provider,
                 authority="authoritative",
             )
+
+    def test_extraction_digest_changes_when_same_source_spans_are_reordered(self):
+        source_digest = hashlib.sha256(b"same-source").hexdigest()
+        span_a = PaddleOCRExtractor(
+            engine=FakeEngine(
+                [
+                    FakeResult(
+                        {
+                            "rec_texts": ["A", "B"],
+                            "rec_scores": [0.9, 0.8],
+                            "rec_polys": [
+                                [[0, 0], [1, 0], [1, 1], [0, 1]],
+                                [[2, 0], [3, 0], [3, 1], [2, 1]],
+                            ],
+                        }
+                    )
+                ]
+            )
+        ).extract(b"same-source", source_name="note.png", media_type="image/png")
+        span_b = DocumentExtraction(
+            source_sha256=source_digest,
+            source_name=span_a.source_name,
+            media_type=span_a.media_type,
+            provider=span_a.provider,
+            provider_profile=span_a.provider_profile,
+            spans=tuple(reversed(span_a.spans)),
+            raw_text="B\nA",
+        )
+        self.assertEqual(span_a.source_sha256, span_b.source_sha256)
+        self.assertNotEqual(span_a.extraction_digest, span_b.extraction_digest)
 
     def test_candidate_claim_rejects_unknown_span(self):
         extraction = DocumentExtraction(

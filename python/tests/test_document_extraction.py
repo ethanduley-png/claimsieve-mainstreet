@@ -8,6 +8,7 @@ from small_business_agent.document_extraction import (
     DocumentExtraction,
     PaddleOCRExtractor,
     bind_candidate_claim,
+    validate_candidate_claim_binding,
 )
 
 
@@ -174,6 +175,7 @@ class DocumentExtractionTests(unittest.TestCase):
         self.assertEqual(claim.span_indices, (0, 1))
         self.assertEqual(claim.authority, UNVERIFIED_CANDIDATE)
         self.assertFalse(claim.is_authoritative)
+        validate_candidate_claim_binding(claim, extraction)
 
         with self.assertRaises(ValueError):
             type(claim)(
@@ -214,6 +216,48 @@ class DocumentExtractionTests(unittest.TestCase):
         )
         self.assertEqual(span_a.source_sha256, span_b.source_sha256)
         self.assertNotEqual(span_a.extraction_digest, span_b.extraction_digest)
+
+    def test_candidate_binding_validator_rejects_reordered_extraction(self):
+        extraction = PaddleOCRExtractor(
+            engine=FakeEngine(
+                [
+                    FakeResult(
+                        {
+                            "rec_texts": ["A", "B"],
+                            "rec_scores": [0.9, 0.8],
+                            "rec_polys": [
+                                [[0, 0], [1, 0], [1, 1], [0, 1]],
+                                [[2, 0], [3, 0], [3, 1], [2, 1]],
+                            ],
+                        }
+                    )
+                ]
+            )
+        ).extract(b"same-source", source_name="note.png", media_type="image/png")
+        claim = bind_candidate_claim(extraction, text="A then B", span_indices=(0, 1))
+        reordered = DocumentExtraction(
+            source_sha256=extraction.source_sha256,
+            source_name=extraction.source_name,
+            media_type=extraction.media_type,
+            provider=extraction.provider,
+            provider_profile=extraction.provider_profile,
+            spans=tuple(reversed(extraction.spans)),
+            raw_text="B\nA",
+        )
+        with self.assertRaisesRegex(ValueError, "extraction digest"):
+            validate_candidate_claim_binding(claim, reordered)
+
+    def test_mutable_span_container_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "immutable tuple"):
+            DocumentExtraction(
+                source_sha256=hashlib.sha256(b"x").hexdigest(),
+                source_name="note.png",
+                media_type="image/png",
+                provider="paddleocr",
+                provider_profile="test",
+                spans=[],
+                raw_text="",
+            )
 
     def test_candidate_claim_rejects_unknown_span(self):
         extraction = DocumentExtraction(

@@ -9,7 +9,7 @@ from urllib.parse import urlsplit
 
 try:
     from coworker.providers.base import ProviderClient as _ProviderClientBase
-except ImportError:  # ordinary repository tests intentionally do not install OpenWorker
+except ImportError:
     class _ProviderClientBase:  # type: ignore[no-redef]
         pass
 
@@ -47,11 +47,7 @@ def _decode(raw: bytes) -> dict[str, Any]:
 
 
 class MainStreetOpenWorkerModelGatewayProvider(_ProviderClientBase):
-    """Native OpenWorker ProviderClient with no external-provider credentials.
-
-    The only model egress is the fixed, hostname-verified, TLS-1.3 mutual-TLS endpoint
-    inside `mainstreet-system`. Vendor routing and credentials live behind that gateway.
-    """
+    """Native OpenWorker ProviderClient with no external-provider credentials."""
 
     RESPONSE_FIELDS = frozenset(
         {"schema_version", "text", "tool_calls", "finish_reason", "reasoning", "extras", "usage"}
@@ -122,9 +118,7 @@ class MainStreetOpenWorkerModelGatewayProvider(_ProviderClientBase):
 
     def _request(self, payload: dict[str, Any]) -> dict[str, Any]:
         try:
-            raw = json.dumps(
-                payload, sort_keys=True, separators=(",", ":"), allow_nan=False
-            ).encode("utf-8")
+            raw = json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
         except (TypeError, ValueError) as exc:
             raise OpenWorkerModelGatewayError("model-gateway request must be finite JSON data") from exc
         if len(raw) > MAX_REQUEST_BYTES:
@@ -185,11 +179,10 @@ class MainStreetOpenWorkerModelGatewayProvider(_ProviderClientBase):
         }
         response = self._request(payload)
         if frozenset(response) != self.RESPONSE_FIELDS:
-            raise OpenWorkerModelGatewayError(
-                "model-gateway response fields do not match the closed schema"
-            )
+            raise OpenWorkerModelGatewayError("model-gateway response fields do not match the closed schema")
         if response.get("schema_version") != "mainstreet.openworker_model_response.v1":
             raise OpenWorkerModelGatewayError("unsupported model-gateway response schema")
+
         raw_calls = response.get("tool_calls")
         if not isinstance(raw_calls, list):
             raise OpenWorkerModelGatewayError("model-gateway tool_calls must be a list")
@@ -202,9 +195,7 @@ class MainStreetOpenWorkerModelGatewayProvider(_ProviderClientBase):
             name = raw_call.get("name")
             arguments = raw_call.get("arguments")
             if not isinstance(call_id, str) or not call_id or call_id in seen_ids:
-                raise OpenWorkerModelGatewayError(
-                    "model-gateway tool call identity is invalid or duplicated"
-                )
+                raise OpenWorkerModelGatewayError("model-gateway tool call identity is invalid or duplicated")
             if not isinstance(name, str) or not name:
                 raise OpenWorkerModelGatewayError("model-gateway tool name is invalid")
             if not isinstance(arguments, dict):
@@ -221,9 +212,7 @@ class MainStreetOpenWorkerModelGatewayProvider(_ProviderClientBase):
             for key in ("input", "output", "cache_read", "cache_write"):
                 value = usage_raw.get(key)
                 if isinstance(value, bool) or not isinstance(value, int) or value < 0:
-                    raise OpenWorkerModelGatewayError(
-                        "model-gateway usage values must be non-negative integers"
-                    )
+                    raise OpenWorkerModelGatewayError("model-gateway usage values must be non-negative integers")
                 values.append(value)
             usage = TokenUsage(*values)
 
@@ -236,9 +225,7 @@ class MainStreetOpenWorkerModelGatewayProvider(_ProviderClientBase):
         if reasoning is not None and not isinstance(reasoning, str):
             raise OpenWorkerModelGatewayError("model-gateway reasoning must be string or null")
         if finish_reason is not None and not isinstance(finish_reason, str):
-            raise OpenWorkerModelGatewayError(
-                "model-gateway finish_reason must be string or null"
-            )
+            raise OpenWorkerModelGatewayError("model-gateway finish_reason must be string or null")
         if not isinstance(extras, dict):
             raise OpenWorkerModelGatewayError("model-gateway extras must be an object")
         return AssistantTurn(
@@ -255,10 +242,13 @@ class MainStreetOpenWorkerModelGatewayProvider(_ProviderClientBase):
 
         if not isinstance(model, str) or not model:
             raise OpenWorkerModelGatewayError("model identifier is invalid")
+        # Until the gateway exposes a separately authenticated capability contract, do not
+        # advertise optional modalities. Tool use is the only capability this integration
+        # requires and independently gates at the ClaimSieve execution boundary.
         return ModelCapabilities(
             tools=True,
-            vision=True,
-            pdf=True,
-            parallel_tool_calls=True,
+            vision=False,
+            pdf=False,
+            parallel_tool_calls=False,
             streaming=False,
         )

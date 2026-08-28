@@ -10,15 +10,22 @@ PINNED_OPENWORKER_COMMIT = "86c57f0692a5a318e55d1b9e0188d798b9fc5690"
 IMAGE_PLACEHOLDER = "mainstreet/openworker@sha256:REPLACE_WITH_RELEASE_IMAGE_DIGEST"
 _IMAGE_RE = re.compile(r"^mainstreet/openworker@sha256:[0-9a-f]{64}$")
 _ALLOWED_EGRESS_APPS = frozenset({"claimsieve-intake", "model-gateway"})
+_REQUIRED_COMMAND = ["python", "-m", "mainstreet_runtimes.openworker_production_server"]
+_REQUIRED_ARGS = ["--host", "0.0.0.0", "--port", "8080"]
 _FORBIDDEN_ENV_MARKERS = (
     "AWS_", "AZURE_", "GCP_", "GOOGLE_APPLICATION_CREDENTIALS",
-    "GITHUB_TOKEN", "GH_TOKEN", "STRIPE_", "DATABASE_URL",
+    "GITHUB_TOKEN", "GH_TOKEN", "STRIPE_", "DATABASE_URL", "COWORKER_API_TOKEN",
     "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GEMINI_API_KEY",
 )
-_REQUIRED_MTLS_ENV = {
+_REQUIRED_ENV = {
+    "PYTHONPATH": "/opt/mainstreet/python",
+    "COWORKER_STATE_DIR": "/var/lib/mainstreet/openworker",
+    "MAINSTREET_CLAIMSIEVE_ENDPOINT": "https://claimsieve-intake.mainstreet-system.svc.cluster.local:8443/v1/runtime/openworker/intents",
+    "MAINSTREET_MODEL_GATEWAY_ENDPOINT": "https://model-gateway.mainstreet-system.svc.cluster.local:8443/v1/runtime/openworker/completions",
     "MAINSTREET_MTLS_CA_FILE": "/var/run/mainstreet/mtls/ca.crt",
     "MAINSTREET_MTLS_CERT_FILE": "/var/run/mainstreet/mtls/tls.crt",
     "MAINSTREET_MTLS_KEY_FILE": "/var/run/mainstreet/mtls/tls.key",
+    "OPENWORKER_RUNTIME_COMMIT": PINNED_OPENWORKER_COMMIT,
 }
 
 
@@ -39,6 +46,18 @@ def _items(manifest: dict[str, Any]) -> list[dict[str, Any]]:
     return items
 
 
+def _validate_probe(container: dict[str, Any], name: str, period: int, failures: int) -> None:
+    probe = container.get(name)
+    _require(isinstance(probe, dict), f"OpenWorker {name} is required")
+    _require(
+        probe.get("httpGet") == {"path": "/v1/health", "port": 8080, "scheme": "HTTP"},
+        f"OpenWorker {name} must target the fixed health endpoint",
+    )
+    _require(probe.get("periodSeconds") == period, f"OpenWorker {name} period is fixed")
+    _require(probe.get("failureThreshold") == failures, f"OpenWorker {name} failure threshold is fixed")
+    _require(probe.get("timeoutSeconds") == 1, f"OpenWorker {name} timeout is fixed")
+
+
 def _validate(manifest: dict[str, Any], *, allow_image_placeholder: bool) -> None:
     items = _items(manifest)
     deployments = [item for item in items if item.get("kind") == "Deployment"]
@@ -54,11 +73,16 @@ def _validate(manifest: dict[str, Any], *, allow_image_placeholder: bool) -> Non
     _require(pod.get("hostIPC") is False, "OpenWorker may not use the host IPC namespace")
     pod_security = pod.get("securityContext", {})
     _require(pod_security.get("runAsNonRoot") is True, "OpenWorker pod must run as non-root")
+    _require(pod_security.get("runAsUser") == 65532, "OpenWorker pod user is fixed")
+    _require(pod_security.get("runAsGroup") == 65532, "OpenWorker pod group is fixed")
+    _require(pod_security.get("fsGroup") == 65532, "OpenWorker fsGroup is fixed")
     _require(pod_security.get("seccompProfile", {}).get("type") == "RuntimeDefault", "OpenWorker pod must use RuntimeDefault seccomp")
 
     containers = pod.get("containers")
     _require(isinstance(containers, list) and len(containers) == 1, "OpenWorker pod must contain exactly one runtime container")
     container = containers[0]
+    _require(container.get("command") == _REQUIRED_COMMAND, "OpenWorker must launch the MainStreet production bootstrap")
+    _require(container.get("args") == _REQUIRED_ARGS, "OpenWorker production bootstrap arguments are fixed")
     security = container.get("securityContext", {})
     _require(security.get("allowPrivilegeEscalation") is False, "OpenWorker privilege escalation must be disabled")
     _require(security.get("readOnlyRootFilesystem") is True, "OpenWorker root filesystem must be read-only")
@@ -75,17 +99,24 @@ def _validate(manifest: dict[str, Any], *, allow_image_placeholder: bool) -> Non
     env = container.get("env", [])
     _require(isinstance(env, list), "OpenWorker env must be a list")
     env_map = {entry.get("name"): entry.get("value") for entry in env if isinstance(entry, dict)}
+    _require(len(env_map) == len(env), "OpenWorker env entries must have unique names")
     for name in env_map:
         if isinstance(name, str):
             _require(not any(name == marker or name.startswith(marker) for marker in _FORBIDDEN_ENV_MARKERS), f"provider or infrastructure credential environment is forbidden in OpenWorker: {name}")
-    _require(env_map.get("OPENWORKER_RUNTIME_COMMIT") == PINNED_OPENWORKER_COMMIT, "OpenWorker runtime commit env must match the pinned commit")
-    _require(env_map.get("MAINSTREET_CLAIMSIEVE_ENDPOINT") == "https://claimsieve-intake.mainstreet-system.svc.cluster.local:8443/v1/runtime/openworker/intents", "OpenWorker ClaimSieve endpoint must be fixed")
-    for name, value in _REQUIRED_MTLS_ENV.items():
-        _require(env_map.get(name) == value, f"OpenWorker {name} must use the fixed mTLS identity path")
+    _require(env_map == _REQUIRED_ENV, "OpenWorker production environment must match the fixed non-secret allowlist")
 
     mounts = container.get("volumeMounts", [])
-    mtls_mount = [m for m in mounts if m.get("name") == "claimsieve-mtls"] if isinstance(mounts, list) else []
-    _require(mtls_mount == [{"name": "claimsieve-mtls", "mountPath": "/var/run/mainstreet/mtls", "readOnly": True}], "ClaimSieve mTLS identity must be mounted read-only at the fixed path")
+    _require(
+        mounts == [
+            {"name": "runtime-tmp", "mountPath": "/tmp"},
+            {"name": "runtime-state", "mountPath": "/var/lib/mainstreet/openworker"},
+            {"name": "claimsieve-mtls", "mountPath": "/var/run/mainstreet/mtls", "readOnly": True},
+        ],
+        "OpenWorker volume mounts must match the fixed production set",
+    )
+    _validate_probe(container, "startupProbe", 2, 30)
+    _validate_probe(container, "readinessProbe", 5, 3)
+    _validate_probe(container, "livenessProbe", 10, 3)
 
     volumes = pod.get("volumes", [])
     _require(isinstance(volumes, list), "OpenWorker volumes must be a list")
@@ -94,12 +125,12 @@ def _validate(manifest: dict[str, Any], *, allow_image_placeholder: bool) -> Non
         _require("hostPath" not in volume, "OpenWorker may not mount host paths")
         _require("projected" not in volume, "OpenWorker may not receive projected credential volumes")
         if "secret" in volume:
-            _require(volume.get("name") == "claimsieve-mtls", "OpenWorker may receive only the ClaimSieve mTLS identity Secret")
+            _require(volume.get("name") == "claimsieve-mtls", "OpenWorker may receive only the ClaimSieve workload-identity Secret")
             secret = volume.get("secret", {})
-            _require(secret.get("secretName") == "openworker-claimsieve-mtls", "OpenWorker mTLS Secret name is fixed")
-            _require(secret.get("defaultMode") == 288, "OpenWorker mTLS Secret files must be mode 0440 for the fixed fsGroup")
+            _require(secret.get("secretName") == "openworker-claimsieve-mtls", "OpenWorker workload-identity Secret name is fixed")
+            _require(secret.get("defaultMode") == 288, "OpenWorker workload identity files must be mode 0440 for the fixed fsGroup")
             mtls_volumes.append(volume)
-    _require(len(mtls_volumes) == 1, "OpenWorker requires exactly one ClaimSieve mTLS identity Secret")
+    _require(len(mtls_volumes) == 1, "OpenWorker requires exactly one workload-identity Secret")
 
     policies = [item for item in items if item.get("kind") == "NetworkPolicy"]
     deny = [p for p in policies if p.get("metadata", {}).get("name") == "openworker-default-deny"]

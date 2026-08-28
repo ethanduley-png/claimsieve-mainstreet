@@ -12,6 +12,12 @@ _IMAGE_RE = re.compile(r"^mainstreet/openworker@sha256:[0-9a-f]{64}$")
 _ALLOWED_EGRESS_APPS = frozenset({"claimsieve-intake", "model-gateway"})
 _REQUIRED_COMMAND = ["python", "-m", "mainstreet_runtimes.openworker_production_server"]
 _REQUIRED_ARGS = ["--host", "0.0.0.0", "--port", "8080"]
+_REQUIRED_SECRET_ITEMS = [
+    {"key": "ca.crt", "path": "ca.crt"},
+    {"key": "tls.crt", "path": "tls.crt"},
+    {"key": "tls.key", "path": "tls.key"},
+    {"key": "openworker.token", "path": "openworker.token"},
+]
 _FORBIDDEN_ENV_MARKERS = (
     "AWS_", "AZURE_", "GCP_", "GOOGLE_APPLICATION_CREDENTIALS",
     "GITHUB_TOKEN", "GH_TOKEN", "STRIPE_", "DATABASE_URL", "COWORKER_API_TOKEN",
@@ -129,6 +135,7 @@ def _validate(manifest: dict[str, Any], *, allow_image_placeholder: bool) -> Non
             secret = volume.get("secret", {})
             _require(secret.get("secretName") == "openworker-claimsieve-mtls", "OpenWorker workload-identity Secret name is fixed")
             _require(secret.get("defaultMode") == 288, "OpenWorker workload identity files must be mode 0440 for the fixed fsGroup")
+            _require(secret.get("items") == _REQUIRED_SECRET_ITEMS, "OpenWorker workload-identity Secret may expose only CA, client certificate, client key, and API token")
             mtls_volumes.append(volume)
     _require(len(mtls_volumes) == 1, "OpenWorker requires exactly one workload-identity Secret")
 

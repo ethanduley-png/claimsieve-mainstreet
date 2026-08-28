@@ -103,7 +103,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$(docker inspect --format '{{.Config.User}}' claimsieve-openworker:pr-test)" = "65532:65532"
-          docker run --rm --entrypoint python claimsieve-openworker:pr-test - <<'PY'
+          docker run --rm -i --entrypoint python claimsieve-openworker:pr-test - <<'PY'
           import shutil
           import mainstreet_runtimes.openworker_production_server as server
           import coworker

@@ -34,6 +34,10 @@ class OpenWorkerDeploymentPolicyTests(unittest.TestCase):
     def container(self, manifest: dict) -> dict:
         return self.deployment(manifest)["spec"]["template"]["spec"]["containers"][0]
 
+    def identity_secret(self, manifest: dict) -> dict:
+        volumes = self.deployment(manifest)["spec"]["template"]["spec"]["volumes"]
+        return next(v for v in volumes if v["name"] == "claimsieve-mtls")["secret"]
+
     def test_checked_in_template_passes_template_validation(self) -> None:
         validate_openworker_deployment_template_file(MANIFEST)
 
@@ -127,9 +131,14 @@ class OpenWorkerDeploymentPolicyTests(unittest.TestCase):
 
     def test_identity_secret_permissions_cannot_be_broadened(self) -> None:
         manifest = self.production_manifest()
-        volumes = self.deployment(manifest)["spec"]["template"]["spec"]["volumes"]
-        next(v for v in volumes if v["name"] == "claimsieve-mtls")["secret"]["defaultMode"] = 420
+        self.identity_secret(manifest)["defaultMode"] = 420
         with self.assertRaisesRegex(OpenWorkerDeploymentPolicyError, "0440"):
+            validate_openworker_production_manifest(manifest)
+
+    def test_identity_secret_cannot_expose_extra_key(self) -> None:
+        manifest = self.production_manifest()
+        self.identity_secret(manifest)["items"].append({"key": "github-token", "path": "github-token"})
+        with self.assertRaisesRegex(OpenWorkerDeploymentPolicyError, "may expose only"):
             validate_openworker_production_manifest(manifest)
 
     def test_health_probe_cannot_be_redirected_to_unrelated_endpoint(self) -> None:

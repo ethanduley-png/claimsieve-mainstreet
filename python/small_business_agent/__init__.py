@@ -10,6 +10,7 @@ from .document_extraction import (
     PaddleOCRExtractor,
     bind_candidate_claim,
     sha256_hex,
+    validate_candidate_claim_binding,
 )
 from .inbox import InboxMessage, InboxTriage, triage_message
 from .model import ActionRisk, BusinessDomain, Intent, ProposedWorkItem, WorkPlan
@@ -44,4 +45,5 @@ __all__ = [
     "PaddleOCRExtractor",
     "bind_candidate_claim",
     "sha256_hex",
+    "validate_candidate_claim_binding",
 ]

@@ -1,0 +1,13 @@
+{
+  "name": "@mainstreet/customer-api-core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "check": "node --check src/authz.js && node --check src/tenant-store.js && node --check src/service.js"
+  }
+}

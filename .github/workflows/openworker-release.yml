@@ -12,6 +12,8 @@ permissions:
 env:
   IMAGE: ghcr.io/${{ github.repository_owner }}/claimsieve-openworker
   PYTHON_BASE_TAG: python:3.11.16-slim
+  OPENWORKER_COMMIT: 86c57f0692a5a318e55d1b9e0188d798b9fc5690
+  AISUITE_COMMIT: 1b4bbf303ec21968230b1ec869a144d054e9b3c4
 
 jobs:
   release:
@@ -24,12 +26,30 @@ jobs:
         with:
           python-version: "3.11.16"
 
-      - name: Validate release source before image build
+      - name: Validate exact release source
         env:
           PYTHONPATH: python
         run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
           python -m pip install -r python/requirements-openworker.lock.txt
           python -m pip check
+          python -m pip freeze --exclude pip --exclude setuptools --exclude wheel > /tmp/openworker.freeze.txt
+          diff -u python/requirements-openworker.lock.txt /tmp/openworker.freeze.txt
+          python - <<'PY'
+          import json
+          from importlib import metadata
+          from mainstreet_runtimes.openworker_native_bridge import verify_pinned_openworker_runtime
+          resolved = verify_pinned_openworker_runtime()
+          if resolved != "86c57f0692a5a318e55d1b9e0188d798b9fc5690":
+              raise SystemExit(f"unexpected OpenWorker commit: {resolved}")
+          raw = metadata.distribution("aisuite").read_text("direct_url.json")
+          if not raw:
+              raise SystemExit("aisuite has no PEP 610 provenance")
+          vcs = json.loads(raw).get("vcs_info", {})
+          if vcs.get("vcs") != "git" or vcs.get("commit_id") != "1b4bbf303ec21968230b1ec869a144d054e9b3c4":
+              raise SystemExit(f"unexpected aisuite provenance: {vcs}")
+          PY
           python -m unittest discover -s python/tests -p 'test_openworker_*.py' -v
           python - <<'PY'
           from mainstreet_runtimes.openworker_deployment_policy import validate_openworker_deployment_template_file
@@ -67,6 +87,9 @@ jobs:
           tags: ${{ env.IMAGE }}:${{ github.sha }}
           build-args: |
             PYTHON_BASE_IMAGE=${{ steps.base.outputs.ref }}
+            REPOSITORY_COMMIT=${{ github.sha }}
+            OPENWORKER_COMMIT=${{ env.OPENWORKER_COMMIT }}
+            AISUITE_COMMIT=${{ env.AISUITE_COMMIT }}
           provenance: mode=max
           sbom: true
           no-cache: true
@@ -102,18 +125,16 @@ jobs:
               dependency_lock_path="python/requirements-openworker.lock.txt",
               deployment_template_path="deploy/openworker/kubernetes.json",
           )
-          record["base_image_ref"] = os.environ["BASE_IMAGE_REF"]
-          # The base image is additional release evidence outside v1's signed closed record;
-          # keep it in a separate immutable metadata file rather than weakening that schema.
           Path("release/openworker/release.json").write_text(
-              json.dumps({k: v for k, v in record.items() if k != "base_image_ref"}, sort_keys=True, indent=2) + "\n",
-              encoding="utf-8",
+              json.dumps(record, sort_keys=True, indent=2) + "\n", encoding="utf-8"
           )
           Path("release/openworker/deployment.json").write_text(
               json.dumps(record["rendered_deployment"], sort_keys=True, indent=2) + "\n",
               encoding="utf-8",
           )
-          Path("release/openworker/base-image.txt").write_text(os.environ["BASE_IMAGE_REF"] + "\n", encoding="utf-8")
+          Path("release/openworker/base-image.txt").write_text(
+              os.environ["BASE_IMAGE_REF"] + "\n", encoding="utf-8"
+          )
           verify_openworker_release(
               json.loads(Path("release/openworker/release.json").read_text(encoding="utf-8")),
               dependency_lock_path="python/requirements-openworker.lock.txt",

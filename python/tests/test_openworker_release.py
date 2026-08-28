@@ -4,6 +4,7 @@ import copy
 import unittest
 from pathlib import Path
 
+from mainstreet_runtimes.openworker_deployment_policy import IMAGE_REPOSITORY
 from mainstreet_runtimes.openworker_release import (
     OpenWorkerReleaseError,
     build_openworker_release,
@@ -29,7 +30,15 @@ class OpenWorkerReleaseTests(unittest.TestCase):
     def test_release_binds_source_dependencies_image_and_deployment(self) -> None:
         record = self.release()
         self.assertEqual(record["repository_commit"], REPO_COMMIT)
+        self.assertEqual(record["container_image_repository"], IMAGE_REPOSITORY)
         self.assertEqual(record["container_image_digest"], IMAGE_DIGEST)
+        deployment = next(
+            item for item in record["rendered_deployment"]["items"] if item["kind"] == "Deployment"
+        )
+        self.assertEqual(
+            deployment["spec"]["template"]["spec"]["containers"][0]["image"],
+            f"{IMAGE_REPOSITORY}@{IMAGE_DIGEST}",
+        )
         self.assertTrue(record["dependency_lock_digest"].startswith("sha256:"))
         self.assertTrue(record["rendered_deployment_digest"].startswith("sha256:"))
         self.assertTrue(record["release_digest"].startswith("sha256:"))
@@ -60,6 +69,12 @@ class OpenWorkerReleaseTests(unittest.TestCase):
         with self.assertRaisesRegex(OpenWorkerReleaseError, "closed schema"):
             verify_openworker_release(record, dependency_lock_path=LOCK, deployment_template_path=TEMPLATE)
 
+    def test_image_repository_substitution_is_rejected(self) -> None:
+        record = self.release()
+        record["container_image_repository"] = "ghcr.io/attacker/openworker"
+        with self.assertRaisesRegex(OpenWorkerReleaseError, "repository drift"):
+            verify_openworker_release(record, dependency_lock_path=LOCK, deployment_template_path=TEMPLATE)
+
     def test_rendered_deployment_tampering_is_rejected(self) -> None:
         record = self.release()
         tampered = copy.deepcopy(record)
@@ -67,6 +82,21 @@ class OpenWorkerReleaseTests(unittest.TestCase):
         deployment["spec"]["template"]["spec"]["hostNetwork"] = True
         with self.assertRaisesRegex(OpenWorkerReleaseError, "rendered deployment digest"):
             verify_openworker_release(tampered, dependency_lock_path=LOCK, deployment_template_path=TEMPLATE)
+
+    def test_deployed_image_substitution_is_rejected_even_if_digest_is_recomputed(self) -> None:
+        from claimsieve_ref.canonical import digest
+
+        record = self.release()
+        deployment = next(item for item in record["rendered_deployment"]["items"] if item["kind"] == "Deployment")
+        deployment["spec"]["template"]["spec"]["containers"][0]["image"] = (
+            f"ghcr.io/attacker/openworker@{IMAGE_DIGEST}"
+        )
+        record["rendered_deployment_digest"] = digest(record["rendered_deployment"])
+        unsigned = dict(record)
+        unsigned.pop("release_digest")
+        record["release_digest"] = digest(unsigned)
+        with self.assertRaisesRegex(OpenWorkerReleaseError, "does not match release image"):
+            verify_openworker_release(record, dependency_lock_path=LOCK, deployment_template_path=TEMPLATE)
 
     def test_dependency_lock_change_invalidates_release(self) -> None:
         record = self.release()

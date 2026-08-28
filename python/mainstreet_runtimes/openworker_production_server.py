@@ -38,17 +38,26 @@ def _require_file(path: Path, label: str) -> Path:
     return path
 
 
+def _validate_api_token(token: str) -> str:
+    if (
+        not isinstance(token, str)
+        or len(token) < 32
+        or len(token) > 512
+        or any(ch.isspace() for ch in token)
+    ):
+        raise OpenWorkerProductionServerError(
+            "COWORKER_API_TOKEN must be 32-512 non-whitespace characters during app construction"
+        )
+    return token
+
+
 def _load_api_token(path: str | Path) -> str:
     token_path = _require_file(Path(path), "OpenWorker API token")
     try:
         token = token_path.read_text(encoding="utf-8").strip()
     except OSError as exc:
         raise OpenWorkerProductionServerError("OpenWorker API token is unreadable") from exc
-    if len(token) < 32 or len(token) > 512 or any(ch.isspace() for ch in token):
-        raise OpenWorkerProductionServerError(
-            "OpenWorker API token must be 32-512 non-whitespace characters"
-        )
-    return token
+    return _validate_api_token(token)
 
 
 def build_production_app(
@@ -61,6 +70,10 @@ def build_production_app(
 ):
     """Construct the only supported production OpenWorker server composition."""
 
+    # Upstream create_app supports a tokenless local compatibility mode. Production does not.
+    # Requiring a valid token here—not only in main()—means importing this factory cannot
+    # accidentally create an unauthenticated server.
+    _validate_api_token(os.environ.get("COWORKER_API_TOKEN", ""))
     verify_pinned_openworker_runtime()
 
     root = Path(state_dir)

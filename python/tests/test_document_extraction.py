@@ -67,6 +67,29 @@ class DocumentExtractionTests(unittest.TestCase):
         self.assertEqual(engine.seen_bytes, source)
         self.assertFalse(os.path.exists(engine.seen_path))
 
+    def test_empty_recognized_strings_are_skipped_but_alignment_is_preserved(self):
+        engine = FakeEngine(
+            [
+                FakeResult(
+                    {
+                        "rec_texts": ["", "real text"],
+                        "rec_scores": [0.2, 0.93],
+                        "rec_polys": [
+                            [[0, 0], [1, 0], [1, 1], [0, 1]],
+                            [[2, 0], [6, 0], [6, 1], [2, 1]],
+                        ],
+                    }
+                )
+            ]
+        )
+        extraction = PaddleOCRExtractor(engine=engine).extract(
+            b"note",
+            source_name="note.jpg",
+            media_type="image/jpeg",
+        )
+        self.assertEqual([span.text for span in extraction.spans], ["real text"])
+        self.assertEqual(extraction.spans[0].polygon[0], (2.0, 0.0))
+
     def test_confidence_threshold_filters_spans_without_changing_source_binding(self):
         source = b"note"
         engine = FakeEngine(
@@ -221,6 +244,61 @@ class DocumentExtractionTests(unittest.TestCase):
                 b"note",
                 source_name="note.png",
                 media_type="image/png",
+            )
+
+    def test_unsupported_media_type_is_rejected_before_provider_execution(self):
+        engine = FakeEngine([])
+        with self.assertRaisesRegex(ValueError, "unsupported OCR media_type"):
+            PaddleOCRExtractor(engine=engine).extract(
+                b"note",
+                source_name="note.heic",
+                media_type="image/heic",
+            )
+        self.assertIsNone(engine.seen_path)
+
+    def test_source_size_limit_is_enforced_before_provider_execution(self):
+        engine = FakeEngine([])
+        with self.assertRaisesRegex(ValueError, "size limit"):
+            PaddleOCRExtractor(engine=engine, max_source_bytes=3).extract(
+                b"four",
+                source_name="note.png",
+                media_type="image/png",
+            )
+        self.assertIsNone(engine.seen_path)
+
+    def test_result_count_limit_bounds_lazy_provider_output(self):
+        def results():
+            payload = {
+                "rec_texts": ["one"],
+                "rec_scores": [0.9],
+                "rec_polys": [[[0, 0], [1, 0], [1, 1], [0, 1]]],
+            }
+            yield FakeResult(payload)
+            yield FakeResult(payload)
+
+        engine = FakeEngine(results())
+        with self.assertRaisesRegex(ValueError, "result count"):
+            PaddleOCRExtractor(engine=engine, max_results=1).extract(
+                b"note",
+                source_name="note.png",
+                media_type="image/png",
+            )
+
+    def test_bad_candidate_span_type_fails_closed_as_value_error(self):
+        extraction = DocumentExtraction(
+            source_sha256=hashlib.sha256(b"x").hexdigest(),
+            source_name="note.png",
+            media_type="image/png",
+            provider="paddleocr",
+            provider_profile="test",
+            spans=(),
+            raw_text="",
+        )
+        with self.assertRaisesRegex(ValueError, "non-negative integers"):
+            bind_candidate_claim(
+                extraction,
+                text="bad claim",
+                span_indices=("0",),
             )
 
     def test_empty_source_is_rejected_before_provider_execution(self):

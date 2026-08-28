@@ -8,6 +8,6 @@
   },
   "scripts": {
     "test": "node --test test/*.test.js",
-    "check": "node --check src/authz.js && node --check src/tenant-store.js && node --check src/service.js"
+    "check": "node --check src/authz.js && node --check src/tenant-store.js && node --check src/service.js && node --check src/api.js"
   }
 }

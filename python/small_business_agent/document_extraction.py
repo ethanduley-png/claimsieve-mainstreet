@@ -12,6 +12,10 @@ from claimsieve_ref.canonical import digest as canonical_digest
 
 CANDIDATE_EVIDENCE = "candidate_evidence"
 UNVERIFIED_CANDIDATE = "unverified_candidate"
+MAX_SPAN_TEXT_BYTES = 128 * 1024
+MAX_EXTRACTION_TEXT_BYTES = 16 * 1024 * 1024
+MAX_SOURCE_NAME_BYTES = 4096
+MAX_PROVIDER_FIELD_BYTES = 4096
 
 
 def _validate_sha256(value: str, *, field_name: str) -> None:
@@ -28,6 +32,17 @@ def _validate_digest(value: str, *, field_name: str) -> None:
     if not isinstance(value, str) or not value.startswith("sha256:"):
         raise ValueError(f"{field_name} must be a sha256: digest")
     _validate_sha256(value.removeprefix("sha256:"), field_name=field_name)
+
+
+def _validate_text(value: str, *, field_name: str, max_bytes: int) -> None:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{field_name} must be non-empty")
+    try:
+        encoded = value.encode("utf-8")
+    except UnicodeEncodeError as exc:
+        raise ValueError(f"{field_name} must contain valid Unicode scalar values") from exc
+    if len(encoded) > max_bytes:
+        raise ValueError(f"{field_name} exceeds the configured text limit")
 
 
 def _utf8_hex(value: str, *, field_name: str) -> str:
@@ -51,8 +66,7 @@ class ExtractedSpan:
     page_index: int | None = None
 
     def __post_init__(self) -> None:
-        if not isinstance(self.text, str) or not self.text.strip():
-            raise ValueError("extracted span text must be non-empty")
+        _validate_text(self.text, field_name="extracted span text", max_bytes=MAX_SPAN_TEXT_BYTES)
         if (
             not isinstance(self.confidence, (int, float))
             or isinstance(self.confidence, bool)
@@ -106,15 +120,25 @@ class DocumentExtraction:
             isinstance(span, ExtractedSpan) for span in self.spans
         ):
             raise ValueError("spans must be an immutable tuple of ExtractedSpan values")
-        for field_name in ("source_name", "media_type", "provider", "provider_profile"):
-            value = getattr(self, field_name)
-            if not isinstance(value, str) or not value.strip():
-                raise ValueError(f"{field_name} must be non-empty")
+        _validate_text(self.source_name, field_name="source_name", max_bytes=MAX_SOURCE_NAME_BYTES)
+        _validate_text(self.media_type, field_name="media_type", max_bytes=255)
+        _validate_text(self.provider, field_name="provider", max_bytes=MAX_PROVIDER_FIELD_BYTES)
+        _validate_text(
+            self.provider_profile,
+            field_name="provider_profile",
+            max_bytes=MAX_PROVIDER_FIELD_BYTES,
+        )
         if self.authority != CANDIDATE_EVIDENCE:
             raise ValueError("OCR extraction authority must remain candidate_evidence")
         expected_text = "\n".join(span.text for span in self.spans)
         if self.raw_text != expected_text:
             raise ValueError("raw_text must exactly match the ordered extracted spans")
+        try:
+            raw_bytes = self.raw_text.encode("utf-8")
+        except UnicodeEncodeError as exc:
+            raise ValueError("raw_text must contain valid Unicode scalar values") from exc
+        if len(raw_bytes) > MAX_EXTRACTION_TEXT_BYTES:
+            raise ValueError("OCR extraction text exceeds the configured total text limit")
 
     def canonical_record(self) -> dict[str, Any]:
         return {
@@ -159,12 +183,14 @@ class CandidateClaim:
     authority: str = UNVERIFIED_CANDIDATE
 
     def __post_init__(self) -> None:
-        if not isinstance(self.text, str) or not self.text.strip():
-            raise ValueError("candidate claim text must be non-empty")
+        _validate_text(self.text, field_name="candidate claim text", max_bytes=MAX_SPAN_TEXT_BYTES)
         _validate_sha256(self.source_sha256, field_name="source_sha256")
         _validate_digest(self.extraction_digest, field_name="extraction_digest")
-        if not isinstance(self.extraction_provider, str) or not self.extraction_provider.strip():
-            raise ValueError("extraction_provider must be non-empty")
+        _validate_text(
+            self.extraction_provider,
+            field_name="extraction_provider",
+            max_bytes=MAX_PROVIDER_FIELD_BYTES,
+        )
         if not isinstance(self.span_indices, tuple):
             raise ValueError("candidate claim span indices must be an immutable tuple")
         if not self.span_indices:
@@ -270,8 +296,11 @@ class PaddleOCRExtractor:
             or not 0.0 <= float(min_confidence) <= 1.0
         ):
             raise ValueError("min_confidence must be in [0, 1]")
-        if not isinstance(provider_profile, str) or not provider_profile.strip():
-            raise ValueError("provider_profile must be non-empty")
+        _validate_text(
+            provider_profile,
+            field_name="provider_profile",
+            max_bytes=MAX_PROVIDER_FIELD_BYTES,
+        )
         for field_name, value in (
             ("max_source_bytes", max_source_bytes),
             ("max_results", max_results),
@@ -402,10 +431,8 @@ class PaddleOCRExtractor:
         digest = sha256_hex(source)
         if len(source) > self.max_source_bytes:
             raise ValueError("source payload exceeds the configured OCR size limit")
-        if not isinstance(source_name, str) or not source_name.strip():
-            raise ValueError("source_name must be non-empty")
-        if not isinstance(media_type, str) or not media_type.strip():
-            raise ValueError("media_type must be non-empty")
+        _validate_text(source_name, field_name="source_name", max_bytes=MAX_SOURCE_NAME_BYTES)
+        _validate_text(media_type, field_name="media_type", max_bytes=255)
         suffix = self._MEDIA_TYPE_SUFFIXES.get(media_type.lower())
         if suffix is None:
             raise ValueError("unsupported OCR media_type")

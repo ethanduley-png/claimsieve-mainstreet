@@ -80,7 +80,19 @@
             "volumes": [
               {"name": "runtime-tmp", "emptyDir": {"sizeLimit": "256Mi"}},
               {"name": "runtime-state", "persistentVolumeClaim": {"claimName": "openworker-runtime-state"}},
-              {"name": "claimsieve-mtls", "secret": {"secretName": "openworker-claimsieve-mtls", "defaultMode": 288}}
+              {
+                "name": "claimsieve-mtls",
+                "secret": {
+                  "secretName": "openworker-claimsieve-mtls",
+                  "defaultMode": 288,
+                  "items": [
+                    {"key": "ca.crt", "path": "ca.crt"},
+                    {"key": "tls.crt", "path": "tls.crt"},
+                    {"key": "tls.key", "path": "tls.key"},
+                    {"key": "openworker.token", "path": "openworker.token"}
+                  ]
+                }
+              }
             ]
           }
         }

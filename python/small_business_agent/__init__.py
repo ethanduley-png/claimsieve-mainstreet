@@ -30,6 +30,7 @@ from .note_memory import (
     promote_note_candidate,
     validate_note_interpretation_binding,
 )
+from .note_signal import accepted_note_to_signal
 from .planner import plan_intent
 from .registry import CAPABILITIES, Capability
 
@@ -76,4 +77,5 @@ __all__ = [
     "validate_note_interpretation_binding",
     "promote_note_candidate",
     "detect_knowledge_conflicts",
+    "accepted_note_to_signal",
 ]

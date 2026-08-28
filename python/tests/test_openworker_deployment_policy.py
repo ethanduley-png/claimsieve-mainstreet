@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 
 from mainstreet_runtimes.openworker_deployment_policy import (
+    IMAGE_REPOSITORY,
     OpenWorkerDeploymentPolicyError,
     render_openworker_production_manifest,
     validate_openworker_deployment_template_file,
@@ -47,7 +48,7 @@ class OpenWorkerDeploymentPolicyTests(unittest.TestCase):
 
     def test_release_renderer_requires_exact_image_digest_and_produces_valid_release(self) -> None:
         release = self.production_manifest()
-        self.assertEqual(self.container(release)["image"], f"mainstreet/openworker@{RELEASE_DIGEST}")
+        self.assertEqual(self.container(release)["image"], f"{IMAGE_REPOSITORY}@{RELEASE_DIGEST}")
         validate_openworker_production_manifest(release)
         with self.assertRaisesRegex(OpenWorkerDeploymentPolicyError, "exactly 64"):
             render_openworker_production_manifest(self.manifest(), "sha256:1234")

@@ -144,15 +144,18 @@ def main(argv: list[str] | None = None) -> None:
     if not 1 <= args.port <= 65535:
         raise OpenWorkerProductionServerError("server port must be in [1, 65535]")
 
-    # Never carry the token as a Kubernetes environment Secret. Read it from the same
-    # narrowly scoped, read-only workload identity volume immediately before app creation.
+    # Upstream create_app snapshots COWORKER_API_TOKEN during construction. Supply it only
+    # for that instant, then erase it from the process environment before uvicorn starts.
     os.environ["COWORKER_API_TOKEN"] = _load_api_token(args.token_file)
+    try:
+        app = build_production_app(
+            state_dir=args.state_dir,
+            mtls_dir=args.mtls_dir,
+            model=args.model,
+        )
+    finally:
+        os.environ.pop("COWORKER_API_TOKEN", None)
 
-    app = build_production_app(
-        state_dir=args.state_dir,
-        mtls_dir=args.mtls_dir,
-        model=args.model,
-    )
     import uvicorn
 
     uvicorn.run(

@@ -3,8 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from hashlib import sha256
 from math import isfinite
+from numbers import Integral
 from tempfile import NamedTemporaryFile
 from typing import Any, Protocol
+
+from claimsieve_ref.canonical import digest as canonical_digest
 
 
 CANDIDATE_EVIDENCE = "candidate_evidence"
@@ -19,6 +22,19 @@ def _validate_sha256(value: str, *, field_name: str) -> None:
         or any(ch not in "0123456789abcdef" for ch in value)
     ):
         raise ValueError(f"{field_name} must be a lowercase SHA-256 hex digest")
+
+
+def _validate_digest(value: str, *, field_name: str) -> None:
+    if not isinstance(value, str) or not value.startswith("sha256:"):
+        raise ValueError(f"{field_name} must be a sha256: digest")
+    _validate_sha256(value.removeprefix("sha256:"), field_name=field_name)
+
+
+def _utf8_hex(value: str, *, field_name: str) -> str:
+    try:
+        return value.encode("utf-8").hex()
+    except UnicodeEncodeError as exc:
+        raise ValueError(f"{field_name} must contain valid Unicode scalar values") from exc
 
 
 def sha256_hex(payload: bytes) -> str:
@@ -85,6 +101,34 @@ class DocumentExtraction:
         if self.raw_text != expected_text:
             raise ValueError("raw_text must exactly match the ordered extracted spans")
 
+    def canonical_record(self) -> dict[str, Any]:
+        return {
+            "schema": "mainstreet.document-extraction.v1",
+            "source_sha256": self.source_sha256,
+            "source_name_utf8_hex": _utf8_hex(self.source_name, field_name="source_name"),
+            "media_type_utf8_hex": _utf8_hex(self.media_type, field_name="media_type"),
+            "provider_utf8_hex": _utf8_hex(self.provider, field_name="provider"),
+            "provider_profile_utf8_hex": _utf8_hex(
+                self.provider_profile, field_name="provider_profile"
+            ),
+            "spans": [
+                {
+                    "text_utf8_hex": _utf8_hex(span.text, field_name="span.text"),
+                    "confidence_hex": float(span.confidence).hex(),
+                    "polygon": [
+                        [float(point[0]).hex(), float(point[1]).hex()]
+                        for point in span.polygon
+                    ],
+                    "page_index": span.page_index,
+                }
+                for span in self.spans
+            ],
+        }
+
+    @property
+    def extraction_digest(self) -> str:
+        return canonical_digest(self.canonical_record())
+
     @property
     def is_authoritative(self) -> bool:
         return False
@@ -94,6 +138,7 @@ class DocumentExtraction:
 class CandidateClaim:
     text: str
     source_sha256: str
+    extraction_digest: str
     span_indices: tuple[int, ...]
     extraction_provider: str
     authority: str = UNVERIFIED_CANDIDATE
@@ -102,6 +147,7 @@ class CandidateClaim:
         if not isinstance(self.text, str) or not self.text.strip():
             raise ValueError("candidate claim text must be non-empty")
         _validate_sha256(self.source_sha256, field_name="source_sha256")
+        _validate_digest(self.extraction_digest, field_name="extraction_digest")
         if not isinstance(self.extraction_provider, str) or not self.extraction_provider.strip():
             raise ValueError("extraction_provider must be non-empty")
         if not self.span_indices:
@@ -150,6 +196,7 @@ def bind_candidate_claim(
     return CandidateClaim(
         text=text,
         source_sha256=extraction.source_sha256,
+        extraction_digest=extraction.extraction_digest,
         span_indices=span_indices,
         extraction_provider=extraction.provider,
     )
@@ -185,6 +232,7 @@ class PaddleOCRExtractor:
     ) -> None:
         if (
             not isinstance(min_confidence, (int, float))
+            or isinstance(min_confidence, bool)
             or not isfinite(float(min_confidence))
             or not 0.0 <= float(min_confidence) <= 1.0
         ):
@@ -279,12 +327,14 @@ class PaddleOCRExtractor:
             raise ValueError("PaddleOCR recognition field lengths do not match")
 
         page_index = payload.get("page_index")
-        if page_index is not None and (
-            not isinstance(page_index, int)
-            or isinstance(page_index, bool)
-            or page_index < 0
-        ):
-            raise ValueError("PaddleOCR page_index must be a non-negative integer or None")
+        if page_index is not None:
+            if (
+                not isinstance(page_index, Integral)
+                or isinstance(page_index, bool)
+                or page_index < 0
+            ):
+                raise ValueError("PaddleOCR page_index must be a non-negative integer or None")
+            page_index = int(page_index)
 
         spans: list[ExtractedSpan] = []
         for text, score, polygon in zip(texts, scores, polygons):

@@ -1,8 +1,10 @@
 # syntax=docker/dockerfile:1.7
 
-# The release workflow must pass an immutable Python base reference such as
-# python:3.11.16-slim@sha256:<digest>. No mutable default is provided on purpose.
+# The workflow must pass immutable references/identities. No mutable base default exists.
 ARG PYTHON_BASE_IMAGE
+ARG REPOSITORY_COMMIT
+ARG OPENWORKER_COMMIT
+ARG AISUITE_COMMIT
 
 FROM ${PYTHON_BASE_IMAGE} AS builder
 USER root
@@ -14,6 +16,13 @@ RUN python -m pip install --upgrade pip \
     && python -m pip wheel --wheel-dir /wheelhouse -r /tmp/requirements-openworker.lock.txt
 
 FROM ${PYTHON_BASE_IMAGE} AS runtime
+ARG REPOSITORY_COMMIT
+ARG OPENWORKER_COMMIT
+ARG AISUITE_COMMIT
+LABEL org.opencontainers.image.source="https://github.com/ethanduley-png/claimsieve-mainstreet" \
+      org.opencontainers.image.revision="${REPOSITORY_COMMIT}" \
+      io.mainstreet.openworker.commit="${OPENWORKER_COMMIT}" \
+      io.mainstreet.aisuite.commit="${AISUITE_COMMIT}"
 ENV PYTHONPATH=/opt/mainstreet/python \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \

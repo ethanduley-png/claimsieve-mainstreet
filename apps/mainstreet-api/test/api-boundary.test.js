@@ -35,6 +35,10 @@ function makeApi({ user = identity(), memberships = new Map() } = {}) {
       }
       return user;
     },
+    listMemberships: async (authenticated) =>
+      [...memberships.values()].filter(
+        (membership) => membership.userId === authenticated.userId
+      ),
     resolveMembership: async (authenticated, requestedTenantId) => {
       const membership = memberships.get(requestedTenantId);
       if (!membership || membership.userId !== authenticated.userId) return null;
@@ -143,6 +147,65 @@ test("membership resolver cannot substitute a different user", async () => {
     method: "GET",
     path: "/v1/session",
     headers: { authorization: "Bearer valid", "x-mainstreet-tenant": "tenant:a" },
+  });
+  assert.equal(result.status, 403);
+});
+
+test("authenticated user can list only validated active business memberships", async () => {
+  const memberships = new Map([
+    ["tenant:b", { userId: "user:alice", tenantId: "tenant:b", role: "staff", status: "active" }],
+    ["tenant:a", { userId: "user:alice", tenantId: "tenant:a", role: "owner", status: "active" }],
+  ]);
+  const api = makeApi({ memberships });
+  const result = await api.handle({
+    method: "GET",
+    path: "/v1/businesses",
+    headers: { authorization: "Bearer valid" },
+  });
+  assert.equal(result.status, 200);
+  assert.deepEqual(result.body.businesses, [
+    { tenantId: "tenant:a", role: "owner" },
+    { tenantId: "tenant:b", role: "staff" },
+  ]);
+});
+
+test("pre-tenant business listing rejects adapter leakage from another user", async () => {
+  const repo = new MemoryTenantRepository();
+  const application = new MainStreetApplication({ repository: repo });
+  const api = createCustomerApi({
+    application,
+    nowEpochSeconds: NOW,
+    authenticate: async () => identity("user:alice"),
+    listMemberships: async () => [
+      { userId: "user:bob", tenantId: "tenant:b", role: "owner", status: "active" },
+    ],
+    resolveMembership: async () => null,
+  });
+  const result = await api.handle({
+    method: "GET",
+    path: "/v1/businesses",
+    headers: { authorization: "Bearer valid" },
+  });
+  assert.equal(result.status, 403);
+});
+
+test("pre-tenant business listing rejects duplicate tenant memberships", async () => {
+  const repo = new MemoryTenantRepository();
+  const application = new MainStreetApplication({ repository: repo });
+  const api = createCustomerApi({
+    application,
+    nowEpochSeconds: NOW,
+    authenticate: async () => identity("user:alice"),
+    listMemberships: async () => [
+      { userId: "user:alice", tenantId: "tenant:a", role: "owner", status: "active" },
+      { userId: "user:alice", tenantId: "tenant:a", role: "staff", status: "active" },
+    ],
+    resolveMembership: async () => null,
+  });
+  const result = await api.handle({
+    method: "GET",
+    path: "/v1/businesses",
+    headers: { authorization: "Bearer valid" },
   });
   assert.equal(result.status, 403);
 });

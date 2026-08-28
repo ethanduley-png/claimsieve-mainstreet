@@ -26,7 +26,7 @@
             "containers": [
               {
                 "name": "openworker",
-                "image": "mainstreet/openworker@sha256:REPLACE_WITH_RELEASE_IMAGE_DIGEST",
+                "image": "ghcr.io/ethanduley-png/claimsieve-openworker@sha256:REPLACE_WITH_RELEASE_IMAGE_DIGEST",
                 "imagePullPolicy": "IfNotPresent",
                 "command": ["python", "-m", "mainstreet_runtimes.openworker_production_server"],
                 "args": ["--host", "0.0.0.0", "--port", "8080"],

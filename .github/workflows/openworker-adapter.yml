@@ -17,7 +17,7 @@ permissions:
 jobs:
   native-compatibility:
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    timeout-minutes: 40
     env:
       OPENWORKER_COMMIT: 86c57f0692a5a318e55d1b9e0188d798b9fc5690
       AISUITE_COMMIT: 1b4bbf303ec21968230b1ec869a144d054e9b3c4
@@ -118,3 +118,12 @@ jobs:
               raise SystemExit("unexpected production server port")
           print("verified minimal production image")
           PY
+      - name: Block known high and critical runtime vulnerabilities
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: claimsieve-openworker:pr-test
+          format: table
+          exit-code: "1"
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: HIGH,CRITICAL

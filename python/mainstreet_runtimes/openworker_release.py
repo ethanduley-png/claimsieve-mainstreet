@@ -8,6 +8,7 @@ from typing import Any
 
 from claimsieve_ref.canonical import digest
 from .openworker_deployment_policy import (
+    IMAGE_REPOSITORY,
     PINNED_OPENWORKER_COMMIT,
     render_openworker_production_manifest,
 )
@@ -45,11 +46,7 @@ def build_openworker_release(
     dependency_lock_path: str | Path,
     deployment_template_path: str | Path,
 ) -> dict[str, Any]:
-    """Build a closed provenance record and rendered manifest for a production image.
-
-    This does not sign or publish an image. It ensures the release inputs are exact and
-    cryptographically bound before a signer/registry workflow is allowed to proceed.
-    """
+    """Build a closed provenance record and rendered manifest for a production image."""
 
     if _SHA40.fullmatch(repository_commit) is None:
         raise OpenWorkerReleaseError("repository commit must be exactly 40 lowercase hex characters")
@@ -72,6 +69,7 @@ def build_openworker_release(
         "python_runtime": PYTHON_RUNTIME,
         "dependency_lock_digest": lock_digest,
         "deployment_template_digest": template_digest,
+        "container_image_repository": IMAGE_REPOSITORY,
         "container_image_digest": image_digest,
         "rendered_deployment_digest": rendered_digest,
         "rendered_deployment": rendered,
@@ -89,8 +87,8 @@ def verify_openworker_release(
     required = {
         "schema_version", "repository_commit", "openworker_commit", "aisuite_commit",
         "python_runtime", "dependency_lock_digest", "deployment_template_digest",
-        "container_image_digest", "rendered_deployment_digest", "rendered_deployment",
-        "release_digest",
+        "container_image_repository", "container_image_digest", "rendered_deployment_digest",
+        "rendered_deployment", "release_digest",
     }
     if set(record) != required:
         raise OpenWorkerReleaseError("OpenWorker release fields do not match the closed schema")
@@ -102,6 +100,8 @@ def verify_openworker_release(
         raise OpenWorkerReleaseError("aisuite release commit drift")
     if record["python_runtime"] != PYTHON_RUNTIME:
         raise OpenWorkerReleaseError("Python runtime drift")
+    if record["container_image_repository"] != IMAGE_REPOSITORY:
+        raise OpenWorkerReleaseError("container image repository drift")
     if _SHA40.fullmatch(record["repository_commit"]) is None:
         raise OpenWorkerReleaseError("repository release commit is malformed")
     if _IMAGE_DIGEST.fullmatch(record["container_image_digest"]) is None:
@@ -112,6 +112,18 @@ def verify_openworker_release(
         raise OpenWorkerReleaseError("deployment template digest mismatch")
     if record["rendered_deployment_digest"] != digest(record["rendered_deployment"]):
         raise OpenWorkerReleaseError("rendered deployment digest mismatch")
+
+    deployment = record["rendered_deployment"]
+    try:
+        deployed_image = next(
+            item for item in deployment["items"] if item.get("kind") == "Deployment"
+        )["spec"]["template"]["spec"]["containers"][0]["image"]
+    except (KeyError, IndexError, StopIteration, TypeError) as exc:
+        raise OpenWorkerReleaseError("rendered deployment image reference is malformed") from exc
+    expected_image = f"{IMAGE_REPOSITORY}@{record['container_image_digest']}"
+    if deployed_image != expected_image:
+        raise OpenWorkerReleaseError("rendered deployment image does not match release image")
+
     unsigned = dict(record)
     supplied_release_digest = unsigned.pop("release_digest")
     if supplied_release_digest != digest(unsigned):

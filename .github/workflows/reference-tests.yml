@@ -21,6 +21,10 @@ jobs:
       - run: PYTHONPATH=python python python/generate_bundle.py
       - run: PYTHONPATH=python python python/verify_bundle.py vectors/valid_evidence_bundle.json trust/fixture-trust-root.json
       - run: node --test mainstreet/test/*.test.js
+      - run: node --test apps/mainstreet-api/test/*.test.js
+      - run: node --check apps/mainstreet-api/src/authz.js && node --check apps/mainstreet-api/src/tenant-store.js && node --check apps/mainstreet-api/src/service.js && node --check apps/mainstreet-api/src/api.js
+      - run: node --test apps/mainstreet-web/test/*.test.js
+      - run: node --check apps/mainstreet-web/public/app.js && node --check apps/mainstreet-web/public/sw.js
       - run: python scripts/source_gate.py
       - run: python scripts/context_contract_gate.py
       - run: PYTHONPATH=python python evidence/V033_PATCHED_TRACE_PROBE.py

@@ -1,4 +1,8 @@
-import { resolveTenantContext } from "./authz.js";
+import {
+  normalizeAuthnIdentity,
+  normalizeMembership,
+  resolveTenantContext,
+} from "./authz.js";
 
 function response(status, body) {
   return Object.freeze({
@@ -24,9 +28,45 @@ function safeMessage(error) {
   return message;
 }
 
-export function createCustomerApi({ authenticate, resolveMembership, application, nowEpochSeconds }) {
+function normalizeBusinessMemberships(identity, memberships) {
+  if (!Array.isArray(memberships)) {
+    throw new Error("membership adapter returned invalid result");
+  }
+  const normalized = memberships.map((membership) => normalizeMembership(membership));
+  if (normalized.some((membership) => membership.userId !== identity.userId)) {
+    throw new Error("membership adapter returned another user's membership");
+  }
+  const byTenant = new Map();
+  for (const membership of normalized) {
+    if (byTenant.has(membership.tenantId)) {
+      throw new Error("membership adapter returned duplicate tenant membership");
+    }
+    byTenant.set(membership.tenantId, membership);
+  }
+  return Object.freeze(
+    [...byTenant.values()]
+      .sort((a, b) => a.tenantId.localeCompare(b.tenantId))
+      .map((membership) =>
+        Object.freeze({
+          tenantId: membership.tenantId,
+          role: membership.role,
+        })
+      )
+  );
+}
+
+export function createCustomerApi({
+  authenticate,
+  listMemberships,
+  resolveMembership,
+  application,
+  nowEpochSeconds,
+}) {
   if (typeof authenticate !== "function") {
     throw new TypeError("authenticate adapter is required");
+  }
+  if (typeof listMemberships !== "function") {
+    throw new TypeError("listMemberships adapter is required");
   }
   if (typeof resolveMembership !== "function") {
     throw new TypeError("resolveMembership adapter is required");
@@ -47,14 +87,35 @@ export function createCustomerApi({ authenticate, resolveMembership, application
         return response(200, { ok: true });
       }
 
-      let identity;
+      let rawIdentity;
       try {
-        identity = await authenticate(request);
+        rawIdentity = await authenticate(request);
       } catch {
         return response(401, { error: "unauthenticated" });
       }
-      if (!identity) {
+      if (!rawIdentity) {
         return response(401, { error: "unauthenticated" });
+      }
+
+      let identity;
+      try {
+        identity = normalizeAuthnIdentity(rawIdentity, {
+          ...(nowEpochSeconds === undefined ? {} : { nowEpochSeconds }),
+        });
+      } catch {
+        return response(401, { error: "unauthenticated" });
+      }
+
+      if (method === "GET" && path === "/v1/businesses") {
+        try {
+          const memberships = normalizeBusinessMemberships(
+            identity,
+            await listMemberships(identity)
+          );
+          return response(200, { businesses: memberships });
+        } catch {
+          return response(403, { error: "forbidden" });
+        }
       }
 
       const requestedTenantId = header(request.headers, "x-mainstreet-tenant");

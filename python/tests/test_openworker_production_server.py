@@ -72,6 +72,16 @@ class OpenWorkerProductionServerTests(unittest.TestCase):
             os.environ["COWORKER_API_TOKEN"] = self.old_api_token
         self.temp.cleanup()
 
+    def test_direct_factory_cannot_create_tokenless_production_app(self) -> None:
+        from mainstreet_runtimes.openworker_production_server import (
+            OpenWorkerProductionServerError,
+            build_production_app,
+        )
+
+        os.environ.pop("COWORKER_API_TOKEN", None)
+        with self.assertRaisesRegex(OpenWorkerProductionServerError, "COWORKER_API_TOKEN"):
+            build_production_app(state_dir=self.state, mtls_dir=self.identity)
+
     def test_app_uses_gateway_no_credentials_and_guarded_engine_constructor(self) -> None:
         from mainstreet_runtimes.openworker_model_gateway import (
             MainStreetOpenWorkerModelGatewayProvider,

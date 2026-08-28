@@ -55,7 +55,6 @@ jobs:
           vcs = json.loads(raw).get("vcs_info", {})
           if vcs.get("vcs") != "git" or vcs.get("commit_id") != "1b4bbf303ec21968230b1ec869a144d054e9b3c4":
               raise SystemExit(f"unexpected aisuite provenance: {vcs}")
-          print(f"verified OpenWorker commit {resolved} and aisuite commit {vcs['commit_id']}")
           PY
       - name: Validate deployment template and production renderer
         env:
@@ -95,6 +94,9 @@ jobs:
           tags: claimsieve-openworker:pr-test
           build-args: |
             PYTHON_BASE_IMAGE=${{ steps.base.outputs.ref }}
+            REPOSITORY_COMMIT=${{ github.sha }}
+            OPENWORKER_COMMIT=${{ env.OPENWORKER_COMMIT }}
+            AISUITE_COMMIT=${{ env.AISUITE_COMMIT }}
           provenance: false
           sbom: false
           no-cache: true
@@ -103,6 +105,9 @@ jobs:
         run: |
           set -euo pipefail
           test "$(docker inspect --format '{{.Config.User}}' claimsieve-openworker:pr-test)" = "65532:65532"
+          test "$(docker inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' claimsieve-openworker:pr-test)" = "${GITHUB_SHA}"
+          test "$(docker inspect --format '{{index .Config.Labels "io.mainstreet.openworker.commit"}}' claimsieve-openworker:pr-test)" = "${OPENWORKER_COMMIT}"
+          test "$(docker inspect --format '{{index .Config.Labels "io.mainstreet.aisuite.commit"}}' claimsieve-openworker:pr-test)" = "${AISUITE_COMMIT}"
           docker run --rm -i --entrypoint python claimsieve-openworker:pr-test - <<'PY'
           import shutil
           import mainstreet_runtimes.openworker_production_server as server

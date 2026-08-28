@@ -1,8 +1,8 @@
-# MainStreet Note OCR Boundary
+# MainStreet Note OCR and Memory Boundary
 
 ## Status
 
-This increment adds a provider-neutral document extraction boundary with a PaddleOCR 3.x adapter. It is an intake/evidence component, not a source of execution authority.
+This increment adds a provider-neutral document extraction boundary with a PaddleOCR 3.x adapter, a bounded reference note interpreter, explicit human validation, and a durable SQLite metadata store. None of these components is execution authority.
 
 ## Boundary
 
@@ -25,50 +25,67 @@ provenance-bound extracted spans
 canonical extraction digest
         |
         v
-candidate claims
+non-authoritative note interpretation
         |
         v
-validation / human review / business policy
+typed candidate facts/tasks/people/dates/prices/contacts
         |
         v
-accepted business knowledge
+explicit human validation
         |
         v
-ClaimSieve for any consequential action
+accepted business knowledge metadata
+        |
+        v
+MainStreet planning / retrieval
+        |
+        v
+ClaimSieve for every consequential action
 ```
 
 ## Invariants
 
 1. OCR output is always `candidate_evidence`, never authoritative business state.
-2. Candidate claims are always `unverified_candidate` and bind to the SHA-256 of the original source, the canonical digest of the exact extraction record, and one or more OCR span indices.
-3. Reordering or changing extracted spans changes the extraction digest, preventing a span index from being silently reinterpreted against a different OCR run.
-4. The OCR layer has no API that promotes a claim to authoritative state or executes an external action.
-5. Malformed provider output fails closed. Recognition text, confidence scores, and polygons must have equal lengths; confidence values must be finite and in `[0, 1]`; polygons must be valid finite coordinate sets. Empty recognized strings emitted by current PaddleOCR pipelines are validated for alignment and skipped rather than treated as business text.
-6. Source size, provider-result count, and accepted-span count are bounded. Unsupported media types are rejected before provider execution.
-7. The provider is replaceable behind `DocumentExtractor`; downstream code is not required to depend on PaddleOCR.
-8. The caller must durably preserve the original source bytes under the returned source digest. This adapter hashes the source but does not itself provide immutable object storage.
-9. Consequential actions derived from notes remain subject to the normal ClaimSieve proposal, adjudication, authorization, execution, observation, and audit path.
+2. OCR candidate claims bind to the original source SHA-256, the canonical digest of the exact extraction record, and exact span indices.
+3. Reordering or changing extracted spans changes the extraction digest.
+4. Extracted span text and extraction metadata are bounded before canonical evidence hashing; total accepted extraction text is bounded.
+5. Malformed PaddleOCR output fails closed. Text, confidence and polygon arrays must align; confidence values and geometry must be valid; unsupported media types and excessive source/result/span counts are rejected.
+6. Note interpretation is `non_authoritative_interpretation`. Every typed candidate remains `unverified_note_candidate` and has `execution_authority == False`.
+7. Material candidates such as prices, dates, people, contacts, commitments and tasks require human review. The reference promotion path currently rejects non-human reviewers.
+8. The interpreter cannot validate its own candidate.
+9. Prompt-injection-like note text is classified as `instruction`, remains data, and cannot be promoted even by the normal human-promotion function. A human must re-enter any legitimate instruction through an ordinary trusted workflow.
+10. Accepted note knowledge is still not execution authority. It can inform planning or retrieval, but consequential action must traverse ClaimSieve.
+11. Candidate, interpretation and validation identities are canonical digests. The durable store uses immutable/idempotent inserts and rejects a forged accepted record that does not exactly match the persisted candidate and accepting validation.
+12. Conflicting accepted values are preserved and surfaced; the store does not silently use last-write-wins semantics.
+13. The caller must durably preserve the original source bytes under the returned source SHA-256. The metadata store does not provide immutable object storage.
 
-## Extraction identity
+## Interpretation scope
 
-The extraction digest reuses the repository's restricted canonical hashing utility. Because that canonical profile deliberately forbids floating-point JSON values, OCR confidence and polygon coordinates are bound as exact hexadecimal floating-point strings. User/provider text is bound as UTF-8 hexadecimal text. This preserves the exact normalized extraction content without weakening the existing canonical profile.
+`RuleBasedNoteInterpreter` is deliberately conservative. It recognizes obvious labeled people, contact details, money, weekday/ISO date mentions, task prefixes, commitments and prompt-injection markers. Unmatched spans become free-form fact candidates. It is a reference implementation, not a claim of general language understanding.
 
-The extraction digest is not an assertion that OCR is correct. It only identifies exactly which OCR result a downstream candidate claim referenced.
+A future model-based interpreter should sit behind the same closed candidate contract. Model output must remain non-authoritative and retain exact source/extraction/span bindings.
+
+## Durable promotion boundary
+
+`NoteMemoryStore` uses SQLite with WAL, `synchronous=FULL`, foreign keys and immutable record identities. It stores interpretation/candidate/validation/accepted-knowledge metadata. It does not store the original image or PDF and it does not issue ClaimSieve permits.
+
+The current human validation record is integrity-bound by canonical digest but is not yet cryptographically signed by an authenticated reviewer identity. Production deployment should bind reviewer identity to the application authentication layer and, for higher-assurance use cases, add signed validation receipts.
 
 ## PaddleOCR integration
 
-The adapter targets the PaddleOCR 3.x `PaddleOCR.predict()` result shape and consumes `rec_texts`, `rec_scores`, `rec_polys`, and optional `page_index` fields. PaddleOCR is loaded lazily so the baseline ClaimSieve assurance test environment does not download OCR models or add a large inference dependency graph.
+The adapter targets PaddleOCR 3.x `PaddleOCR.predict()` results and consumes `rec_texts`, `rec_scores`, `rec_polys`, and optional `page_index`. PaddleOCR is loaded lazily so baseline assurance tests do not download models.
 
-`python/requirements-ocr.txt` pins the top-level PaddleOCR package used for this evaluation. A production OCR service still needs a platform-specific PaddlePaddle runtime, a fully frozen transitive dependency graph, exact model/profile identity and model artifact provenance, deployment isolation, release provenance, and controlled model-fetch/network behavior before it should be treated as a reproducible production evidence producer.
+`python/requirements-ocr.txt` pins the top-level PaddleOCR package used for this evaluation. Production still needs a platform-specific PaddlePaddle runtime, frozen transitive dependencies, exact model/profile identity and model artifact provenance, deployment isolation, release provenance, immutable source object storage, and controlled model-fetch/network behavior.
 
-## Deliberate non-goals in this increment
+## Deliberate non-goals
 
-- no direct write into authoritative business memory
-- no automatic acceptance of OCR-derived prices, obligations, dates, identities, or instructions
-- no provider credentials in the ClaimSieve verifier/executor
-- no model download in baseline CI
+- no automatic acceptance of OCR-derived prices, obligations, identities or instructions
+- no direct provider credentials in the ClaimSieve verifier/executor
 - no claim that handwriting recognition is perfect
-- no attempt to formally prove OCR correctness
+- no formal proof of OCR correctness
 - no production object-storage implementation
+- no cryptographic reviewer signature yet
+- no model-based general note interpretation yet
+- no automatic resolution of conflicting accepted business knowledge
 
-The assurance target is narrower: preserve the source and extraction bindings and prevent uncertain OCR output from silently becoming trusted authority.
+The assurance target is narrow: preserve evidence identity, contain uncertain interpretation, require an explicit promotion boundary, and prevent note content from bypassing the normal ClaimSieve execution path.

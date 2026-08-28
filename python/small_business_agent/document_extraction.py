@@ -53,16 +53,27 @@ class ExtractedSpan:
     def __post_init__(self) -> None:
         if not isinstance(self.text, str) or not self.text.strip():
             raise ValueError("extracted span text must be non-empty")
-        if not isinstance(self.confidence, (int, float)) or not isfinite(float(self.confidence)):
+        if (
+            not isinstance(self.confidence, (int, float))
+            or isinstance(self.confidence, bool)
+            or not isfinite(float(self.confidence))
+        ):
             raise ValueError("extracted span confidence must be finite")
         if not 0.0 <= float(self.confidence) <= 1.0:
             raise ValueError("extracted span confidence must be in [0, 1]")
+        if not isinstance(self.polygon, tuple):
+            raise ValueError("extracted span polygon must be an immutable tuple")
         if len(self.polygon) < 4:
             raise ValueError("extracted span polygon must contain at least four points")
         for point in self.polygon:
-            if len(point) != 2:
-                raise ValueError("polygon points must be x/y pairs")
-            if not all(isinstance(value, (int, float)) and isfinite(float(value)) for value in point):
+            if not isinstance(point, tuple) or len(point) != 2:
+                raise ValueError("polygon points must be immutable x/y pairs")
+            if not all(
+                isinstance(value, (int, float))
+                and not isinstance(value, bool)
+                and isfinite(float(value))
+                for value in point
+            ):
                 raise ValueError("polygon coordinates must be finite numbers")
         if self.page_index is not None and (
             not isinstance(self.page_index, int)
@@ -91,6 +102,10 @@ class DocumentExtraction:
 
     def __post_init__(self) -> None:
         _validate_sha256(self.source_sha256, field_name="source_sha256")
+        if not isinstance(self.spans, tuple) or not all(
+            isinstance(span, ExtractedSpan) for span in self.spans
+        ):
+            raise ValueError("spans must be an immutable tuple of ExtractedSpan values")
         for field_name in ("source_name", "media_type", "provider", "provider_profile"):
             value = getattr(self, field_name)
             if not isinstance(value, str) or not value.strip():
@@ -150,6 +165,8 @@ class CandidateClaim:
         _validate_digest(self.extraction_digest, field_name="extraction_digest")
         if not isinstance(self.extraction_provider, str) or not self.extraction_provider.strip():
             raise ValueError("extraction_provider must be non-empty")
+        if not isinstance(self.span_indices, tuple):
+            raise ValueError("candidate claim span indices must be an immutable tuple")
         if not self.span_indices:
             raise ValueError("candidate claim must bind to at least one source span")
         if len(set(self.span_indices)) != len(self.span_indices):
@@ -193,13 +210,29 @@ def bind_candidate_claim(
         raise ValueError("candidate claim span indices must be non-negative integers")
     if any(index >= len(extraction.spans) for index in span_indices):
         raise ValueError("candidate claim references an unknown OCR span")
-    return CandidateClaim(
+    claim = CandidateClaim(
         text=text,
         source_sha256=extraction.source_sha256,
         extraction_digest=extraction.extraction_digest,
         span_indices=span_indices,
         extraction_provider=extraction.provider,
     )
+    validate_candidate_claim_binding(claim, extraction)
+    return claim
+
+
+def validate_candidate_claim_binding(
+    claim: CandidateClaim,
+    extraction: DocumentExtraction,
+) -> None:
+    if claim.source_sha256 != extraction.source_sha256:
+        raise ValueError("candidate claim source digest does not match extraction")
+    if claim.extraction_digest != extraction.extraction_digest:
+        raise ValueError("candidate claim extraction digest does not match extraction")
+    if claim.extraction_provider != extraction.provider:
+        raise ValueError("candidate claim provider does not match extraction")
+    if any(index >= len(extraction.spans) for index in claim.span_indices):
+        raise ValueError("candidate claim references an unknown OCR span")
 
 
 class PaddleOCRExtractor:

@@ -18,7 +18,7 @@ env:
 jobs:
   release:
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@v6
 
@@ -104,6 +104,16 @@ jobs:
             exit 1
           fi
           docker buildx imagetools inspect "$IMAGE@$digest" >/dev/null
+
+      - name: Block known high and critical release vulnerabilities
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ env.IMAGE }}@${{ steps.build.outputs.digest }}
+          format: table
+          exit-code: "1"
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
 
       - name: Build and verify closed release record
         env:

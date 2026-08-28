@@ -28,10 +28,14 @@
                 "name": "openworker",
                 "image": "mainstreet/openworker@sha256:REPLACE_WITH_RELEASE_IMAGE_DIGEST",
                 "imagePullPolicy": "IfNotPresent",
+                "command": ["python", "-m", "mainstreet_runtimes.openworker_production_server"],
+                "args": ["--host", "0.0.0.0", "--port", "8080"],
                 "ports": [{"containerPort": 8080, "protocol": "TCP"}],
                 "env": [
+                  {"name": "PYTHONPATH", "value": "/opt/mainstreet/python"},
+                  {"name": "COWORKER_STATE_DIR", "value": "/var/lib/mainstreet/openworker"},
                   {"name": "MAINSTREET_CLAIMSIEVE_ENDPOINT", "value": "https://claimsieve-intake.mainstreet-system.svc.cluster.local:8443/v1/runtime/openworker/intents"},
-                  {"name": "MAINSTREET_MODEL_GATEWAY_ENDPOINT", "value": "https://model-gateway.mainstreet-system.svc.cluster.local:8443"},
+                  {"name": "MAINSTREET_MODEL_GATEWAY_ENDPOINT", "value": "https://model-gateway.mainstreet-system.svc.cluster.local:8443/v1/runtime/openworker/completions"},
                   {"name": "MAINSTREET_MTLS_CA_FILE", "value": "/var/run/mainstreet/mtls/ca.crt"},
                   {"name": "MAINSTREET_MTLS_CERT_FILE", "value": "/var/run/mainstreet/mtls/tls.crt"},
                   {"name": "MAINSTREET_MTLS_KEY_FILE", "value": "/var/run/mainstreet/mtls/tls.key"},
@@ -49,6 +53,24 @@
                   {"name": "runtime-state", "mountPath": "/var/lib/mainstreet/openworker"},
                   {"name": "claimsieve-mtls", "mountPath": "/var/run/mainstreet/mtls", "readOnly": true}
                 ],
+                "startupProbe": {
+                  "httpGet": {"path": "/v1/health", "port": 8080, "scheme": "HTTP"},
+                  "periodSeconds": 2,
+                  "failureThreshold": 30,
+                  "timeoutSeconds": 1
+                },
+                "readinessProbe": {
+                  "httpGet": {"path": "/v1/health", "port": 8080, "scheme": "HTTP"},
+                  "periodSeconds": 5,
+                  "failureThreshold": 3,
+                  "timeoutSeconds": 1
+                },
+                "livenessProbe": {
+                  "httpGet": {"path": "/v1/health", "port": 8080, "scheme": "HTTP"},
+                  "periodSeconds": 10,
+                  "failureThreshold": 3,
+                  "timeoutSeconds": 1
+                },
                 "resources": {
                   "requests": {"cpu": "100m", "memory": "256Mi"},
                   "limits": {"cpu": "2", "memory": "2Gi"}

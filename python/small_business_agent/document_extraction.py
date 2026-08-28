@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from hashlib import sha256
 from math import isfinite
-from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Any, Protocol
 
@@ -103,6 +102,8 @@ class CandidateClaim:
         if not isinstance(self.text, str) or not self.text.strip():
             raise ValueError("candidate claim text must be non-empty")
         _validate_sha256(self.source_sha256, field_name="source_sha256")
+        if not isinstance(self.extraction_provider, str) or not self.extraction_provider.strip():
+            raise ValueError("extraction_provider must be non-empty")
         if not self.span_indices:
             raise ValueError("candidate claim must bind to at least one source span")
         if len(set(self.span_indices)) != len(self.span_indices):
@@ -139,6 +140,11 @@ def bind_candidate_claim(
 ) -> CandidateClaim:
     if not span_indices:
         raise ValueError("candidate claim must bind to at least one source span")
+    if any(
+        not isinstance(index, int) or isinstance(index, bool) or index < 0
+        for index in span_indices
+    ):
+        raise ValueError("candidate claim span indices must be non-negative integers")
     if any(index >= len(extraction.spans) for index in span_indices):
         raise ValueError("candidate claim references an unknown OCR span")
     return CandidateClaim(
@@ -158,15 +164,13 @@ class PaddleOCRExtractor:
     and ClaimSieve boundary before consequential use.
     """
 
-    _SAFE_SUFFIXES = {
-        ".bmp",
-        ".jpeg",
-        ".jpg",
-        ".pdf",
-        ".png",
-        ".tif",
-        ".tiff",
-        ".webp",
+    _MEDIA_TYPE_SUFFIXES = {
+        "application/pdf": ".pdf",
+        "image/bmp": ".bmp",
+        "image/jpeg": ".jpg",
+        "image/png": ".png",
+        "image/tiff": ".tiff",
+        "image/webp": ".webp",
     }
 
     def __init__(
@@ -175,6 +179,9 @@ class PaddleOCRExtractor:
         engine: Any | None = None,
         min_confidence: float = 0.0,
         provider_profile: str = "paddleocr-3.x-default",
+        max_source_bytes: int = 25 * 1024 * 1024,
+        max_results: int = 200,
+        max_spans: int = 20_000,
     ) -> None:
         if (
             not isinstance(min_confidence, (int, float))
@@ -184,9 +191,19 @@ class PaddleOCRExtractor:
             raise ValueError("min_confidence must be in [0, 1]")
         if not isinstance(provider_profile, str) or not provider_profile.strip():
             raise ValueError("provider_profile must be non-empty")
+        for field_name, value in (
+            ("max_source_bytes", max_source_bytes),
+            ("max_results", max_results),
+            ("max_spans", max_spans),
+        ):
+            if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
+                raise ValueError(f"{field_name} must be a positive integer")
         self._engine = engine
         self.min_confidence = float(min_confidence)
         self.provider_profile = provider_profile
+        self.max_source_bytes = max_source_bytes
+        self.max_results = max_results
+        self.max_spans = max_spans
 
     def _get_engine(self) -> Any:
         if self._engine is None:
@@ -271,8 +288,8 @@ class PaddleOCRExtractor:
 
         spans: list[ExtractedSpan] = []
         for text, score, polygon in zip(texts, scores, polygons):
-            if not isinstance(text, str) or not text.strip():
-                raise ValueError("PaddleOCR rec_texts entries must be non-empty strings")
+            if not isinstance(text, str):
+                raise ValueError("PaddleOCR rec_texts entries must be strings")
             try:
                 confidence = float(score)
             except (TypeError, ValueError) as exc:
@@ -280,6 +297,8 @@ class PaddleOCRExtractor:
             if not isfinite(confidence) or not 0.0 <= confidence <= 1.0:
                 raise ValueError("PaddleOCR confidence must be finite and in [0, 1]")
             normalized_polygon = self._normalize_polygon(polygon)
+            if not text.strip():
+                continue
             span = ExtractedSpan(
                 text=text,
                 confidence=confidence,
@@ -298,16 +317,18 @@ class PaddleOCRExtractor:
         media_type: str,
     ) -> DocumentExtraction:
         digest = sha256_hex(source)
+        if len(source) > self.max_source_bytes:
+            raise ValueError("source payload exceeds the configured OCR size limit")
         if not isinstance(source_name, str) or not source_name.strip():
             raise ValueError("source_name must be non-empty")
         if not isinstance(media_type, str) or not media_type.strip():
             raise ValueError("media_type must be non-empty")
-
-        suffix = Path(source_name).suffix.lower()
-        if suffix not in self._SAFE_SUFFIXES:
-            suffix = ".img"
+        suffix = self._MEDIA_TYPE_SUFFIXES.get(media_type.lower())
+        if suffix is None:
+            raise ValueError("unsupported OCR media_type")
 
         engine = self._get_engine()
+        spans: list[ExtractedSpan] = []
         with NamedTemporaryFile(suffix=suffix) as handle:
             handle.write(source)
             handle.flush()
@@ -315,13 +336,17 @@ class PaddleOCRExtractor:
             if results is None:
                 raise ValueError("PaddleOCR returned no result collection")
             try:
-                result_items = list(results)
+                iterator = iter(results)
             except TypeError as exc:
                 raise ValueError("PaddleOCR predict() must return an iterable result collection") from exc
 
-        spans: list[ExtractedSpan] = []
-        for result in result_items:
-            spans.extend(self._parse_result(result))
+            for result_index, result in enumerate(iterator):
+                if result_index >= self.max_results:
+                    raise ValueError("PaddleOCR result count exceeds the configured limit")
+                parsed = self._parse_result(result)
+                if len(spans) + len(parsed) > self.max_spans:
+                    raise ValueError("PaddleOCR span count exceeds the configured limit")
+                spans.extend(parsed)
 
         ordered_spans = tuple(spans)
         return DocumentExtraction(

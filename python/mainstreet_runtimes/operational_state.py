@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 from claimsieve_ref.canonical import canonical_bytes, digest, loads_strict
 
@@ -126,6 +127,28 @@ def _validate_payload_bounds(
         )
 
 
+def _normalize_deletions(
+    deletions: Sequence[str],
+    *,
+    bounds: OperationalStateBounds,
+) -> tuple[str, ...]:
+    if isinstance(deletions, (str, bytes)) or not isinstance(deletions, Sequence):
+        raise OperationalStateError("patch deletions must be a sequence of root names")
+    deletion_items = tuple(deletions)
+    if any(not isinstance(key, str) or not key for key in deletion_items):
+        raise OperationalStateError("patch deletion keys must be non-empty strings")
+    if len(set(deletion_items)) != len(deletion_items):
+        raise OperationalStateError("patch deletions must be unique")
+    if len(deletion_items) > bounds.max_deletions_per_patch:
+        raise OperationalStateBoundsError(
+            f"operational patch deletes {len(deletion_items)} roots; "
+            f"limit is {bounds.max_deletions_per_patch}"
+        )
+    deletion_tuple = tuple(sorted(deletion_items))
+    _validate_root_keys({key: None for key in deletion_tuple})
+    return deletion_tuple
+
+
 @dataclass(frozen=True)
 class OperationalState:
     """Versioned, canonical, bounded working state for an untrusted agent.
@@ -142,6 +165,7 @@ class OperationalState:
         if not isinstance(self.version, int) or isinstance(self.version, bool) or self.version < 0:
             raise OperationalStateError("operational state version must be a non-negative integer")
         payload = _canonical_object(self.payload_json, field="payload_json")
+        _validate_root_keys(payload)
         expected = digest(
             {
                 "schema_version": "claimsieve.operational_state.v1",
@@ -209,12 +233,14 @@ class OperationalStatePatch:
         if not isinstance(self.actor, str) or not self.actor:
             raise OperationalStateError("patch actor must be a non-empty string")
         changes = _canonical_object(self.changes_json, field="changes_json")
+        _validate_root_keys(changes)
+        if any(not isinstance(key, str) or not key for key in self.deletions):
+            raise OperationalStateError("patch deletion keys must be non-empty strings")
         if len(set(self.deletions)) != len(self.deletions):
             raise OperationalStateError("patch deletions must be unique")
         if tuple(sorted(self.deletions)) != self.deletions:
             raise OperationalStateError("patch deletions must be sorted")
-        if any(not isinstance(key, str) or not key for key in self.deletions):
-            raise OperationalStateError("patch deletion keys must be non-empty strings")
+        _validate_root_keys({key: None for key in self.deletions})
         overlap = set(changes).intersection(self.deletions)
         if overlap:
             raise OperationalStateError(
@@ -243,6 +269,8 @@ class OperationalStatePatch:
         deletions: Sequence[str] = (),
         bounds: OperationalStateBounds = DEFAULT_OPERATIONAL_STATE_BOUNDS,
     ) -> "OperationalStatePatch":
+        if changes is not None and not isinstance(changes, Mapping):
+            raise OperationalStateError("patch changes must be a mapping")
         materialized = dict(changes or {})
         _validate_root_keys(materialized)
         encoded_changes = canonical_bytes(materialized)
@@ -252,13 +280,7 @@ class OperationalStatePatch:
                 f"limit is {bounds.max_patch_bytes}"
             )
 
-        deletion_tuple = tuple(sorted(deletions))
-        if len(deletion_tuple) > bounds.max_deletions_per_patch:
-            raise OperationalStateBoundsError(
-                f"operational patch deletes {len(deletion_tuple)} roots; "
-                f"limit is {bounds.max_deletions_per_patch}"
-            )
-        _validate_root_keys({key: None for key in deletion_tuple})
+        deletion_tuple = _normalize_deletions(deletions, bounds=bounds)
         overlap = set(materialized).intersection(deletion_tuple)
         if overlap:
             raise OperationalStateError(

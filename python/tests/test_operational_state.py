@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import unittest
 
+from claimsieve_ref.canonical import canonical_bytes, digest
 from mainstreet_runtimes.operational_state import (
     OperationalState,
     OperationalStateBounds,
@@ -56,6 +57,19 @@ class BoundedOperationalStateTests(unittest.TestCase):
                 with self.assertRaises(ProtectedOperationalStateError):
                     OperationalState.from_payload({key: {"value": "untrusted"}})
 
+    def test_manual_state_constructor_cannot_bypass_reserved_roots(self) -> None:
+        payload = {"permit": {"value": "untrusted"}}
+        payload_json = canonical_bytes(payload).decode("utf-8")
+        state_digest = digest(
+            {
+                "schema_version": "claimsieve.operational_state.v1",
+                "version": 0,
+                "payload": payload,
+            }
+        )
+        with self.assertRaises(ProtectedOperationalStateError):
+            OperationalState(version=0, payload_json=payload_json, state_digest=state_digest)
+
     def test_non_authoritative_summaries_remain_possible(self) -> None:
         state = OperationalState.from_payload(
             {"evidence_summary": {"known": 2, "unknown": 1}, "approval_summary": "review required"}
@@ -99,6 +113,33 @@ class BoundedOperationalStateTests(unittest.TestCase):
         successor, _ = apply_operational_state_patch(state, patch)
         self.assertNotIn("temporary", successor.payload)
         self.assertEqual("done", successor.payload["status"])
+
+    def test_string_deletions_are_rejected_as_malformed_input(self) -> None:
+        state = OperationalState.from_payload({"temporary": "discard"})
+        with self.assertRaisesRegex(OperationalStateError, "sequence of root names"):
+            OperationalStatePatch.from_changes(
+                state,
+                actor="worker:a",
+                deletions="temporary",
+            )
+
+    def test_non_string_deletion_is_rejected_cleanly(self) -> None:
+        state = OperationalState.from_payload({"temporary": "discard"})
+        with self.assertRaisesRegex(OperationalStateError, "non-empty strings"):
+            OperationalStatePatch.from_changes(
+                state,
+                actor="worker:a",
+                deletions=(1,),
+            )
+
+    def test_protected_root_cannot_be_deleted_as_authority_side_effect(self) -> None:
+        state = OperationalState.from_payload({"status": "working"})
+        with self.assertRaises(ProtectedOperationalStateError):
+            OperationalStatePatch.from_changes(
+                state,
+                actor="worker:a",
+                deletions=("permit",),
+            )
 
     def test_change_delete_overlap_is_rejected(self) -> None:
         state = OperationalState.from_payload({"status": "working"})

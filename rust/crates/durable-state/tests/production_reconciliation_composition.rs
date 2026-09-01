@@ -2,23 +2,17 @@
 //! Composition tests for the public production reconciliation boundary.
 
 use claimsieve_durable_state::{
-    DurableState, DurableStateError, ExecutorReport, Outcome, ProviderObservation,
-    ReservationPhase,
+    DurableState, DurableStateError, ExecutorReport, Outcome, ProviderObservation, ReservationPhase,
 };
 
 fn reserve(state: &mut DurableState, permit_id: &str) {
-    state
-        .reserve(
-            permit_id,
-            "campaign",
-            "action",
-            "request",
-            "resource",
-            1,
-            10,
-            2,
-        )
-        .expect("fixture reservation must succeed");
+    assert!(
+        state
+            .reserve(
+                permit_id, "campaign", "action", "request", "resource", 1, 10, 2,
+            )
+            .is_ok()
+    );
 }
 
 #[test]
@@ -73,10 +67,7 @@ fn unknown_observation_may_later_resolve() {
         state.reservations["p1"].outcome,
         Some(Outcome::ConfirmedSuccess)
     );
-    assert_eq!(
-        state.reservations["p1"].phase,
-        ReservationPhase::Reconciled
-    );
+    assert_eq!(state.reservations["p1"].phase, ReservationPhase::Reconciled);
 }
 
 #[test]
@@ -111,9 +102,7 @@ fn divergent_observation_contains_campaign_and_blocks_existing_dispatch() {
     let mut state = DurableState::new();
     reserve(&mut state, "p1");
     reserve(&mut state, "p2");
-    state
-        .begin_execution("p2", "executor-2", true)
-        .expect("fixture execution must begin");
+    assert!(state.begin_execution("p2", "executor-2", true).is_ok());
 
     assert_eq!(
         state.reconcile_observation(
@@ -181,6 +170,11 @@ fn exact_success_does_not_force_containment() {
         ),
         Ok(Outcome::ConfirmedSuccess)
     );
-    assert!(!state.campaigns["campaign"].suspended);
+    assert!(
+        !state
+            .campaigns
+            .get("campaign")
+            .is_some_and(|campaign| campaign.suspended)
+    );
     assert_eq!(state.containment_epoch, 0);
 }

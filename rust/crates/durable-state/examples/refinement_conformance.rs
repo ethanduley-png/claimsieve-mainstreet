@@ -33,7 +33,7 @@ fn reconcile_from_independent_provider(
 }
 
 fn invalid_input(message: &str) -> io::Error {
-    io::Error::new(io::ErrorKind::InvalidInput, message)
+    io::Error::new(io::ErrorKind::InvalidInput, message.to_owned())
 }
 
 fn invalid_data(message: String) -> io::Error {

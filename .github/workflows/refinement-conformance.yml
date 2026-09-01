@@ -37,7 +37,9 @@ jobs:
               cd /tmp/claimsieve-rocq
               rocq compile -Q . ClaimSieve DurableState.v 1>&2
               rocq compile -Q . ClaimSieve ExtractRefinement.v 1>&2
-              ocamlc -o refinement_conformance RefinementCore.ml refinement_conformance.ml
+              ocamlc -c RefinementCore.mli
+              ocamlc -c RefinementCore.ml
+              ocamlc -o refinement_conformance RefinementCore.cmo refinement_conformance.ml
               ./refinement_conformance /workspace/vectors/reconciliation_refinement_v1.tsv
             ' > evidence/REFINEMENT_OCAML_OUTPUT.txt
       - name: Require exhaustive byte-for-byte agreement

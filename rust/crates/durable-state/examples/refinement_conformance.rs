@@ -1,3 +1,4 @@
+#![forbid(unsafe_code)]
 //! Example-only Rust candidate for refinement conformance testing.
 
 use claimsieve_durable_state::Outcome;

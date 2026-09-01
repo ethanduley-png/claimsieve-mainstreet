@@ -563,7 +563,12 @@ mod tests {
         let mut state = DurableState::new();
         assert!(reserve(&mut state).is_ok());
         assert_eq!(
-            state.reconcile_classified_with_containment("p", Outcome::ConfirmedSuccess, false, false),
+            state.reconcile_classified_with_containment(
+                "p",
+                Outcome::ConfirmedSuccess,
+                false,
+                false
+            ),
             Err(DurableStateError::ObserverAuthenticationRequired)
         );
     }
@@ -578,7 +583,12 @@ mod tests {
                 .is_ok()
         );
         assert_eq!(
-            state.reconcile_classified_with_containment("p", Outcome::ConfirmedFailure, false, true),
+            state.reconcile_classified_with_containment(
+                "p",
+                Outcome::ConfirmedFailure,
+                false,
+                true
+            ),
             Err(DurableStateError::TerminalOutcomeRewrite)
         );
     }

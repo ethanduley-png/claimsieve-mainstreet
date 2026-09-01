@@ -100,8 +100,7 @@ pub fn reconcile_from_independent_provider(
 pub fn observation_requires_containment(observation: ProviderObservation) -> bool {
     matches!(
         observation,
-        ProviderObservation::ProviderAcceptedDivergent
-            | ProviderObservation::ProviderConflicting
+        ProviderObservation::ProviderAcceptedDivergent | ProviderObservation::ProviderConflicting
     )
 }
 
@@ -443,25 +442,6 @@ impl DurableState {
         Ok(outcome)
     }
 
-    /// Apply an already classified outcome inside the durable transition.
-    ///
-    /// Keeping this private prevents callers from bypassing the independent
-    /// provider observation classifier at the public production boundary.
-    fn reconcile_classified(
-        &mut self,
-        permit_id: &str,
-        outcome: Outcome,
-        observer_authenticated: bool,
-    ) -> Result<(), DurableStateError> {
-        let requires_containment = outcome == Outcome::DivergentEffect;
-        self.reconcile_classified_with_containment(
-            permit_id,
-            outcome,
-            requires_containment,
-            observer_authenticated,
-        )
-    }
-
     fn reconcile_classified_with_containment(
         &mut self,
         permit_id: &str,
@@ -583,7 +563,7 @@ mod tests {
         let mut state = DurableState::new();
         assert!(reserve(&mut state).is_ok());
         assert_eq!(
-            state.reconcile_classified("p", Outcome::ConfirmedSuccess, false),
+            state.reconcile_classified_with_containment("p", Outcome::ConfirmedSuccess, false, false),
             Err(DurableStateError::ObserverAuthenticationRequired)
         );
     }
@@ -594,11 +574,11 @@ mod tests {
         assert!(reserve(&mut state).is_ok());
         assert!(
             state
-                .reconcile_classified("p", Outcome::ConfirmedSuccess, true)
+                .reconcile_classified_with_containment("p", Outcome::ConfirmedSuccess, false, true)
                 .is_ok()
         );
         assert_eq!(
-            state.reconcile_classified("p", Outcome::ConfirmedFailure, true),
+            state.reconcile_classified_with_containment("p", Outcome::ConfirmedFailure, false, true),
             Err(DurableStateError::TerminalOutcomeRewrite)
         );
     }
@@ -609,7 +589,7 @@ mod tests {
         assert!(reserve(&mut state).is_ok());
         assert!(
             state
-                .reconcile_classified("p", Outcome::DivergentEffect, true)
+                .reconcile_classified_with_containment("p", Outcome::DivergentEffect, true, true)
                 .is_ok()
         );
         assert!(
@@ -637,7 +617,7 @@ mod tests {
         assert!(state.begin_execution("p2", "executor-2", true).is_ok());
         assert!(
             state
-                .reconcile_classified("p", Outcome::DivergentEffect, true)
+                .reconcile_classified_with_containment("p", Outcome::DivergentEffect, true, true)
                 .is_ok()
         );
         assert_eq!(
@@ -652,13 +632,13 @@ mod tests {
         assert!(reserve(&mut state).is_ok());
         assert!(
             state
-                .reconcile_classified("p", Outcome::DivergentEffect, true)
+                .reconcile_classified_with_containment("p", Outcome::DivergentEffect, true, true)
                 .is_ok()
         );
         let contained_epoch = state.containment_epoch;
         assert!(
             state
-                .reconcile_classified("p", Outcome::DivergentEffect, true)
+                .reconcile_classified_with_containment("p", Outcome::DivergentEffect, true, true)
                 .is_ok()
         );
         assert_eq!(state.containment_epoch, contained_epoch);
@@ -670,7 +650,7 @@ mod tests {
         assert!(reserve(&mut state).is_ok());
         assert!(
             state
-                .reconcile_classified("p", Outcome::ConfirmedFailure, true)
+                .reconcile_classified_with_containment("p", Outcome::ConfirmedFailure, false, true)
                 .is_ok()
         );
         assert!(

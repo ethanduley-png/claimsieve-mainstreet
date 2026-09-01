@@ -25,6 +25,16 @@ jobs:
             --example refinement_conformance \
             -- vectors/reconciliation_refinement_v1.tsv \
             > evidence/REFINEMENT_RUST_OUTPUT.txt
+      - name: Test authenticated observation through durable mutation
+        run: |
+          set -euo pipefail
+          cargo test \
+            --locked \
+            --manifest-path rust/Cargo.toml \
+            -p claimsieve-durable-state \
+            --test production_reconciliation_composition \
+            -- --nocapture \
+            2>&1 | tee evidence/RECONCILIATION_COMPOSITION.txt
       - name: Extract Rocq function and run OCaml conformance candidate
         run: |
           set -euo pipefail
@@ -59,3 +69,4 @@ jobs:
             evidence/REFINEMENT_RUST_OUTPUT.txt
             evidence/REFINEMENT_OCAML_OUTPUT.txt
             evidence/REFINEMENT_FIXTURE.sha256
+            evidence/RECONCILIATION_COMPOSITION.txt

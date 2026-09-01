@@ -416,8 +416,7 @@ impl DurableState {
         provider_observation: ProviderObservation,
         observer_authenticated: bool,
     ) -> Result<Outcome, DurableStateError> {
-        let outcome =
-            reconcile_from_independent_provider(executor_report, provider_observation);
+        let outcome = reconcile_from_independent_provider(executor_report, provider_observation);
         self.reconcile_classified(permit_id, outcome.clone(), observer_authenticated)?;
         Ok(outcome)
     }
@@ -571,7 +570,11 @@ mod tests {
     fn divergent_effect_suspends_campaign_and_blocks_new_reservation() {
         let mut state = DurableState::new();
         assert!(reserve(&mut state).is_ok());
-        assert!(state.reconcile_classified("p", Outcome::DivergentEffect, true).is_ok());
+        assert!(
+            state
+                .reconcile_classified("p", Outcome::DivergentEffect, true)
+                .is_ok()
+        );
         assert!(
             state
                 .campaigns
@@ -595,7 +598,11 @@ mod tests {
                 .is_ok()
         );
         assert!(state.begin_execution("p2", "executor-2", true).is_ok());
-        assert!(state.reconcile_classified("p", Outcome::DivergentEffect, true).is_ok());
+        assert!(
+            state
+                .reconcile_classified("p", Outcome::DivergentEffect, true)
+                .is_ok()
+        );
         assert_eq!(
             state.claim_dispatch("p2", "executor-2", true, 3),
             Err(DurableStateError::CampaignSuspended)
@@ -606,9 +613,17 @@ mod tests {
     fn repeated_divergence_is_idempotent_for_containment_epoch() {
         let mut state = DurableState::new();
         assert!(reserve(&mut state).is_ok());
-        assert!(state.reconcile_classified("p", Outcome::DivergentEffect, true).is_ok());
+        assert!(
+            state
+                .reconcile_classified("p", Outcome::DivergentEffect, true)
+                .is_ok()
+        );
         let contained_epoch = state.containment_epoch;
-        assert!(state.reconcile_classified("p", Outcome::DivergentEffect, true).is_ok());
+        assert!(
+            state
+                .reconcile_classified("p", Outcome::DivergentEffect, true)
+                .is_ok()
+        );
         assert_eq!(state.containment_epoch, contained_epoch);
     }
 

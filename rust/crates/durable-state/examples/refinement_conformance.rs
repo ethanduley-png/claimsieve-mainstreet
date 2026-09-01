@@ -1,39 +1,10 @@
 #![forbid(unsafe_code)]
-//! Example-only Rust candidate for refinement conformance testing.
+//! Conformance runner over the production durable reconciliation classifier.
 
-use claimsieve_durable_state::Outcome;
+use claimsieve_durable_state::{
+    ExecutorReport, Outcome, ProviderObservation, reconcile_from_independent_provider,
+};
 use std::{env, fs, io};
-
-#[derive(Clone, Copy)]
-enum ExecutorReport {
-    ExecutorAccepted,
-    ExecutorRejected,
-    ExecutorTimeout,
-    NoExecutorClaim,
-}
-
-#[derive(Clone, Copy)]
-enum ProviderObservation {
-    NoProviderRecord,
-    ProviderRejected,
-    ProviderAcceptedExact,
-    ProviderAcceptedDivergent,
-    ProviderConflicting,
-}
-
-fn reconcile_from_independent_provider(
-    _claim: ExecutorReport,
-    observation: ProviderObservation,
-) -> Outcome {
-    match observation {
-        ProviderObservation::NoProviderRecord | ProviderObservation::ProviderConflicting => {
-            Outcome::Unknown
-        }
-        ProviderObservation::ProviderRejected => Outcome::ConfirmedFailure,
-        ProviderObservation::ProviderAcceptedExact => Outcome::ConfirmedSuccess,
-        ProviderObservation::ProviderAcceptedDivergent => Outcome::DivergentEffect,
-    }
-}
 
 fn invalid_input(message: &str) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidInput, message.to_owned())

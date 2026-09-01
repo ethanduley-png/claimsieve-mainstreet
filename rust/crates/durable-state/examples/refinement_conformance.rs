@@ -1,8 +1,10 @@
+//! Example-only Rust candidate for refinement conformance testing.
+
 use claimsieve_durable_state::Outcome;
 use std::{env, fs, io};
 
 #[derive(Clone, Copy)]
-enum ExecutorClaim {
+enum ExecutorReport {
     ExecutorAccepted,
     ExecutorRejected,
     ExecutorTimeout,
@@ -19,7 +21,7 @@ enum ProviderObservation {
 }
 
 fn reconcile_from_independent_provider(
-    _claim: ExecutorClaim,
+    _claim: ExecutorReport,
     observation: ProviderObservation,
 ) -> Outcome {
     match observation {
@@ -40,12 +42,12 @@ fn invalid_data(message: String) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, message)
 }
 
-fn parse_claim(value: &str) -> Option<ExecutorClaim> {
+fn parse_claim(value: &str) -> Option<ExecutorReport> {
     match value {
-        "ExecutorAccepted" => Some(ExecutorClaim::ExecutorAccepted),
-        "ExecutorRejected" => Some(ExecutorClaim::ExecutorRejected),
-        "ExecutorTimeout" => Some(ExecutorClaim::ExecutorTimeout),
-        "NoExecutorClaim" => Some(ExecutorClaim::NoExecutorClaim),
+        "ExecutorAccepted" => Some(ExecutorReport::ExecutorAccepted),
+        "ExecutorRejected" => Some(ExecutorReport::ExecutorRejected),
+        "ExecutorTimeout" => Some(ExecutorReport::ExecutorTimeout),
+        "NoExecutorClaim" => Some(ExecutorReport::NoExecutorClaim),
         _ => None,
     }
 }

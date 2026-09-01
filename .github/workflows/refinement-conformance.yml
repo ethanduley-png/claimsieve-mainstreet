@@ -1,0 +1,59 @@
+name: Rust OCaml refinement conformance
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  conformance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.90.0
+      - name: Run isolated Rust refinement candidate
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          cargo run \
+            --quiet \
+            --locked \
+            --manifest-path rust/Cargo.toml \
+            -p claimsieve-durable-state \
+            --example refinement_conformance \
+            -- vectors/reconciliation_refinement_v1.tsv \
+            > evidence/REFINEMENT_RUST_OUTPUT.txt
+      - name: Extract Rocq function and run OCaml conformance candidate
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -v "$PWD:/workspace:ro" \
+            rocq/rocq-prover:9.2 \
+            bash -lc '
+              set -euo pipefail
+              cp -R /workspace/rocq /tmp/claimsieve-rocq
+              cd /tmp/claimsieve-rocq
+              rocq compile -Q . ClaimSieve DurableState.v 1>&2
+              rocq compile -Q . ClaimSieve ExtractRefinement.v 1>&2
+              ocamlc -o refinement_conformance RefinementCore.ml refinement_conformance.ml
+              ./refinement_conformance /workspace/vectors/reconciliation_refinement_v1.tsv
+            ' > evidence/REFINEMENT_OCAML_OUTPUT.txt
+      - name: Require exhaustive byte-for-byte agreement
+        run: |
+          set -euo pipefail
+          test "$(wc -l < evidence/REFINEMENT_RUST_OUTPUT.txt)" -eq 20
+          test "$(wc -l < evidence/REFINEMENT_OCAML_OUTPUT.txt)" -eq 20
+          diff -u \
+            evidence/REFINEMENT_OCAML_OUTPUT.txt \
+            evidence/REFINEMENT_RUST_OUTPUT.txt
+          sha256sum vectors/reconciliation_refinement_v1.tsv \
+            > evidence/REFINEMENT_FIXTURE.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: refinement-conformance-${{ github.sha }}
+          path: |
+            evidence/REFINEMENT_RUST_OUTPUT.txt
+            evidence/REFINEMENT_OCAML_OUTPUT.txt
+            evidence/REFINEMENT_FIXTURE.sha256

@@ -42,6 +42,56 @@ pub enum Outcome {
     Unknown,
 }
 
+/// Non-authoritative report from the executor.
+///
+/// This value is retained for audit correlation but cannot determine terminal
+/// execution truth.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ExecutorReport {
+    /// Executor reported that the provider accepted the request.
+    ExecutorAccepted,
+    /// Executor reported that the provider rejected the request.
+    ExecutorRejected,
+    /// Executor timed out while waiting for a provider response.
+    ExecutorTimeout,
+    /// No executor report is available.
+    NoExecutorClaim,
+}
+
+/// Independently authenticated provider observation.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ProviderObservation {
+    /// No matching provider-side record was observed.
+    NoProviderRecord,
+    /// The provider independently reports an exact rejection.
+    ProviderRejected,
+    /// The observed provider effect exactly matches the authorized action.
+    ProviderAcceptedExact,
+    /// A provider effect exists but differs from the authorized action.
+    ProviderAcceptedDivergent,
+    /// Independent provider evidence conflicts.
+    ProviderConflicting,
+}
+
+/// Classify terminal truth from independent provider evidence.
+///
+/// The executor report is deliberately non-authoritative. It cannot change the
+/// returned outcome for a fixed provider observation.
+#[must_use]
+pub fn reconcile_from_independent_provider(
+    _report: ExecutorReport,
+    observation: ProviderObservation,
+) -> Outcome {
+    match observation {
+        ProviderObservation::NoProviderRecord | ProviderObservation::ProviderConflicting => {
+            Outcome::Unknown
+        }
+        ProviderObservation::ProviderRejected => Outcome::ConfirmedFailure,
+        ProviderObservation::ProviderAcceptedExact => Outcome::ConfirmedSuccess,
+        ProviderObservation::ProviderAcceptedDivergent => Outcome::DivergentEffect,
+    }
+}
+
 /// One durable campaign record.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CampaignRecord {
@@ -355,13 +405,28 @@ impl DurableState {
         self.frozen = true;
     }
 
-    /// Record an authenticated independently reconciled outcome.
+    /// Record an authenticated independent provider observation.
     ///
-    /// A divergent independently observed effect is a containment event: the
-    /// affected campaign is suspended before this transition returns. Replaying
-    /// the same terminal divergence is idempotent and does not advance the
-    /// containment epoch again.
-    pub fn reconcile(
+    /// This is the authoritative reconciliation boundary. The executor report
+    /// is retained as an input but cannot establish terminal truth.
+    pub fn reconcile_observation(
+        &mut self,
+        permit_id: &str,
+        executor_report: ExecutorReport,
+        provider_observation: ProviderObservation,
+        observer_authenticated: bool,
+    ) -> Result<Outcome, DurableStateError> {
+        let outcome =
+            reconcile_from_independent_provider(executor_report, provider_observation);
+        self.reconcile_classified(permit_id, outcome.clone(), observer_authenticated)?;
+        Ok(outcome)
+    }
+
+    /// Apply an already classified outcome inside the durable transition.
+    ///
+    /// Keeping this private prevents callers from bypassing the independent
+    /// provider observation classifier at the public production boundary.
+    fn reconcile_classified(
         &mut self,
         permit_id: &str,
         outcome: Outcome,
@@ -482,7 +547,7 @@ mod tests {
         let mut state = DurableState::new();
         assert!(reserve(&mut state).is_ok());
         assert_eq!(
-            state.reconcile("p", Outcome::ConfirmedSuccess, false),
+            state.reconcile_classified("p", Outcome::ConfirmedSuccess, false),
             Err(DurableStateError::ObserverAuthenticationRequired)
         );
     }
@@ -493,11 +558,11 @@ mod tests {
         assert!(reserve(&mut state).is_ok());
         assert!(
             state
-                .reconcile("p", Outcome::ConfirmedSuccess, true)
+                .reconcile_classified("p", Outcome::ConfirmedSuccess, true)
                 .is_ok()
         );
         assert_eq!(
-            state.reconcile("p", Outcome::ConfirmedFailure, true),
+            state.reconcile_classified("p", Outcome::ConfirmedFailure, true),
             Err(DurableStateError::TerminalOutcomeRewrite)
         );
     }
@@ -506,7 +571,7 @@ mod tests {
     fn divergent_effect_suspends_campaign_and_blocks_new_reservation() {
         let mut state = DurableState::new();
         assert!(reserve(&mut state).is_ok());
-        assert!(state.reconcile("p", Outcome::DivergentEffect, true).is_ok());
+        assert!(state.reconcile_classified("p", Outcome::DivergentEffect, true).is_ok());
         assert!(
             state
                 .campaigns
@@ -530,7 +595,7 @@ mod tests {
                 .is_ok()
         );
         assert!(state.begin_execution("p2", "executor-2", true).is_ok());
-        assert!(state.reconcile("p", Outcome::DivergentEffect, true).is_ok());
+        assert!(state.reconcile_classified("p", Outcome::DivergentEffect, true).is_ok());
         assert_eq!(
             state.claim_dispatch("p2", "executor-2", true, 3),
             Err(DurableStateError::CampaignSuspended)
@@ -541,9 +606,9 @@ mod tests {
     fn repeated_divergence_is_idempotent_for_containment_epoch() {
         let mut state = DurableState::new();
         assert!(reserve(&mut state).is_ok());
-        assert!(state.reconcile("p", Outcome::DivergentEffect, true).is_ok());
+        assert!(state.reconcile_classified("p", Outcome::DivergentEffect, true).is_ok());
         let contained_epoch = state.containment_epoch;
-        assert!(state.reconcile("p", Outcome::DivergentEffect, true).is_ok());
+        assert!(state.reconcile_classified("p", Outcome::DivergentEffect, true).is_ok());
         assert_eq!(state.containment_epoch, contained_epoch);
     }
 
@@ -553,7 +618,7 @@ mod tests {
         assert!(reserve(&mut state).is_ok());
         assert!(
             state
-                .reconcile("p", Outcome::ConfirmedFailure, true)
+                .reconcile_classified("p", Outcome::ConfirmedFailure, true)
                 .is_ok()
         );
         assert!(

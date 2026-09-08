@@ -110,7 +110,7 @@ class OpenHandsProposalAdapterTests(unittest.TestCase):
         materialized["arguments"]["amount"] = 5000
         self.assertEqual(intent.arguments["amount"], 100)
 
-    def test_file_view_is_not_routable_as_consequential(self) -> None:
+    def test_file_view_is_consequential_because_read_access_can_disclose_data(self) -> None:
         event = {
             "tool_call_id": "call-oh-004",
             "tool_name": "file_editor",
@@ -125,10 +125,10 @@ class OpenHandsProposalAdapterTests(unittest.TestCase):
                 "view_range": None,
             },
         }
-        self.assertFalse(self.adapter.is_consequential_event(event))
-        with self.assertRaisesRegex(OpenHandsAdapterError, "not configured as consequential"):
-            self.adapter.route_event(event)
-        self.assertEqual(self.routed, [])
+        self.assertTrue(self.adapter.is_consequential_event(event))
+        result = self.adapter.route_event(event)
+        self.assertTrue(result["routed_to_claimsieve"])
+        self.assertFalse(result["external_action_executed"])
 
     def test_file_create_is_consequential(self) -> None:
         result = self.adapter.route_event(
@@ -165,27 +165,48 @@ class OpenHandsProposalAdapterTests(unittest.TestCase):
         }
         self.assertTrue(self.adapter.is_consequential_event(event))
 
+    def test_switching_model_profile_is_consequential(self) -> None:
+        event = {
+            "tool_call_id": "call-oh-007",
+            "tool_name": "switch_llm",
+            "action": {
+                "kind": "SwitchLLMAction",
+                "profile_name": "another-profile",
+                "reason": "test",
+            },
+        }
+        self.assertTrue(self.adapter.is_consequential_event(event))
+
+    def test_glob_file_discovery_is_consequential(self) -> None:
+        event = {
+            "tool_call_id": "call-oh-008",
+            "tool_name": "glob",
+            "action": {
+                "kind": "GlobAction",
+                "pattern": "**/*.env",
+                "path": "/workspace",
+            },
+        }
+        self.assertTrue(self.adapter.is_consequential_event(event))
+
+    def test_internal_think_action_is_not_routable_as_consequential(self) -> None:
+        event = {
+            "tool_call_id": "call-oh-009",
+            "tool_name": "think",
+            "action": {"kind": "ThinkAction", "thought": "plan only"},
+        }
+        self.assertFalse(self.adapter.is_consequential_event(event))
+        with self.assertRaisesRegex(OpenHandsAdapterError, "not configured as consequential"):
+            self.adapter.route_event(event)
+        self.assertEqual(self.routed, [])
+
     def test_unknown_action_kind_fails_closed(self) -> None:
         with self.assertRaisesRegex(OpenHandsAdapterError, "unreviewed OpenHands action kind"):
             self.adapter.is_consequential_event(
                 {
-                    "tool_call_id": "call-oh-007",
+                    "tool_call_id": "call-oh-010",
                     "tool_name": "future_tool",
                     "action": {"kind": "FutureSideEffectAction", "value": "x"},
-                }
-            )
-
-    def test_unreviewed_known_upstream_action_kind_also_fails_closed(self) -> None:
-        with self.assertRaisesRegex(OpenHandsAdapterError, "unreviewed OpenHands action kind"):
-            self.adapter.is_consequential_event(
-                {
-                    "tool_call_id": "call-oh-008",
-                    "tool_name": "switch_llm",
-                    "action": {
-                        "kind": "SwitchLLMAction",
-                        "profile_name": "another-profile",
-                        "reason": "test",
-                    },
                 }
             )
 
@@ -193,7 +214,7 @@ class OpenHandsProposalAdapterTests(unittest.TestCase):
         with self.assertRaisesRegex(OpenHandsAdapterError, "MCPToolAction.data must be a mapping"):
             self.adapter.build_intent(
                 {
-                    "tool_call_id": "call-oh-009",
+                    "tool_call_id": "call-oh-011",
                     "tool_name": "mcp_tool",
                     "action": {"kind": "MCPToolAction", "data": "not-a-mapping"},
                 }

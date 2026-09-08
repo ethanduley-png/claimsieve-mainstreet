@@ -20,20 +20,44 @@ ACTION_EVENT_MARKERS = (
     "tool_call_id: ToolCallID;",
 )
 
-REVIEWED_ACTION_KIND_MARKERS = (
-    'ActionBase<"MCPToolAction">',
-    'ActionBase<"ExecuteBashAction">',
-    'ActionBase<"TerminalAction">',
-    'ActionBase<"FileEditorAction">',
-    'ActionBase<"StrReplaceEditorAction">',
-    'ActionBase<"PlanningFileEditorAction">',
-    'ActionBase<"BrowserNavigateAction">',
-    'ActionBase<"BrowserClickAction">',
-    'ActionBase<"BrowserTypeAction">',
-    'ActionBase<"TaskAction">',
+REVIEWED_ACTION_KIND_MARKERS = tuple(
+    f"export interface {name}"
+    for name in (
+        "MCPToolAction",
+        "ExecuteBashAction",
+        "TerminalAction",
+        "FileEditorAction",
+        "StrReplaceEditorAction",
+        "PlanningFileEditorAction",
+        "GlobAction",
+        "GrepAction",
+        "BrowserNavigateAction",
+        "BrowserClickAction",
+        "BrowserTypeAction",
+        "BrowserGetStateAction",
+        "BrowserGetContentAction",
+        "BrowserScrollAction",
+        "BrowserGoBackAction",
+        "BrowserListTabsAction",
+        "BrowserSwitchTabAction",
+        "BrowserCloseTabAction",
+        "InvokeSkillAction",
+        "TaskAction",
+        "SwitchLLMAction",
+        "CanvasUIAction",
+        "LaunchChildConversationAction",
+    )
 )
 
-LAUNCH_CHILD_MARKER = "LAUNCH_CHILD_CONVERSATION_ACTION_KIND"
+INTERNAL_ACTION_KIND_MARKERS = tuple(
+    f"export interface {name}"
+    for name in (
+        "ThinkAction",
+        "FinishAction",
+        "TaskTrackerAction",
+    )
+)
+
 FILE_COMMAND_MARKER = '"view" | "create" | "str_replace" | "insert" | "undo_edit"'
 
 
@@ -109,16 +133,16 @@ def main() -> int:
     )
     report["checks"].append(
         check_markers(
-            "Reviewed consequential action kinds",
+            "Reviewed consequential capability kinds",
             action_types,
             REVIEWED_ACTION_KIND_MARKERS,
         )
     )
     report["checks"].append(
         check_markers(
-            "Launch-child action remains present",
+            "Reviewed internal action kinds",
             action_types,
-            (LAUNCH_CHILD_MARKER,),
+            INTERNAL_ACTION_KIND_MARKERS,
         )
     )
     report["checks"].append(

@@ -12,10 +12,13 @@ from claimsieve_ref.runtime import PermitError
 from founder_os import FounderOSReferenceWorkflow, GitHubIssueRequest
 from mainstreet_runtimes import (
     PINNED_OPENHANDS_COMMIT,
+    AuthenticatedRuntimeBinding,
     OpenHandsAdapterError,
+    OpenHandsAuthenticatedRoute,
     OpenHandsFounderIntake,
     OpenHandsProposalAdapter,
     OpenHandsRuntimeContext,
+    OpenHandsTransportError,
 )
 from mainstreet_runtimes.claimsieve_intake import ClaimSieveIntakeError
 
@@ -74,6 +77,15 @@ def expect_block(
         results.append(record(name, "blocked", False, "operation was accepted"))
     except expected_exception as exc:
         results.append(record(name, "blocked", True, f"{type(exc).__name__}: {exc}"))
+    except BaseException as exc:
+        results.append(
+            record(
+                name,
+                f"blocked with {expected_exception.__name__}",
+                False,
+                f"unexpected {type(exc).__name__}: {exc}",
+            )
+        )
 
 
 def main() -> int:
@@ -98,6 +110,14 @@ def main() -> int:
             runtime_version=PINNED_OPENHANDS_COMMIT,
         )
         intake = OpenHandsFounderIntake(workflow)
+        authenticated_binding = AuthenticatedRuntimeBinding.from_mapping(
+            workflow.runtime_profile.binding()
+        )
+        authenticated_route = OpenHandsAuthenticatedRoute(
+            intake,
+            workflow,
+            authenticated_binding,
+        )
         context = OpenHandsRuntimeContext(
             trace_id="trace-openhands-redteam",
             campaign_id="campaign-openhands-redteam",
@@ -105,7 +125,7 @@ def main() -> int:
             work_item_id="work-openhands-redteam",
             requested_at_seq=60,
         )
-        adapter = OpenHandsProposalAdapter(context, intake.route_intent)
+        adapter = OpenHandsProposalAdapter(context, authenticated_route.route_intent)
 
         routed = adapter.route_event(event("call-baseline"))
         no_execution = (
@@ -129,7 +149,7 @@ def main() -> int:
             results,
             "runtime_version_substitution",
             ClaimSieveIntakeError,
-            lambda: intake.route_intent(changed),
+            lambda: authenticated_route.route_intent(changed),
         )
 
         changed = adapter.build_intent(event("call-action-kind")).to_dict()
@@ -138,7 +158,7 @@ def main() -> int:
             results,
             "capability_substitution",
             ClaimSieveIntakeError,
-            lambda: intake.route_intent(changed),
+            lambda: authenticated_route.route_intent(changed),
         )
 
         changed = adapter.build_intent(event("call-tool-name")).to_dict()
@@ -147,7 +167,7 @@ def main() -> int:
             results,
             "tool_name_substitution",
             ClaimSieveIntakeError,
-            lambda: intake.route_intent(changed),
+            lambda: authenticated_route.route_intent(changed),
         )
 
         changed = adapter.build_intent(event("call-metadata")).to_dict()
@@ -156,7 +176,7 @@ def main() -> int:
             results,
             "authority_metadata_injection",
             ClaimSieveIntakeError,
-            lambda: intake.route_intent(changed),
+            lambda: authenticated_route.route_intent(changed),
         )
 
         changed = adapter.build_intent(event("call-argument")).to_dict()
@@ -165,16 +185,16 @@ def main() -> int:
             results,
             "unexpected_argument_injection",
             ClaimSieveIntakeError,
-            lambda: intake.route_intent(changed),
+            lambda: authenticated_route.route_intent(changed),
         )
 
         duplicate = adapter.build_intent(event("call-duplicate")).to_dict()
-        intake.route_intent(copy.deepcopy(duplicate))
+        authenticated_route.route_intent(copy.deepcopy(duplicate))
         expect_block(
             results,
             "tool_call_replay",
             ClaimSieveIntakeError,
-            lambda: intake.route_intent(copy.deepcopy(duplicate)),
+            lambda: authenticated_route.route_intent(copy.deepcopy(duplicate)),
         )
 
         prepared = workflow.prepare_issue(direct_request("destination"))
@@ -239,16 +259,39 @@ def main() -> int:
             lambda: OpenHandsFounderIntake(wrong_version),
         )
 
+        forged_principal_raw = workflow.runtime_profile.binding()
+        forged_principal_raw["principal"] = (
+            "spiffe://mainstreet.local/tenant-founder/agent/attacker"
+        )
+        forged_principal = AuthenticatedRuntimeBinding.from_mapping(forged_principal_raw)
+        expect_block(
+            results,
+            "authenticated_principal_substitution",
+            OpenHandsTransportError,
+            lambda: OpenHandsAuthenticatedRoute(intake, workflow, forged_principal),
+        )
+
+        forged_manifest_raw = workflow.runtime_profile.binding()
+        forged_manifest_raw["runtime_manifest_digest"] = "sha256:" + ("0" * 64)
+        forged_manifest = AuthenticatedRuntimeBinding.from_mapping(forged_manifest_raw)
+        expect_block(
+            results,
+            "authenticated_manifest_substitution",
+            OpenHandsTransportError,
+            lambda: OpenHandsAuthenticatedRoute(intake, workflow, forged_manifest),
+        )
+
     surviving = [
         str(item["name"]) for item in results if not bool(item["blocked_or_detected"])
     ]
     report = {
-        "schema_version": "claimsieve.openhands_authority_red_team.v1",
+        "schema_version": "claimsieve.openhands_authority_red_team.v2",
         "upstream_repository": "OpenHands/OpenHands",
         "pinned_commit": PINNED_OPENHANDS_COMMIT,
         "tested_path": {
             "action_kind": "MCPToolAction",
             "tool_name": "create_github_issue",
+            "runtime_identity_source": "modeled out-of-band authenticated binding",
         },
         "total": len(results),
         "blocked_or_detected": sum(
@@ -258,6 +301,8 @@ def main() -> int:
         "results": results,
         "limitations": [
             "This is a local composition harness using the deterministic provider simulator, not a live OpenHands deployment.",
+            "AuthenticatedRuntimeBinding models a trusted transport/attestation input; it is not an mTLS, SPIFFE, or measured-attestation implementation.",
+            "The pinned commit and runtime manifest are expected-profile bindings, not proof of the bytes executing in a live OpenHands workload.",
             "It does not prove that a deployed OpenHands process lacks ambient credentials; process and network isolation remain deployment obligations.",
             "Pending tool-call replay state in OpenHandsFounderIntake is process-local and is not restart-durable.",
             "The harness covers the selected MCP GitHub-issue capability only; other OpenHands capabilities remain blocked from this authority intake.",

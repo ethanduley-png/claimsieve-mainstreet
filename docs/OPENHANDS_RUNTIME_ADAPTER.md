@@ -19,7 +19,7 @@ The adapter does not:
 - retry provider execution;
 - declare an external action successful or failed.
 
-The route-result envelope therefore sets `external_action_executed` to `false` at the adapter boundary.
+The route-result envelope therefore sets `external_action_executed` to `false` at the adapter boundary. The callback used as `route_intent` must also return an explicit proposal-only receipt with `external_action_executed: false`; missing, ambiguous, or execution-positive receipts are rejected. This catches accidental composition with an execution-capable route, but it does not replace process separation or prove that a dishonest callback had no side effect.
 
 ## Reviewed action classification
 
@@ -64,13 +64,14 @@ Correlation context is not a permit or approval.
 1. MCP actions are routed without executing an external action.
 2. OpenHands thought/reasoning and risk labels do not become ClaimSieve authority inputs.
 3. A `LOW` upstream risk label cannot authorize execution.
-4. Mutable source arguments are copied before routing to prevent post-canonicalization mutation.
-5. File reads are treated as consequential because confidentiality loss is an effect.
-6. File writes and shell execution are consequential.
-7. Model-profile switching and sensitive file discovery are consequential.
-8. Explicitly internal thought operations stay outside the consequential route.
-9. Unknown action kinds fail closed.
-10. Malformed MCP payloads, missing tool-call identities, and invalid runtime sequence metadata are rejected.
+4. A route callback cannot return an ambiguous or execution-positive receipt and still be accepted as proposal-only.
+5. Mutable source arguments are copied before routing to prevent post-canonicalization mutation.
+6. File reads are treated as consequential because confidentiality loss is an effect.
+7. File writes and shell execution are consequential.
+8. Model-profile switching and sensitive file discovery are consequential.
+9. Explicitly internal thought operations stay outside the consequential route.
+10. Unknown action kinds fail closed.
+11. Malformed MCP payloads, missing tool-call identities, and invalid runtime sequence metadata are rejected.
 
 ## Nonblocking upstream drift lane
 

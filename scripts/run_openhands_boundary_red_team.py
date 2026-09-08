@@ -115,7 +115,6 @@ def main() -> int:
         )
         authenticated_route = OpenHandsAuthenticatedRoute(
             intake,
-            workflow,
             authenticated_binding,
         )
         context = OpenHandsRuntimeContext(
@@ -268,7 +267,7 @@ def main() -> int:
             results,
             "authenticated_principal_substitution",
             OpenHandsTransportError,
-            lambda: OpenHandsAuthenticatedRoute(intake, workflow, forged_principal),
+            lambda: OpenHandsAuthenticatedRoute(intake, forged_principal),
         )
 
         forged_manifest_raw = workflow.runtime_profile.binding()
@@ -278,7 +277,7 @@ def main() -> int:
             results,
             "authenticated_manifest_substitution",
             OpenHandsTransportError,
-            lambda: OpenHandsAuthenticatedRoute(intake, workflow, forged_manifest),
+            lambda: OpenHandsAuthenticatedRoute(intake, forged_manifest),
         )
 
     surviving = [

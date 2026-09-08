@@ -23,7 +23,7 @@ The route-result envelope therefore sets `external_action_executed` to `false` a
 
 ## Reviewed action classification
 
-This baseline deliberately treats capability access, not only external writes, as potentially consequential. A read can disclose credentials, customer data, source code, browser state, or other protected information to an untrusted runtime or model provider. ClaimSieve therefore does not assume that "read only" means "safe."
+This baseline deliberately treats capability access, not only external writes, as potentially consequential. A read can disclose credentials, customer data, source code, browser state, or other protected information to an untrusted runtime or model provider. A final user-visible response can also disclose protected data or make an operational claim. ClaimSieve therefore does not assume that "read only" or "final response" means "safe."
 
 The reviewed consequential set includes:
 
@@ -35,11 +35,12 @@ The reviewed consequential set includes:
 - subagent/task launch;
 - model-profile switching;
 - Canvas UI capability actions;
-- child-conversation launch.
+- child-conversation launch;
+- user-visible `FinishAction` output.
 
-Concretely, the current adapter routes `ExecuteBashAction`, `TerminalAction`, `MCPToolAction`, all OpenHands file-editor action kinds, `GlobAction`, `GrepAction`, all reviewed browser action kinds, `InvokeSkillAction`, `TaskAction`, `SwitchLLMAction`, `CanvasUIAction`, and `LaunchChildConversationAction` to the ClaimSieve proposal boundary.
+The adapter recognizes both the legacy OpenHands action names and the generated SDK client action discriminators currently used for Canvas UI and child-conversation launch: `ClientAction_canvas_ui_control` and `ClientAction_launch_child_conversation`.
 
-Only the explicitly internal `ThinkAction`, `FinishAction`, and `TaskTrackerAction` are currently classified as non-consequential. Any other action kind fails closed.
+Only the explicitly internal `ThinkAction` and `TaskTrackerAction` are currently classified as non-consequential. Any other action kind fails closed.
 
 Failing closed is deliberate: an upstream feature addition must not silently acquire authority merely because OpenHands can represent or execute it.
 
@@ -69,9 +70,11 @@ Correlation context is not a permit or approval.
 6. File reads are treated as consequential because confidentiality loss is an effect.
 7. File writes and shell execution are consequential.
 8. Model-profile switching and sensitive file discovery are consequential.
-9. Explicitly internal thought operations stay outside the consequential route.
-10. Unknown action kinds fail closed.
-11. Malformed MCP payloads, missing tool-call identities, and invalid runtime sequence metadata are rejected.
+9. User-visible final output is consequential.
+10. Current generated client-action discriminators are classified as consequential.
+11. Explicitly internal thought operations stay outside the consequential route.
+12. Unknown action kinds fail closed.
+13. Malformed MCP payloads, missing tool-call identities, and invalid runtime sequence metadata are rejected.
 
 ## Nonblocking upstream drift lane
 
@@ -81,7 +84,7 @@ Correlation context is not a permit or approval.
 
 `upstream-contract` checks the pinned OpenHands source contract and preserves a JSON artifact. It is deliberately `continue-on-error: true` during this first baseline phase. A drift failure is evidence to investigate, not yet a merge blocker.
 
-The contract probe validates the presence of the `ActionEvent` fields required by the adapter, every currently reviewed consequential capability kind, the explicitly internal action kinds, and the file-editor command contract. It does not prove OpenHands runtime safety and does not test a live OpenHands deployment.
+The contract probe validates the `ActionEvent` fields required by the adapter, every currently reviewed capability interface, the explicitly internal action kinds, the file-editor command contract, and the generated Canvas UI and child-conversation discriminator definitions. It does not prove OpenHands runtime safety and does not test a live OpenHands deployment.
 
 ## Promotion path
 
@@ -92,7 +95,7 @@ The intended maturity sequence is:
 1. structural compatibility baseline;
 2. proposal-only adapter tests;
 3. runtime-principal and manifest binding;
-4. exact capability, destination, data-access, and parameter binding for selected consequential actions;
+4. exact capability, destination, data-access, outbound-content, and parameter binding for selected consequential actions;
 5. replay and freshness tests;
 6. live OpenHands adversarial scenarios with no ambient executor credentials;
 7. preserved evidence and baseline metrics;

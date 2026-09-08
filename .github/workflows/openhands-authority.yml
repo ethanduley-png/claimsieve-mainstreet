@@ -7,6 +7,7 @@ on:
       - "python/tests/test_openhands_*.py"
       - "scripts/run_openhands_boundary_red_team.py"
       - "docs/OPENHANDS_AUTHORITY_BINDING.md"
+      - "docs/OPENHANDS_TRANSPORT_IDENTITY.md"
       - ".github/workflows/openhands-authority.yml"
   workflow_dispatch:
 

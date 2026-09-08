@@ -1,0 +1,67 @@
+name: OpenHands Authority Binding
+
+on:
+  pull_request:
+    paths:
+      - "python/mainstreet_runtimes/**"
+      - "python/tests/test_openhands_*.py"
+      - "scripts/run_openhands_boundary_red_team.py"
+      - "docs/OPENHANDS_AUTHORITY_BINDING.md"
+      - ".github/workflows/openhands-authority.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  authority-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: python/requirements-test.txt
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r python/requirements-test.txt
+      - name: Run OpenHands adapter and authority-intake tests
+        env:
+          PYTHONPATH: python
+        run: |
+          python -m unittest discover \
+            -s python/tests \
+            -p 'test_openhands_*.py' \
+            -v
+
+  adversarial-baseline:
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: python/requirements-test.txt
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r python/requirements-test.txt
+      - name: Run OpenHands authority red team
+        env:
+          PYTHONPATH: python
+        run: |
+          python scripts/run_openhands_boundary_red_team.py \
+            --output openhands-authority-red-team.json
+      - name: Preserve adversarial evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: openhands-authority-red-team
+          path: openhands-authority-red-team.json
+          if-no-files-found: warn

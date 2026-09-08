@@ -34,7 +34,6 @@ class OpenHandsAuthenticatedTransportTests(unittest.TestCase):
         )
         self.transport = OpenHandsAuthenticatedRoute(
             self.intake,
-            self.workflow,
             self.binding,
         )
         self.adapter = OpenHandsProposalAdapter(
@@ -83,14 +82,14 @@ class OpenHandsAuthenticatedTransportTests(unittest.TestCase):
         raw["principal"] = "spiffe://mainstreet.local/tenant-founder/agent/attacker"
         forged = AuthenticatedRuntimeBinding.from_mapping(raw)
         with self.assertRaisesRegex(OpenHandsTransportError, "does not match"):
-            OpenHandsAuthenticatedRoute(self.intake, self.workflow, forged)
+            OpenHandsAuthenticatedRoute(self.intake, forged)
 
     def test_wrong_authenticated_manifest_cannot_create_route(self) -> None:
         raw = self.workflow.runtime_profile.binding()
         raw["runtime_manifest_digest"] = "sha256:" + ("0" * 64)
         forged = AuthenticatedRuntimeBinding.from_mapping(raw)
         with self.assertRaisesRegex(OpenHandsTransportError, "does not match"):
-            OpenHandsAuthenticatedRoute(self.intake, self.workflow, forged)
+            OpenHandsAuthenticatedRoute(self.intake, forged)
 
     def test_payload_cannot_replace_out_of_band_authenticated_binding(self) -> None:
         intent = self.adapter.build_intent(self.event("call-transport-002")).to_dict()

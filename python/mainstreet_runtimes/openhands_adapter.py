@@ -77,9 +77,10 @@ class OpenHandsProposalAdapter:
 
     This first baseline is deliberately conservative. Capabilities that can
     execute code, access files or browser state, invoke skills/tools, change the
-    model/runtime graph, or spawn work are treated as consequential. Read access
-    is included because confidentiality loss is a consequential effect even when
-    no external write occurs. Unknown action kinds fail closed.
+    model/runtime graph, spawn work, or emit user-visible output are treated as
+    consequential. Read access is included because confidentiality loss is a
+    consequential effect even when no external write occurs. Unknown action
+    kinds fail closed.
     """
 
     CONSEQUENTIAL_ACTION_KINDS = frozenset(
@@ -106,14 +107,16 @@ class OpenHandsProposalAdapter:
             "TaskAction",
             "SwitchLLMAction",
             "CanvasUIAction",
+            "ClientAction_canvas_ui_control",
             "LaunchChildConversationAction",
+            "ClientAction_launch_child_conversation",
+            "FinishAction",
         }
     )
 
     NON_CONSEQUENTIAL_ACTION_KINDS = frozenset(
         {
             "ThinkAction",
-            "FinishAction",
             "TaskTrackerAction",
         }
     )

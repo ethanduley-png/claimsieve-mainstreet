@@ -23,8 +23,14 @@ from .openhands_adapter import (
     OpenHandsProposalAdapter,
     OpenHandsRuntimeContext,
 )
+from .openhands_transport import (
+    AuthenticatedRuntimeBinding,
+    OpenHandsAuthenticatedRoute,
+    OpenHandsTransportError,
+)
 
 __all__ = [
+    "AuthenticatedRuntimeBinding",
     "ClaimSieveIntakeError",
     "ClaimSieveRuntimeContext",
     "ConsequentialToolIntent",
@@ -32,9 +38,11 @@ __all__ = [
     "DeepAgentsFounderIntake",
     "DeepAgentsProposalAdapter",
     "OpenHandsAdapterError",
+    "OpenHandsAuthenticatedRoute",
     "OpenHandsConsequentialIntent",
     "OpenHandsFounderIntake",
     "OpenHandsProposalAdapter",
     "OpenHandsRuntimeContext",
+    "OpenHandsTransportError",
     "PINNED_OPENHANDS_COMMIT",
 ]

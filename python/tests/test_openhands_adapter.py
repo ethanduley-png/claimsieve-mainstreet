@@ -209,9 +209,46 @@ class OpenHandsProposalAdapterTests(unittest.TestCase):
         }
         self.assertTrue(self.adapter.is_consequential_event(event))
 
-    def test_internal_think_action_is_not_routable_as_consequential(self) -> None:
+    def test_finish_action_is_consequential_because_it_emits_user_visible_output(self) -> None:
         event = {
             "tool_call_id": "call-oh-010",
+            "tool_name": "finish",
+            "action": {
+                "kind": "FinishAction",
+                "message": "Customer-facing answer",
+            },
+        }
+        self.assertTrue(self.adapter.is_consequential_event(event))
+        result = self.adapter.route_event(event)
+        self.assertTrue(result["routed_to_claimsieve"])
+        self.assertFalse(result["external_action_executed"])
+
+    def test_generated_client_action_kinds_are_consequential(self) -> None:
+        for call_id, tool_name, kind, payload in (
+            (
+                "call-oh-011",
+                "canvas_ui_control",
+                "ClientAction_canvas_ui_control",
+                {"command": "open_tab", "tab": "preview"},
+            ),
+            (
+                "call-oh-012",
+                "launch_child_conversation",
+                "ClientAction_launch_child_conversation",
+                {"target": "local", "task": "inspect boundary"},
+            ),
+        ):
+            with self.subTest(kind=kind):
+                event = {
+                    "tool_call_id": call_id,
+                    "tool_name": tool_name,
+                    "action": {"kind": kind, **payload},
+                }
+                self.assertTrue(self.adapter.is_consequential_event(event))
+
+    def test_internal_think_action_is_not_routable_as_consequential(self) -> None:
+        event = {
+            "tool_call_id": "call-oh-013",
             "tool_name": "think",
             "action": {"kind": "ThinkAction", "thought": "plan only"},
         }
@@ -224,7 +261,7 @@ class OpenHandsProposalAdapterTests(unittest.TestCase):
         with self.assertRaisesRegex(OpenHandsAdapterError, "unreviewed OpenHands action kind"):
             self.adapter.is_consequential_event(
                 {
-                    "tool_call_id": "call-oh-011",
+                    "tool_call_id": "call-oh-014",
                     "tool_name": "future_tool",
                     "action": {"kind": "FutureSideEffectAction", "value": "x"},
                 }
@@ -234,7 +271,7 @@ class OpenHandsProposalAdapterTests(unittest.TestCase):
         with self.assertRaisesRegex(OpenHandsAdapterError, "MCPToolAction.data must be a mapping"):
             self.adapter.build_intent(
                 {
-                    "tool_call_id": "call-oh-012",
+                    "tool_call_id": "call-oh-015",
                     "tool_name": "mcp_tool",
                     "action": {"kind": "MCPToolAction", "data": "not-a-mapping"},
                 }

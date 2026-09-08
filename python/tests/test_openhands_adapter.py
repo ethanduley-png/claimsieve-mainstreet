@@ -25,6 +25,7 @@ class OpenHandsProposalAdapterTests(unittest.TestCase):
             return {
                 "status": "CLAIMSIEVE_INTAKE_ACCEPTED",
                 "intent_digest": "fixture-openhands-intent-digest",
+                "external_action_executed": False,
             }
 
         self.adapter = OpenHandsProposalAdapter(self.context, route)
@@ -68,7 +69,7 @@ class OpenHandsProposalAdapterTests(unittest.TestCase):
         self.assertNotIn("reasoning_content", intent)
         self.assertNotIn("security_risk", intent)
 
-    def test_openhands_low_risk_label_never_authorizes_execution(self) -> None:
+    def test_openhands_low_risk_label_cannot_bypass_proposal_only_route_contract(self) -> None:
         adapter = OpenHandsProposalAdapter(
             self.context,
             lambda intent: {
@@ -76,27 +77,46 @@ class OpenHandsProposalAdapterTests(unittest.TestCase):
                 "external_action_executed": True,
             },
         )
-        result = adapter.route_event(
-            {
-                "tool_call_id": "call-oh-002",
-                "tool_name": "terminal",
-                "security_risk": "LOW",
-                "action": {
-                    "kind": "ExecuteBashAction",
-                    "command": "printf test",
-                    "is_input": False,
-                    "timeout": 5,
-                    "reset": False,
-                },
-            }
+        with self.assertRaisesRegex(OpenHandsAdapterError, "proposal-only receipt"):
+            adapter.route_event(
+                {
+                    "tool_call_id": "call-oh-002",
+                    "tool_name": "terminal",
+                    "security_risk": "LOW",
+                    "action": {
+                        "kind": "ExecuteBashAction",
+                        "command": "printf test",
+                        "is_input": False,
+                        "timeout": 5,
+                        "reset": False,
+                    },
+                }
+            )
+
+    def test_route_receipt_must_explicitly_state_no_external_execution(self) -> None:
+        adapter = OpenHandsProposalAdapter(
+            self.context,
+            lambda intent: {"status": "AMBIGUOUS"},
         )
-        self.assertFalse(result["external_action_executed"])
-        self.assertTrue(result["routed_to_claimsieve"])
+        with self.assertRaisesRegex(OpenHandsAdapterError, "proposal-only receipt"):
+            adapter.route_event(
+                {
+                    "tool_call_id": "call-oh-003",
+                    "tool_name": "terminal",
+                    "action": {
+                        "kind": "TerminalAction",
+                        "command": "echo test",
+                        "is_input": False,
+                        "timeout": None,
+                        "reset": False,
+                    },
+                }
+            )
 
     def test_mcp_arguments_are_copied_before_routing(self) -> None:
         data = {"destination": "customer-001", "amount": 100}
         event = {
-            "tool_call_id": "call-oh-003",
+            "tool_call_id": "call-oh-004",
             "tool_name": "issue_refund",
             "action": {"kind": "MCPToolAction", "data": data},
         }
@@ -112,7 +132,7 @@ class OpenHandsProposalAdapterTests(unittest.TestCase):
 
     def test_file_view_is_consequential_because_read_access_can_disclose_data(self) -> None:
         event = {
-            "tool_call_id": "call-oh-004",
+            "tool_call_id": "call-oh-005",
             "tool_name": "file_editor",
             "action": {
                 "kind": "FileEditorAction",
@@ -133,7 +153,7 @@ class OpenHandsProposalAdapterTests(unittest.TestCase):
     def test_file_create_is_consequential(self) -> None:
         result = self.adapter.route_event(
             {
-                "tool_call_id": "call-oh-005",
+                "tool_call_id": "call-oh-006",
                 "tool_name": "file_editor",
                 "action": {
                     "kind": "FileEditorAction",
@@ -153,7 +173,7 @@ class OpenHandsProposalAdapterTests(unittest.TestCase):
 
     def test_execute_bash_is_always_consequential(self) -> None:
         event = {
-            "tool_call_id": "call-oh-006",
+            "tool_call_id": "call-oh-007",
             "tool_name": "terminal",
             "action": {
                 "kind": "ExecuteBashAction",
@@ -167,7 +187,7 @@ class OpenHandsProposalAdapterTests(unittest.TestCase):
 
     def test_switching_model_profile_is_consequential(self) -> None:
         event = {
-            "tool_call_id": "call-oh-007",
+            "tool_call_id": "call-oh-008",
             "tool_name": "switch_llm",
             "action": {
                 "kind": "SwitchLLMAction",
@@ -179,7 +199,7 @@ class OpenHandsProposalAdapterTests(unittest.TestCase):
 
     def test_glob_file_discovery_is_consequential(self) -> None:
         event = {
-            "tool_call_id": "call-oh-008",
+            "tool_call_id": "call-oh-009",
             "tool_name": "glob",
             "action": {
                 "kind": "GlobAction",
@@ -191,7 +211,7 @@ class OpenHandsProposalAdapterTests(unittest.TestCase):
 
     def test_internal_think_action_is_not_routable_as_consequential(self) -> None:
         event = {
-            "tool_call_id": "call-oh-009",
+            "tool_call_id": "call-oh-010",
             "tool_name": "think",
             "action": {"kind": "ThinkAction", "thought": "plan only"},
         }
@@ -204,7 +224,7 @@ class OpenHandsProposalAdapterTests(unittest.TestCase):
         with self.assertRaisesRegex(OpenHandsAdapterError, "unreviewed OpenHands action kind"):
             self.adapter.is_consequential_event(
                 {
-                    "tool_call_id": "call-oh-010",
+                    "tool_call_id": "call-oh-011",
                     "tool_name": "future_tool",
                     "action": {"kind": "FutureSideEffectAction", "value": "x"},
                 }
@@ -214,7 +234,7 @@ class OpenHandsProposalAdapterTests(unittest.TestCase):
         with self.assertRaisesRegex(OpenHandsAdapterError, "MCPToolAction.data must be a mapping"):
             self.adapter.build_intent(
                 {
-                    "tool_call_id": "call-oh-011",
+                    "tool_call_id": "call-oh-012",
                     "tool_name": "mcp_tool",
                     "action": {"kind": "MCPToolAction", "data": "not-a-mapping"},
                 }

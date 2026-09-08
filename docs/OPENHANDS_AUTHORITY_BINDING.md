@@ -16,12 +16,12 @@ All other OpenHands capabilities remain outside this authority intake.
 
 ## Intent v2
 
-The OpenHands proposal adapter now emits `mainstreet.consequential_tool_intent.v2`.
+The OpenHands proposal adapter emits `mainstreet.consequential_tool_intent.v2`.
 
-The v2 envelope binds:
+The v2 envelope carries:
 
-- runtime name;
-- exact pinned runtime revision;
+- expected runtime name;
+- expected pinned runtime revision;
 - exact OpenHands action discriminator;
 - tool-call identity;
 - tool name;
@@ -30,26 +30,38 @@ The v2 envelope binds:
 
 OpenHands reasoning, `security_risk`, critic data, and other model-generated metadata are not authority inputs. The OpenHands intake rejects unexpected top-level fields rather than silently ignoring them.
 
-## Runtime principal and manifest binding
+The runtime name and revision inside this proposal envelope are binding inputs, not authentication. A proposal-controlled field cannot prove which workload sent the request. The separate transport identity model is documented in `OPENHANDS_TRANSPORT_IDENTITY.md`.
 
-`OpenHandsFounderIntake` requires a `FounderOSReferenceWorkflow` whose runtime profile is exactly:
+## Runtime principal and profile binding
+
+`OpenHandsFounderIntake` requires a `FounderOSReferenceWorkflow` whose configured runtime profile is exactly:
 
 `spiffe://mainstreet.local/tenant-founder/agent/openhands`
 
 with the pinned OpenHands revision above.
 
-The intake independently reconstructs the expected runtime profile and requires the full binding to match, including:
+The intake independently reconstructs the expected reference profile and requires the full binding to match, including:
 
 - runtime name;
 - runtime version;
 - principal;
-- runtime manifest digest;
-- skills manifest digest;
+- runtime profile digest;
+- skills profile digest;
 - network profile digest.
 
-The prepared proposal must carry that same runtime identity. The issued permit must carry the same principal. The signed deployment certificate must identify the same runtime name, revision, principal, and manifest digest.
+The prepared proposal must carry that same runtime identity. The issued permit must carry the same principal. The signed deployment certificate must identify the same configured runtime name, revision, principal, and reference-profile digest.
 
-This means an OpenHands proposal cannot be admitted through this reference path after substituting a different runtime identity, runtime revision, or reviewed capability.
+This closes substitution inside the reference composition: a proposal cannot be admitted through this path after changing the runtime identity, runtime revision, or reviewed capability.
+
+It does **not** prove that the bytes of a live OpenHands process match the pinned revision. The current `runtime_manifest_digest` is a canonical digest of ClaimSieve reference runtime metadata, not a complete binary, container-image, filesystem, or measured-boot hash. Deployment-level artifact identity remains a separate requirement.
+
+## Out-of-band authenticated route model
+
+`AuthenticatedRuntimeBinding` and `OpenHandsAuthenticatedRoute` model the additional property the live deployment needs: caller identity supplied independently of the OpenHands proposal payload.
+
+The route is constructed only when the authenticated binding exactly matches the independently configured ClaimSieve runtime profile. Principal or manifest substitution in that out-of-band binding is rejected before proposal admission.
+
+This is a reference model, not an implementation of mutual Transport Layer Security, SPIFFE workload identity, or measured attestation. Production must populate the equivalent binding from infrastructure the OpenHands process cannot forge.
 
 ## Exact effect binding
 
@@ -86,9 +98,11 @@ Tool-call identities are tracked under a same-process lock so duplicate or concu
 10. post-permit runtime-identity mutation;
 11. unknown pending permit execution;
 12. execution-positive route receipts;
-13. an unpinned OpenHands runtime profile backing the intake.
+13. an unpinned OpenHands runtime profile backing the intake;
+14. authenticated-principal substitution;
+15. authenticated reference-manifest substitution.
 
-The harness writes a JSON evidence report and exits nonzero if any tested bypass survives.
+The harness records unexpected exception classes as failed test cases instead of aborting before writing evidence. It writes a JSON report and exits nonzero if any tested bypass survives or fails in an unexpected way.
 
 ## CI promotion strategy
 
@@ -103,6 +117,7 @@ A failure class should only move from observation to a merge-blocking gate after
 
 This increment is still a local reference composition. It does not prove:
 
+- that a deployed OpenHands process is cryptographically or attestationally the pinned upstream revision;
 - that a deployed OpenHands process has no ambient cloud, GitHub, shell, or model-provider credentials;
 - that process isolation, network egress confinement, or secret custody is correctly deployed;
 - that every OpenHands capability has a ClaimSieve policy mapping;
@@ -110,4 +125,4 @@ This increment is still a local reference composition. It does not prove:
 - that a live OpenHands agent cannot exploit a deployment mechanism outside the mediated adapter;
 - that the full execution boundary is green.
 
-The next deployment-level increment should run a pinned OpenHands process in an isolated environment with no executor credentials, allow egress only to the ClaimSieve intake, and attempt the same adversarial cases against a restricted executor and independent observer.
+The next deployment-level increment should run a pinned OpenHands workload in an isolated environment with independently established workload/artifact identity, no executor credentials, egress constrained to ClaimSieve intake and approved read channels, a restricted executor holding consequential provider credentials, and an independent observer.

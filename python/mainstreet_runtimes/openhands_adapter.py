@@ -64,7 +64,7 @@ RouteIntent = Callable[[dict[str, Any]], Mapping[str, Any]]
 
 
 class OpenHandsProposalAdapter:
-    """Route potentially consequential OpenHands actions to ClaimSieve.
+    """Route reviewed OpenHands capabilities to the ClaimSieve proposal boundary.
 
     The adapter is intentionally proposal-only. It never executes OpenHands
     actions, issues ClaimSieve permits, owns provider credentials, or interprets
@@ -74,36 +74,47 @@ class OpenHandsProposalAdapter:
     ``tool_call_id``, and an ``action`` mapping with a ``kind`` discriminator.
     Reasoning/thought fields are deliberately ignored and are not copied into the
     ClaimSieve intent.
+
+    This first baseline is deliberately conservative. Capabilities that can
+    execute code, access files or browser state, invoke skills/tools, change the
+    model/runtime graph, or spawn work are treated as consequential. Read access
+    is included because confidentiality loss is a consequential effect even when
+    no external write occurs. Unknown action kinds fail closed.
     """
 
-    ALWAYS_CONSEQUENTIAL_ACTION_KINDS = frozenset(
+    CONSEQUENTIAL_ACTION_KINDS = frozenset(
         {
             "ExecuteBashAction",
             "TerminalAction",
             "MCPToolAction",
-            "TaskAction",
-            "LaunchChildConversationAction",
-            "BrowserNavigateAction",
-            "BrowserClickAction",
-            "BrowserTypeAction",
-        }
-    )
-    FILE_ACTION_KINDS = frozenset(
-        {
             "FileEditorAction",
             "StrReplaceEditorAction",
             "PlanningFileEditorAction",
+            "GlobAction",
+            "GrepAction",
+            "BrowserNavigateAction",
+            "BrowserClickAction",
+            "BrowserTypeAction",
+            "BrowserGetStateAction",
+            "BrowserGetContentAction",
+            "BrowserScrollAction",
+            "BrowserGoBackAction",
+            "BrowserListTabsAction",
+            "BrowserSwitchTabAction",
+            "BrowserCloseTabAction",
+            "InvokeSkillAction",
+            "TaskAction",
+            "SwitchLLMAction",
+            "CanvasUIAction",
+            "LaunchChildConversationAction",
         }
     )
-    KNOWN_READ_ONLY_ACTION_KINDS = frozenset(
+
+    NON_CONSEQUENTIAL_ACTION_KINDS = frozenset(
         {
             "ThinkAction",
             "FinishAction",
-            "GlobAction",
-            "GrepAction",
-            "BrowserGetStateAction",
-            "BrowserGetContentAction",
-            "BrowserListTabsAction",
+            "TaskTrackerAction",
         }
     )
 
@@ -145,20 +156,16 @@ class OpenHandsProposalAdapter:
         action = self._mapping(event_map.get("action"), "action")
         kind = self._nonempty_string(action.get("kind"), "action.kind", 128)
 
-        if kind in self.ALWAYS_CONSEQUENTIAL_ACTION_KINDS:
+        if kind in self.CONSEQUENTIAL_ACTION_KINDS:
             return True
         if kind in self._extra_consequential_action_kinds:
             return True
-        if kind in self.FILE_ACTION_KINDS:
-            command = action.get("command")
-            if not isinstance(command, str):
-                raise OpenHandsAdapterError("file action command must be a string")
-            return command != "view"
-        if kind in self.KNOWN_READ_ONLY_ACTION_KINDS:
+        if kind in self.NON_CONSEQUENTIAL_ACTION_KINDS:
             return False
 
-        # Unknown OpenHands action kinds fail closed. Upstream can add new action
-        # kinds without ClaimSieve having reviewed their side-effect semantics.
+        # Upstream may add action kinds without ClaimSieve having reviewed their
+        # authority, confidentiality, or side-effect semantics. Never silently
+        # classify such a capability as safe.
         raise OpenHandsAdapterError(f"unreviewed OpenHands action kind: {kind}")
 
     def build_intent(self, event: Mapping[str, Any]) -> OpenHandsConsequentialIntent:

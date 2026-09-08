@@ -5,6 +5,9 @@ from dataclasses import asdict, dataclass
 from typing import Any, Callable, Mapping
 
 
+PINNED_OPENHANDS_COMMIT = "ea7a85c27628a6abad4d5738527e5044b34b91ff"
+
+
 class OpenHandsAdapterError(ValueError):
     """Raised when an untrusted OpenHands action cannot be canonicalized."""
 
@@ -44,6 +47,8 @@ class OpenHandsConsequentialIntent:
 
     schema_version: str
     runtime: str
+    runtime_version: str
+    action_kind: str
     tool_call_id: str
     tool_name: str
     arguments: dict[str, Any]
@@ -53,6 +58,8 @@ class OpenHandsConsequentialIntent:
         return {
             "schema_version": self.schema_version,
             "runtime": self.runtime,
+            "runtime_version": self.runtime_version,
+            "action_kind": self.action_kind,
             "tool_call_id": self.tool_call_id,
             "tool_name": self.tool_name,
             "arguments": copy.deepcopy(self.arguments),
@@ -75,13 +82,21 @@ class OpenHandsProposalAdapter:
     Reasoning/thought fields are deliberately ignored and are not copied into the
     ClaimSieve intent.
 
-    This first baseline is deliberately conservative. Capabilities that can
-    execute code, access files or browser state, invoke skills/tools, change the
-    model/runtime graph, spawn work, or emit user-visible output are treated as
-    consequential. Read access is included because confidentiality loss is a
-    consequential effect even when no external write occurs. Unknown action
-    kinds fail closed.
+    The v2 intent binds the exact pinned OpenHands source revision and action
+    discriminator in addition to the tool name and copied arguments. This prevents
+    the authority intake from authorizing a proposal after its runtime revision or
+    capability identity has been substituted.
+
+    Capabilities that can execute code, access files or browser state, invoke
+    skills/tools, change the model/runtime graph, spawn work, or emit user-visible
+    output are treated as consequential. Read access is included because
+    confidentiality loss is a consequential effect even when no external write
+    occurs. Unknown action kinds fail closed.
     """
+
+    INTENT_SCHEMA = "mainstreet.consequential_tool_intent.v2"
+    RUNTIME_NAME = "openhands"
+    RUNTIME_VERSION = PINNED_OPENHANDS_COMMIT
 
     CONSEQUENTIAL_ACTION_KINDS = frozenset(
         {
@@ -166,9 +181,6 @@ class OpenHandsProposalAdapter:
         if kind in self.NON_CONSEQUENTIAL_ACTION_KINDS:
             return False
 
-        # Upstream may add action kinds without ClaimSieve having reviewed their
-        # authority, confidentiality, or side-effect semantics. Never silently
-        # classify such a capability as safe.
         raise OpenHandsAdapterError(f"unreviewed OpenHands action kind: {kind}")
 
     def build_intent(self, event: Mapping[str, Any]) -> OpenHandsConsequentialIntent:
@@ -195,8 +207,10 @@ class OpenHandsProposalAdapter:
             )
 
         return OpenHandsConsequentialIntent(
-            schema_version="mainstreet.consequential_tool_intent.v1",
-            runtime="openhands",
+            schema_version=self.INTENT_SCHEMA,
+            runtime=self.RUNTIME_NAME,
+            runtime_version=self.RUNTIME_VERSION,
+            action_kind=kind,
             tool_call_id=tool_call_id,
             tool_name=tool_name,
             arguments=arguments,
@@ -215,7 +229,9 @@ class OpenHandsProposalAdapter:
             )
         return {
             "schema_version": "mainstreet.claimsieve_route_result.v1",
-            "runtime": "openhands",
+            "runtime": self.RUNTIME_NAME,
+            "runtime_version": self.RUNTIME_VERSION,
+            "action_kind": intent.action_kind,
             "tool_call_id": intent.tool_call_id,
             "tool_name": intent.tool_name,
             "routed_to_claimsieve": True,

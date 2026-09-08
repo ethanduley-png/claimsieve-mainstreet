@@ -12,6 +12,12 @@ from .deepagents_adapter import (
     DeepAgentsAdapterError,
     DeepAgentsProposalAdapter,
 )
+from .openhands_adapter import (
+    OpenHandsAdapterError,
+    OpenHandsConsequentialIntent,
+    OpenHandsProposalAdapter,
+    OpenHandsRuntimeContext,
+)
 
 __all__ = [
     "ClaimSieveIntakeError",
@@ -20,4 +26,8 @@ __all__ = [
     "DeepAgentsAdapterError",
     "DeepAgentsFounderIntake",
     "DeepAgentsProposalAdapter",
+    "OpenHandsAdapterError",
+    "OpenHandsConsequentialIntent",
+    "OpenHandsProposalAdapter",
+    "OpenHandsRuntimeContext",
 ]

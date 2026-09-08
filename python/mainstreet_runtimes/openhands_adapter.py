@@ -205,6 +205,11 @@ class OpenHandsProposalAdapter:
         routed = self._route_intent(intent.to_dict())
         if not isinstance(routed, Mapping):
             raise OpenHandsAdapterError("route_intent must return a mapping")
+        route_result = copy.deepcopy(dict(routed))
+        if route_result.get("external_action_executed") is not False:
+            raise OpenHandsAdapterError(
+                "route_intent must return an explicit proposal-only receipt with external_action_executed false"
+            )
         return {
             "schema_version": "mainstreet.claimsieve_route_result.v1",
             "runtime": "openhands",
@@ -212,5 +217,5 @@ class OpenHandsProposalAdapter:
             "tool_name": intent.tool_name,
             "routed_to_claimsieve": True,
             "external_action_executed": False,
-            "claimsieve": copy.deepcopy(dict(routed)),
+            "claimsieve": route_result,
         }

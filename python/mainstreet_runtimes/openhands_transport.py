@@ -4,8 +4,6 @@ import re
 from dataclasses import dataclass
 from typing import Any, Mapping
 
-from founder_os import FounderOSReferenceWorkflow
-
 from .claimsieve_intake import OpenHandsFounderIntake
 
 _SHA256_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
@@ -88,6 +86,11 @@ class OpenHandsAuthenticatedRoute:
     bound ``route_intent`` callback; it cannot alter the authenticated identity
     captured when this object is constructed.
 
+    The authority profile is read from the intake itself. Accepting a separate
+    workflow/profile argument here would allow configuration confusion where the
+    transport authenticates against one profile while routing to a different
+    intake. Keeping one source of authority identity closes that composition gap.
+
     This remains a local reference composition and is not itself a network
     authentication implementation.
     """
@@ -95,16 +98,15 @@ class OpenHandsAuthenticatedRoute:
     def __init__(
         self,
         intake: OpenHandsFounderIntake,
-        workflow: FounderOSReferenceWorkflow,
         authenticated_binding: AuthenticatedRuntimeBinding,
     ) -> None:
         if not isinstance(intake, OpenHandsFounderIntake):
             raise OpenHandsTransportError(
                 "authenticated OpenHands route requires OpenHandsFounderIntake"
             )
-        profile = getattr(workflow, "runtime_profile", None)
+        profile = getattr(intake, "_runtime_profile", None)
         if profile is None:
-            raise OpenHandsTransportError("Founder OS workflow has no runtime profile")
+            raise OpenHandsTransportError("OpenHands intake has no runtime profile")
         authenticated_binding.validate()
         expected = profile.binding()
         if authenticated_binding.binding() != expected:

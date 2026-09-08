@@ -13,6 +13,8 @@ UPSTREAM_REPOSITORY = "OpenHands/OpenHands"
 DEFAULT_COMMIT = "ea7a85c27628a6abad4d5738527e5044b34b91ff"
 ACTION_EVENT_PATH = "src/types/agent-server/core/events/action-event.ts"
 ACTION_TYPES_PATH = "src/types/agent-server/core/base/action.ts"
+CANVAS_CONSTANTS_PATH = "src/constants/canvas-ui.ts"
+CHILD_CONSTANTS_PATH = "src/constants/child-conversation.ts"
 
 ACTION_EVENT_MARKERS = (
     "action: T;",
@@ -24,6 +26,7 @@ REVIEWED_ACTION_KIND_MARKERS = tuple(
     f"export interface {name}"
     for name in (
         "MCPToolAction",
+        "FinishAction",
         "ExecuteBashAction",
         "TerminalAction",
         "FileEditorAction",
@@ -53,12 +56,15 @@ INTERNAL_ACTION_KIND_MARKERS = tuple(
     f"export interface {name}"
     for name in (
         "ThinkAction",
-        "FinishAction",
         "TaskTrackerAction",
     )
 )
 
 FILE_COMMAND_MARKER = '"view" | "create" | "str_replace" | "insert" | "undo_edit"'
+CANVAS_CLIENT_TOOL_MARKER = 'CANVAS_UI_CLIENT_TOOL_NAME = "canvas_ui_control"'
+CANVAS_CLIENT_KIND_MARKER = '`ClientAction_${CANVAS_UI_CLIENT_TOOL_NAME}`'
+CHILD_CLIENT_TOOL_MARKER = 'LAUNCH_CHILD_CONVERSATION_TOOL_NAME = "launch_child_conversation"'
+CHILD_CLIENT_KIND_MARKER = '`ClientAction_${LAUNCH_CHILD_CONVERSATION_TOOL_NAME}`'
 
 
 def raw_url(commit: str, path: str) -> str:
@@ -102,7 +108,12 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    paths = (ACTION_EVENT_PATH, ACTION_TYPES_PATH)
+    paths = (
+        ACTION_EVENT_PATH,
+        ACTION_TYPES_PATH,
+        CANVAS_CONSTANTS_PATH,
+        CHILD_CONSTANTS_PATH,
+    )
     urls = {path: raw_url(args.commit, path) for path in paths}
     report: dict[str, Any] = {
         "schema_version": "claimsieve.openhands_contract_probe.v1",
@@ -122,6 +133,8 @@ def main() -> int:
     try:
         action_event = fetch_text(urls[ACTION_EVENT_PATH])
         action_types = fetch_text(urls[ACTION_TYPES_PATH])
+        canvas_constants = fetch_text(urls[CANVAS_CONSTANTS_PATH])
+        child_constants = fetch_text(urls[CHILD_CONSTANTS_PATH])
     except (urllib.error.URLError, TimeoutError, UnicodeDecodeError, OSError) as exc:
         report["error"] = f"upstream fetch failed: {type(exc).__name__}: {exc}"
         Path(args.output).write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
@@ -150,6 +163,20 @@ def main() -> int:
             "File-editor command contract",
             action_types,
             (FILE_COMMAND_MARKER,),
+        )
+    )
+    report["checks"].append(
+        check_markers(
+            "Canvas client-action discriminator contract",
+            canvas_constants,
+            (CANVAS_CLIENT_TOOL_MARKER, CANVAS_CLIENT_KIND_MARKER),
+        )
+    )
+    report["checks"].append(
+        check_markers(
+            "Child-conversation client-action discriminator contract",
+            child_constants,
+            (CHILD_CLIENT_TOOL_MARKER, CHILD_CLIENT_KIND_MARKER),
         )
     )
 

@@ -1,20 +1,17 @@
 From Stdlib Require Import Bool Arith.
 From ClaimSieve Require Import AuthorityCompression.
 
-(** Pointwise necessity of the compact execution guard set.
+(** Pointwise necessity of the immutable compact-certificate guard set.
 
-    These results intentionally make a narrower claim than global or
-    information-theoretic minimality. For each runtime guard used by
-    [verify_compact], we construct one concrete state in which omitting only
-    that guard admits an execution that the full verifier rejects.
+    Mutable facts such as revocation and consumption are intentionally excluded
+    from this module. Their necessity belongs to trusted current state, not to
+    the immutable certificate.
 
-    This establishes that each runtime predicate is independently necessary
-    for the safety behavior represented by this model. *)
+    For each guard used by [verify_compact], we construct a concrete state where
+    omitting only that guard changes an unsafe request from reject to accept. *)
 
 Inductive runtime_guard : Type :=
 | AuthorityGuard
-| RevocationGuard
-| ConsumptionGuard
 | ActionGuard
 | PolicyGuard
 | IdentityGuard
@@ -24,8 +21,6 @@ Inductive runtime_guard : Type :=
 Definition same_runtime_guard (left right : runtime_guard) : bool :=
   match left, right with
   | AuthorityGuard, AuthorityGuard => true
-  | RevocationGuard, RevocationGuard => true
-  | ConsumptionGuard, ConsumptionGuard => true
   | ActionGuard, ActionGuard => true
   | PolicyGuard, PolicyGuard => true
   | IdentityGuard, IdentityGuard => true
@@ -45,10 +40,6 @@ Definition verify_without
   (candidate : execution_candidate) : bool :=
   apply_unless_omitted omitted AuthorityGuard
     (cert_authorized certificate) &&
-  (apply_unless_omitted omitted RevocationGuard
-    (negb (cert_revoked certificate)) &&
-  (apply_unless_omitted omitted ConsumptionGuard
-    (negb (cert_consumed certificate)) &&
   (apply_unless_omitted omitted ActionGuard
     (Nat.eqb (cert_action_digest certificate) (exec_action_digest candidate)) &&
   (apply_unless_omitted omitted PolicyGuard
@@ -58,7 +49,7 @@ Definition verify_without
   (apply_unless_omitted omitted NotBeforeGuard
     (Nat.leb (cert_valid_from certificate) (exec_sequence candidate)) &&
    apply_unless_omitted omitted ExpiryGuard
-    (Nat.leb (exec_sequence candidate) (cert_expires_at certificate)))))))).
+    (Nat.leb (exec_sequence candidate) (cert_expires_at certificate)))))).
 
 Definition necessity_base_certificate : authority_certificate :=
   {| cert_action_digest := 1;
@@ -66,8 +57,6 @@ Definition necessity_base_certificate : authority_certificate :=
      cert_identity_digest := 3;
      cert_evidence_digest := 4;
      cert_authorized := true;
-     cert_revoked := false;
-     cert_consumed := false;
      cert_valid_from := 10;
      cert_expires_at := 20 |}.
 
@@ -83,30 +72,6 @@ Definition necessity_unauthorized_certificate : authority_certificate :=
      cert_identity_digest := 3;
      cert_evidence_digest := 4;
      cert_authorized := false;
-     cert_revoked := false;
-     cert_consumed := false;
-     cert_valid_from := 10;
-     cert_expires_at := 20 |}.
-
-Definition necessity_revoked_certificate : authority_certificate :=
-  {| cert_action_digest := 1;
-     cert_policy_digest := 2;
-     cert_identity_digest := 3;
-     cert_evidence_digest := 4;
-     cert_authorized := true;
-     cert_revoked := true;
-     cert_consumed := false;
-     cert_valid_from := 10;
-     cert_expires_at := 20 |}.
-
-Definition necessity_consumed_certificate : authority_certificate :=
-  {| cert_action_digest := 1;
-     cert_policy_digest := 2;
-     cert_identity_digest := 3;
-     cert_evidence_digest := 4;
-     cert_authorized := true;
-     cert_revoked := false;
-     cert_consumed := true;
      cert_valid_from := 10;
      cert_expires_at := 20 |}.
 
@@ -147,26 +112,6 @@ Theorem authority_guard_is_necessary :
     necessity_good_candidate = true /\
   verify_compact
     necessity_unauthorized_certificate
-    necessity_good_candidate = false.
-Proof. reflexivity. Qed.
-
-Theorem revocation_guard_is_necessary :
-  verify_without
-    RevocationGuard
-    necessity_revoked_certificate
-    necessity_good_candidate = true /\
-  verify_compact
-    necessity_revoked_certificate
-    necessity_good_candidate = false.
-Proof. reflexivity. Qed.
-
-Theorem consumption_guard_is_necessary :
-  verify_without
-    ConsumptionGuard
-    necessity_consumed_certificate
-    necessity_good_candidate = true /\
-  verify_compact
-    necessity_consumed_certificate
     necessity_good_candidate = false.
 Proof. reflexivity. Qed.
 
@@ -220,10 +165,8 @@ Theorem expiry_guard_is_necessary :
     necessity_expired_candidate = false.
 Proof. reflexivity. Qed.
 
-(** The evidence digest is retained for archive linkage and reconstruction.
-    It is deliberately not consulted by [verify_compact]. This theorem makes
-    that separation explicit so the model does not overclaim that every field
-    carried by the certificate is a runtime authorization predicate. *)
+(** The evidence digest is retained for archive linkage and reconstruction. It
+    is deliberately not consulted by [verify_compact]. *)
 Definition with_evidence_digest
   (certificate : authority_certificate)
   (new_evidence_digest : nat) : authority_certificate :=
@@ -232,8 +175,6 @@ Definition with_evidence_digest
      cert_identity_digest := cert_identity_digest certificate;
      cert_evidence_digest := new_evidence_digest;
      cert_authorized := cert_authorized certificate;
-     cert_revoked := cert_revoked certificate;
-     cert_consumed := cert_consumed certificate;
      cert_valid_from := cert_valid_from certificate;
      cert_expires_at := cert_expires_at certificate |}.
 
@@ -248,8 +189,6 @@ Proof.
   reflexivity.
 Qed.
 
-(** Master statement: every runtime guard currently present in the compact
-    verifier has a concrete omission witness. *)
 Theorem compact_runtime_guard_set_is_pointwise_necessary :
   (verify_without
     AuthorityGuard
@@ -257,20 +196,6 @@ Theorem compact_runtime_guard_set_is_pointwise_necessary :
     necessity_good_candidate = true /\
    verify_compact
     necessity_unauthorized_certificate
-    necessity_good_candidate = false) /\
-  (verify_without
-    RevocationGuard
-    necessity_revoked_certificate
-    necessity_good_candidate = true /\
-   verify_compact
-    necessity_revoked_certificate
-    necessity_good_candidate = false) /\
-  (verify_without
-    ConsumptionGuard
-    necessity_consumed_certificate
-    necessity_good_candidate = true /\
-   verify_compact
-    necessity_consumed_certificate
     necessity_good_candidate = false) /\
   (verify_without
     ActionGuard

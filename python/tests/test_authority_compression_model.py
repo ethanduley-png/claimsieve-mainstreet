@@ -180,6 +180,61 @@ class AuthorityCompressionModelTests(unittest.TestCase):
                 self.assertFalse(verify(certificate, candidate))
                 self.assertTrue(verify_without_guard(certificate, candidate, guard))
 
+    def test_exhaustive_guard_omission_matrix(self) -> None:
+        unsafe_accepts = {
+            "authority": 0,
+            "revocation": 0,
+            "consumption": 0,
+            "action": 0,
+            "policy": 0,
+            "identity": 0,
+            "not_before": 0,
+            "expiry": 0,
+        }
+        full_accepts = 0
+        checked = 0
+
+        for authorized, revoked, consumed in product((False, True), repeat=3):
+            for values in product(range(2), repeat=6):
+                cert_action, cert_policy, cert_identity, action, policy, identity = values
+                for valid_from, expires_at, sequence in product(range(3), repeat=3):
+                    certificate = Certificate(
+                        cert_action,
+                        cert_policy,
+                        cert_identity,
+                        9,
+                        authorized,
+                        revoked,
+                        consumed,
+                        valid_from,
+                        expires_at,
+                    )
+                    candidate = Candidate(action, policy, identity, sequence)
+                    full = verify(certificate, candidate)
+                    checked += 1
+                    full_accepts += int(full)
+
+                    for guard in unsafe_accepts:
+                        weakened = verify_without_guard(certificate, candidate, guard)
+                        if weakened and not full:
+                            unsafe_accepts[guard] += 1
+
+        self.assertEqual(checked, 13_824)
+        self.assertEqual(full_accepts, 80)
+        self.assertEqual(
+            unsafe_accepts,
+            {
+                "authority": 80,
+                "revocation": 80,
+                "consumption": 80,
+                "action": 80,
+                "policy": 80,
+                "identity": 80,
+                "not_before": 64,
+                "expiry": 64,
+            },
+        )
+
     def test_evidence_digest_is_archive_link_not_runtime_guard(self) -> None:
         candidate = Candidate(1, 2, 3, 15)
         left = Certificate(1, 2, 3, 4, True, False, False, 10, 20)

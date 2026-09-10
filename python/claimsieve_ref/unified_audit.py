@@ -9,6 +9,13 @@ from .crypto import KeyPair, PublicKey
 from .ledger import GENESIS_HASH
 
 
+def _is_sha256_digest(value: Any) -> bool:
+    if not isinstance(value, str) or not value.startswith("sha256:"):
+        return False
+    hex_part = value[len("sha256:"):]
+    return len(hex_part) == 64 and all(character in "0123456789abcdef" for character in hex_part)
+
+
 @dataclass
 class UnifiedAuditLog:
     """Experimental single-chain audit log with role-constrained writers.
@@ -36,8 +43,8 @@ class UnifiedAuditLog:
             raise ValueError("exactly one of payload or payload_digest is required")
 
         committed_digest = digest(payload) if payload is not None else payload_digest
-        if not isinstance(committed_digest, str) or not committed_digest.startswith("sha256:"):
-            raise ValueError("payload_digest must be a sha256 commitment")
+        if not _is_sha256_digest(committed_digest):
+            raise ValueError("payload_digest must be a lowercase sha256 commitment")
 
         sequence = len(self.records)
         unsigned: dict[str, Any] = {
@@ -60,6 +67,24 @@ class UnifiedAuditLog:
         self.records.append(complete)
         return copy.deepcopy(complete)
 
+    def checkpoint(self, witness: KeyPair) -> dict[str, Any]:
+        """Sign the current externally checkpointable head.
+
+        A hash chain alone cannot detect suffix truncation. The checkpoint is
+        useful only when the witness key is trusted independently of the log.
+        """
+        unsigned = {
+            "schema_version": "claimsieve.unified_audit_checkpoint.v1",
+            "log_id": self.log_id,
+            "record_count": len(self.records),
+            "head_hash": self.records[-1]["record_hash"] if self.records else GENESIS_HASH,
+            "witness_key_id": witness.key_id,
+        }
+        return {
+            **unsigned,
+            "signature": witness.sign("unified-audit-checkpoint-v1", unsigned),
+        }
+
     @staticmethod
     def verify(
         records: list[dict[str, Any]],
@@ -69,6 +94,7 @@ class UnifiedAuditLog:
         record_roles: Mapping[str, str],
         expected_log_id: str = "claimsieve-unified-audit",
     ) -> list[str]:
+        """Verify the chain using trusted role configuration supplied externally."""
         errors: list[str] = []
         previous = GENESIS_HASH
 
@@ -96,15 +122,16 @@ class UnifiedAuditLog:
             if key_id not in allowed:
                 errors.append(f"record {index}: writer key not allowed for role")
 
+            payload_digest = record.get("payload_digest")
+            if not _is_sha256_digest(payload_digest):
+                errors.append(f"record {index}: payload commitment invalid")
             payload = record.get("payload")
             if payload is not None:
                 try:
-                    if record.get("payload_digest") != digest(payload):
+                    if payload_digest != digest(payload):
                         errors.append(f"record {index}: payload digest mismatch")
                 except Exception:
                     errors.append(f"record {index}: payload cannot be canonicalized")
-            elif not isinstance(record.get("payload_digest"), str):
-                errors.append(f"record {index}: payload commitment missing")
 
             unsigned = {k: v for k, v in record.items() if k not in {"signature", "record_hash"}}
             key = keys.get(key_id)
@@ -124,6 +151,45 @@ class UnifiedAuditLog:
             previous = str(record.get("record_hash", ""))
 
         return errors
+
+    @staticmethod
+    def verify_checkpoint(
+        records: list[dict[str, Any]],
+        checkpoint: dict[str, Any],
+        *,
+        keys: Mapping[str, PublicKey],
+        allowed_witness_key_ids: set[str],
+        expected_log_id: str = "claimsieve-unified-audit",
+    ) -> list[str]:
+        errors: list[str] = []
+        if checkpoint.get("schema_version") != "claimsieve.unified_audit_checkpoint.v1":
+            return ["checkpoint schema invalid"]
+        if checkpoint.get("log_id") != expected_log_id:
+            errors.append("checkpoint log id mismatch")
+        if checkpoint.get("record_count") != len(records):
+            errors.append("checkpoint record count mismatch")
+        expected_head = records[-1].get("record_hash") if records else GENESIS_HASH
+        if checkpoint.get("head_hash") != expected_head:
+            errors.append("checkpoint head hash mismatch")
+
+        key_id = checkpoint.get("witness_key_id")
+        if key_id not in allowed_witness_key_ids:
+            errors.append("checkpoint witness key not allowed")
+        unsigned = {key: value for key, value in checkpoint.items() if key != "signature"}
+        key = keys.get(key_id)
+        if key is None or not key.verify(
+            "unified-audit-checkpoint-v1", unsigned, str(checkpoint.get("signature", ""))
+        ):
+            errors.append("checkpoint signature invalid")
+        return errors
+
+    @staticmethod
+    def verify_committed_payload(record: Mapping[str, Any], payload: Any) -> bool:
+        """Verify a retrieved artifact against the exact record commitment."""
+        try:
+            return _is_sha256_digest(record.get("payload_digest")) and record.get("payload_digest") == digest(payload)
+        except Exception:
+            return False
 
 
 def default_record_roles() -> dict[str, str]:

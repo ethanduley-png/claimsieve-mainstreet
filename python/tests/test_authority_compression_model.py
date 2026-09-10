@@ -48,16 +48,31 @@ def compress(archive: Archive, valid_from: int, expires_at: int) -> Certificate:
     )
 
 
+def guard_checks(certificate: Certificate, candidate: Candidate) -> dict[str, bool]:
+    return {
+        "authority": certificate.authorized,
+        "revocation": not certificate.revoked,
+        "consumption": not certificate.consumed,
+        "action": certificate.action == candidate.action,
+        "policy": certificate.policy == candidate.policy,
+        "identity": certificate.identity == candidate.identity,
+        "not_before": certificate.valid_from <= candidate.sequence,
+        "expiry": candidate.sequence <= certificate.expires_at,
+    }
+
+
 def verify(certificate: Certificate, candidate: Candidate) -> bool:
-    return (
-        certificate.authorized
-        and not certificate.revoked
-        and not certificate.consumed
-        and certificate.action == candidate.action
-        and certificate.policy == candidate.policy
-        and certificate.identity == candidate.identity
-        and certificate.valid_from <= candidate.sequence <= certificate.expires_at
-    )
+    return all(guard_checks(certificate, candidate).values())
+
+
+def verify_without_guard(
+    certificate: Certificate, candidate: Candidate, omitted_guard: str
+) -> bool:
+    checks = guard_checks(certificate, candidate)
+    if omitted_guard not in checks:
+        raise ValueError(f"unknown runtime guard: {omitted_guard}")
+    del checks[omitted_guard]
+    return all(checks.values())
 
 
 class AuthorityCompressionModelTests(unittest.TestCase):
@@ -145,6 +160,34 @@ class AuthorityCompressionModelTests(unittest.TestCase):
         self.assertFalse(verify(base, replace(good, identity=0)))
         self.assertFalse(verify(base, replace(good, sequence=0)))
         self.assertFalse(verify(base, replace(good, sequence=4)))
+
+    def test_each_runtime_guard_is_pointwise_necessary(self) -> None:
+        base = Certificate(1, 2, 3, 4, True, False, False, 10, 20)
+        good = Candidate(1, 2, 3, 15)
+        omission_witnesses = {
+            "authority": (replace(base, authorized=False), good),
+            "revocation": (replace(base, revoked=True), good),
+            "consumption": (replace(base, consumed=True), good),
+            "action": (base, replace(good, action=9)),
+            "policy": (base, replace(good, policy=9)),
+            "identity": (base, replace(good, identity=9)),
+            "not_before": (base, replace(good, sequence=9)),
+            "expiry": (base, replace(good, sequence=21)),
+        }
+
+        for guard, (certificate, candidate) in omission_witnesses.items():
+            with self.subTest(guard=guard):
+                self.assertFalse(verify(certificate, candidate))
+                self.assertTrue(verify_without_guard(certificate, candidate, guard))
+
+    def test_evidence_digest_is_archive_link_not_runtime_guard(self) -> None:
+        candidate = Candidate(1, 2, 3, 15)
+        left = Certificate(1, 2, 3, 4, True, False, False, 10, 20)
+        right = replace(left, evidence=999_999)
+
+        self.assertNotEqual(left.evidence, right.evidence)
+        self.assertEqual(verify(left, candidate), verify(right, candidate))
+        self.assertTrue(verify(left, candidate))
 
 
 if __name__ == "__main__":

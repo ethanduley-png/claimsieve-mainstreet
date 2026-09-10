@@ -14,6 +14,9 @@ The experimental unified multi-signer log passed the first mutation and writer-s
 - record deletion detected
 - record reordering detected
 - proposal writer forging a decision detected
+- evidence writer forging execution detected
+- exact retrieved-artifact replay accepted and substituted artifact rejected
+- externally witnessed head accepted and suffix truncation detected
 
 These checks establish only audit-chain integrity for the tested cases. They do not replace ClaimSieve permit, reservation, revocation, approval, provider reconciliation, or independent outcome authority.
 
@@ -55,6 +58,12 @@ The performance problem is therefore much more specifically **large inline artif
 The result also does **not** support a receipt-only architecture. Exact authority still depends on proposal/action commitments, evidence commitments, policy state, validity, one-use semantics, and durable reservation/revocation checks.
 
 The remaining argument for or against four physical chains is now architectural rather than a simple cryptographic-latency argument: writer independence, storage/failure-domain separation, retention policy, concurrent append contention, operational complexity, crash recovery, and external witnessing.
+
+## Current storage topology implication
+
+The current durable reference boundary is explicitly a SQLite-backed **single-writer** state machine. Write transactions use `BEGIN IMMEDIATE`, so committed durable writes are serialized at the database boundary. Therefore parallel durable-write throughput is not currently a demonstrated benefit of keeping four physical chains. Four-chain parallelism would become a real architectural advantage only if those chains were moved to independently writable stores or services.
+
+That does not make the four chains useless. They can still preserve semantic separation, distinct writer authority, selective retention/access, independent export, and future failure-domain separation. But those are the claims that should justify I-040, not an assumed latency advantage.
 
 ## Decision
 

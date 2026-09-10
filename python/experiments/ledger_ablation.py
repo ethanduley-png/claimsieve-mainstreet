@@ -65,11 +65,12 @@ def _minimal_permit_case(size_bytes: int) -> int:
     return len(canonical_bytes({"subject": subject, "signature": signature}))
 
 
-def _four_ledger_case(size_bytes: int) -> int:
+def _four_ledger_inline_case(size_bytes: int) -> int:
     keys = keypairs()
     evidence = _payload(size_bytes)
+    evidence_digest = digest(evidence)
     proposal = {"proposal_id": "p1", "destination": "sms:+15551234567"}
-    decision = {"decision": "ALLOW", "evidence_root": digest(evidence)}
+    decision = {"decision": "ALLOW", "evidence_root": evidence_digest}
     execution = {"status": "submitted", "provider_id": "provider-1"}
 
     proposal_ledger = Ledger("proposal", keys["proposal"])
@@ -91,11 +92,48 @@ def _four_ledger_case(size_bytes: int) -> int:
     return len(canonical_bytes(bundle))
 
 
+def _four_ledger_commitment_case(size_bytes: int) -> int:
+    """Four physical chains, but large evidence stays out of the ledger.
+
+    This control isolates the cost of four chains from the cost of repeatedly
+    canonicalizing and signing the full evidence artifact.
+    """
+    keys = keypairs()
+    evidence = _payload(size_bytes)
+    evidence_digest = digest(evidence)
+    proposal = {"proposal_id": "p1", "destination": "sms:+15551234567"}
+    decision = {"decision": "ALLOW", "evidence_root": evidence_digest}
+    execution = {"status": "submitted", "provider_id": "provider-1"}
+    evidence_commitment = {
+        "artifact_digest": evidence_digest,
+        "storage": "content-addressed",
+    }
+
+    proposal_ledger = Ledger("proposal", keys["proposal"])
+    evidence_ledger = Ledger("evidence", keys["evidence"])
+    decision_ledger = Ledger("decision", keys["decision"])
+    execution_ledger = Ledger("execution", keys["execution"])
+
+    proposal_ledger.append("trace-ablation", "PROPOSAL_SUBMITTED", proposal)
+    evidence_ledger.append("trace-ablation", "EVIDENCE_RECORDED", evidence_commitment)
+    decision_ledger.append("trace-ablation", "DECISION_RECORDED", decision)
+    execution_ledger.append("trace-ablation", "EXECUTOR_RECEIPT", execution)
+
+    bundle = {
+        "proposal": proposal_ledger.records,
+        "evidence": evidence_ledger.records,
+        "decision": decision_ledger.records,
+        "execution": execution_ledger.records,
+    }
+    return len(canonical_bytes(bundle))
+
+
 def _unified_commitment_case(size_bytes: int) -> int:
     keys = keypairs()
     evidence = _payload(size_bytes)
+    evidence_digest = digest(evidence)
     proposal = {"proposal_id": "p1", "destination": "sms:+15551234567"}
-    decision = {"decision": "ALLOW", "evidence_root": digest(evidence)}
+    decision = {"decision": "ALLOW", "evidence_root": evidence_digest}
     execution = {"status": "submitted", "provider_id": "provider-1"}
 
     log = UnifiedAuditLog()
@@ -111,7 +149,7 @@ def _unified_commitment_case(size_bytes: int) -> int:
         record_type="EVIDENCE_RECORDED",
         writer_role="evidence",
         writer=keys["evidence"],
-        payload_digest=digest(evidence),
+        payload_digest=evidence_digest,
     )
     log.append(
         trace_id="trace-ablation",
@@ -132,7 +170,7 @@ def _unified_commitment_case(size_bytes: int) -> int:
 
 def run(iterations: int) -> dict[str, object]:
     result: dict[str, object] = {
-        "schema_version": "claimsieve.ledger_ablation.v1",
+        "schema_version": "claimsieve.ledger_ablation.v2",
         "iterations": iterations,
         "warning": (
             "Local microbenchmark only. Excludes database, network, provider, "
@@ -146,7 +184,8 @@ def run(iterations: int) -> dict[str, object]:
     for size in (1024, 8192, 65536):
         cases[str(size)] = {
             "minimal_permit": _measure(lambda: _minimal_permit_case(size), iterations),
-            "four_ledgers_inline": _measure(lambda: _four_ledger_case(size), iterations),
+            "four_ledgers_inline": _measure(lambda: _four_ledger_inline_case(size), iterations),
+            "four_ledgers_commitment": _measure(lambda: _four_ledger_commitment_case(size), iterations),
             "unified_commitment_log": _measure(lambda: _unified_commitment_case(size), iterations),
         }
     return result

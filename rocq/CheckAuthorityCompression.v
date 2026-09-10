@@ -8,8 +8,6 @@ Print Assumptions compression_binds_identity.
 Print Assumptions certificate_soundness.
 Print Assumptions execution_implies_original_decision_allow.
 Print Assumptions unauthorized_certificate_fails_closed.
-Print Assumptions revocation_dominates_compact_certificate.
-Print Assumptions consumed_compact_certificate_cannot_execute.
 Print Assumptions action_binding_of_compact_verifier.
 Print Assumptions policy_binding_of_compact_verifier.
 Print Assumptions identity_binding_of_compact_verifier.

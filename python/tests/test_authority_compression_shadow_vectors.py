@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from itertools import product
 import json
 from pathlib import Path
 import unittest
@@ -132,6 +133,66 @@ class AuthorityCompressionShadowVectorTests(unittest.TestCase):
             if case["id"] in rejection_cases and not bool(case["expected"])
         }
         self.assertEqual(found, rejection_cases)
+
+    def test_exhaustive_current_state_dominance(self) -> None:
+        base = dict(self.vectors["base"])
+        base["authenticated"] = True
+        base["authorized"] = True
+        base["certificate_action"] = base["candidate_action"] = 1
+        base["certificate_policy"] = base["candidate_policy"] = 2
+        base["certificate_identity"] = base["candidate_identity"] = 3
+        base["valid_from"] = 10
+        base["sequence"] = 15
+        base["expires_at"] = 20
+
+        checked = 0
+        accepted = 0
+        for (
+            policy_active,
+            principal_active,
+            campaign_active,
+            execution_frozen,
+            campaign_suspended,
+            revoked,
+            consumed,
+            policy_matches,
+            identity_matches,
+        ) in product((False, True), repeat=9):
+            state = dict(base)
+            state.update(
+                {
+                    "policy_active": policy_active,
+                    "principal_active": principal_active,
+                    "campaign_active": campaign_active,
+                    "execution_frozen": execution_frozen,
+                    "campaign_suspended": campaign_suspended,
+                    "revoked": revoked,
+                    "consumed": consumed,
+                    "candidate_policy": 2 if policy_matches else 9,
+                    "candidate_identity": 3 if identity_matches else 9,
+                }
+            )
+            expected = all(
+                (
+                    policy_active,
+                    principal_active,
+                    campaign_active,
+                    not execution_frozen,
+                    not campaign_suspended,
+                    not revoked,
+                    not consumed,
+                    policy_matches,
+                    identity_matches,
+                )
+            )
+            self.assertEqual(reference_executable(state), expected)
+            self.assertEqual(compact_shadow_executable(state), expected)
+            self.assertTrue(historical_authority(state))
+            checked += 1
+            accepted += int(expected)
+
+        self.assertEqual(checked, 512)
+        self.assertEqual(accepted, 1)
 
 
 if __name__ == "__main__":

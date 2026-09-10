@@ -8,10 +8,11 @@ From ClaimSieve Require Import AuthorityCompression AuthorityCompressionAuthenti
     policy replacement, identity disablement, campaign suspension, and global
     freeze therefore arrive from a separately trusted current-state boundary.
 
-    This module leaves the original compact certificate model intact and adds
-    current state as a dominating execution predicate. In particular, an old
-    certificate whose embedded [cert_revoked] bit is false can still be rejected
-    by a later current revocation. *)
+    This module combines the immutable compact certificate with current state as
+    a dominating execution predicate. Revocation and consumption are deliberately
+    not embedded in the certificate: a historically valid certificate can still
+    be rejected later when trusted current state reports revocation, consumption,
+    suspension, policy replacement, identity disablement, or global freeze. *)
 
 Record current_authority_state : Type := {
   current_policy_digest : nat;

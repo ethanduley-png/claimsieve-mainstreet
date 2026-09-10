@@ -5,6 +5,7 @@ members = [
   "crates/kernel",
   "crates/ledger",
   "crates/runtime",
+  "crates/compact-admission",
   "crates/durable-state",
   "crates/verifier",
   "crates/cli",

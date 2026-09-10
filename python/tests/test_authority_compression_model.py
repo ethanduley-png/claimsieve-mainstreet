@@ -75,6 +75,12 @@ def verify_without_guard(
     return all(checks.values())
 
 
+def verify_authenticated(
+    certificate: Certificate, candidate: Candidate, signature_valid: bool
+) -> bool:
+    return signature_valid and verify(certificate, candidate)
+
+
 class AuthorityCompressionModelTests(unittest.TestCase):
     def test_exhaustive_core_invariants(self) -> None:
         checked = 0
@@ -234,6 +240,14 @@ class AuthorityCompressionModelTests(unittest.TestCase):
                 "expiry": 64,
             },
         )
+
+    def test_certificate_authenticity_is_outer_guard(self) -> None:
+        certificate = Certificate(1, 2, 3, 4, True, False, False, 10, 20)
+        candidate = Candidate(1, 2, 3, 15)
+
+        self.assertTrue(verify(certificate, candidate))
+        self.assertTrue(verify_authenticated(certificate, candidate, True))
+        self.assertFalse(verify_authenticated(certificate, candidate, False))
 
     def test_evidence_digest_is_archive_link_not_runtime_guard(self) -> None:
         candidate = Candidate(1, 2, 3, 15)

@@ -1,8 +1,6 @@
 From ClaimSieve Require Import AuthorityCompressionNecessity.
 
 Print Assumptions authority_guard_is_necessary.
-Print Assumptions revocation_guard_is_necessary.
-Print Assumptions consumption_guard_is_necessary.
 Print Assumptions action_guard_is_necessary.
 Print Assumptions policy_guard_is_necessary.
 Print Assumptions identity_guard_is_necessary.

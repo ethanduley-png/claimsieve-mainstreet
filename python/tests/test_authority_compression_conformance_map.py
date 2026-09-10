@@ -22,6 +22,7 @@ class AuthorityCompressionConformanceMapTests(unittest.TestCase):
             "formal_source",
             "necessity_source",
             "authenticity_source",
+            "current_state_source",
             "production_source",
             "shadow_candidate_source",
             "permit_schema",
@@ -33,6 +34,7 @@ class AuthorityCompressionConformanceMapTests(unittest.TestCase):
             ROOT / self.mapping["formal_source"],
             ROOT / self.mapping["necessity_source"],
             ROOT / self.mapping["authenticity_source"],
+            ROOT / self.mapping["current_state_source"],
         ]
         formal_text = "\n".join(path.read_text(encoding="utf-8") for path in formal_paths)
         production_text = (ROOT / self.mapping["production_source"]).read_text(encoding="utf-8")
@@ -63,6 +65,8 @@ class AuthorityCompressionConformanceMapTests(unittest.TestCase):
                 "action_binding",
                 "policy_binding",
                 "identity_binding",
+                "campaign_currentness",
+                "global_freeze",
                 "not_before",
                 "expiry",
             },
@@ -91,6 +95,7 @@ class AuthorityCompressionConformanceMapTests(unittest.TestCase):
             "FULL_EVIDENCE_ON_REFERENCE_EXECUTION_PATH",
             "FULL_POLICY_AND_DECISION_ON_REFERENCE_EXECUTION_PATH",
             "SHADOW_CONSUMPTION_IS_NOT_ATOMIC",
+            "SHADOW_CURRENT_FACTS_NEED_TRUSTED_SOURCE",
             "SHADOW_PATH_NOT_YET_EQUIVALENCE_TESTED_AGAINST_REFERENCE",
         }
         self.assertEqual(set(gaps), expected)
@@ -108,6 +113,7 @@ class AuthorityCompressionConformanceMapTests(unittest.TestCase):
         gaps = {gap["id"]: gap for gap in self.mapping["known_gaps"]}
         for gap_id in (
             "SHADOW_CONSUMPTION_IS_NOT_ATOMIC",
+            "SHADOW_CURRENT_FACTS_NEED_TRUSTED_SOURCE",
             "SHADOW_PATH_NOT_YET_EQUIVALENCE_TESTED_AGAINST_REFERENCE",
         ):
             gap = gaps[gap_id]

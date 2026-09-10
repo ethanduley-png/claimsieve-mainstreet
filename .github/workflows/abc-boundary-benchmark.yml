@@ -1,0 +1,25 @@
+name: A-B-C boundary benchmark
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check -r python/requirements-test.txt
+      - name: Run A/B/C execution boundary benchmark
+        run: PYTHONPATH=python python python/benchmarks/abc_execution_boundary.py
+      - name: Upload benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: abc-boundary-benchmark
+          path: evidence/ABC_BOUNDARY_BENCHMARK.json
+          if-no-files-found: warn

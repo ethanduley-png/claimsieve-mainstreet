@@ -3,7 +3,9 @@ Claimsieve.v
 DurableState.v
 AuthorityCompression.v
 AuthorityCompressionNecessity.v
+AuthorityCompressionAuthenticity.v
 Check.v
 CheckDurableState.v
 CheckAuthorityCompression.v
 CheckAuthorityCompressionNecessity.v
+CheckAuthorityCompressionAuthenticity.v

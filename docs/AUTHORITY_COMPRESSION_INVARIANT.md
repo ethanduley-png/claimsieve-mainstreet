@@ -2,94 +2,140 @@
 
 ## Design statement
 
-Persist the minimum authority-relevant facts required to establish execution authority before execution. Preserve the complete evidence needed to reconstruct that authority outside the latency-critical path. Cryptographically bind the compact execution certificate to the preserved evidence.
+Persist the minimum immutable authority-relevant facts required to establish historical execution authority. Preserve the complete evidence needed to reconstruct that authority outside the latency-critical path. At execution time, combine the authenticated compact certificate with the minimum trusted current-state facts required to establish that the authority remains executable.
 
 Short form:
 
-> Compress authority, not evidence.
+> Compress authority, not evidence. Keep mutable authority live.
 
-## Formal split
+## Three-way split
 
-Let `R` denote the preserved authority archive and let `C = Γ(R)` denote the compact certificate projected from it.
+Let `R` be the preserved historical authority archive, `C = Γ(R)` the immutable compact certificate, and `U_t` trusted current authority state at execution time.
 
-The execution path evaluates only:
-
-`Verify(C, x, t)`
-
-while historical reconstruction evaluates:
+Historical reconstruction evaluates:
 
 `Reconstruct(R)`.
 
-The central safety requirement is:
+Immutable compact verification evaluates:
 
-`Verify(Γ(R), x, t) = true  ->  Reconstruct(R) = true`.
+`Verify(C, x, t)`.
 
-In the current Rocq model, `Reconstruct(R)` is the result of replaying the preserved ClaimSieve `decide` inputs. Therefore the stronger proved bridge is:
+Present executability evaluates:
 
-`Verify(Γ(R), x, t) = true  ->  decide(policy(R), proposal(R), campaign(R)) = Allow`.
+`ExecuteNow(C, x, t, U_t)`.
 
-## Compact authority state
+The central safety direction is:
 
-The compact certificate carries:
+`ExecuteNow(Γ(R), x, t, U_t) = true -> Reconstruct(R) = true`.
+
+Current invalidity is allowed to turn execution off without rewriting history:
+
+`Reconstruct(R) = true` and `Revoked(U_t) = true` imply `ExecuteNow(Γ(R), x, t, U_t) = false`.
+
+That distinction is deliberate:
+
+- `Reconstruct(R)` answers **was this authorized then?**
+- `ExecuteNow(...)` answers **may this execute now?**
+
+## Immutable certificate state
+
+The Rocq `authority_certificate` now carries only immutable or issuance-bound facts:
 
 - action digest
 - policy digest
 - identity digest
 - evidence archive digest
 - historical authority result
-- revocation state
-- consumption state
 - validity interval
 
-The full archived adjudication inputs and arbitrary evidence payload are not parameters of the latency-critical verifier.
+Revocation and consumption are deliberately **not** certificate fields. They can change after issuance and therefore belong to trusted current state. This matches the production architecture more closely: the real permit is immutable, revocation is held by containment state, and one-use consumption is enforced by reservation state.
 
-The evidence archive digest has a distinct role from the runtime guards. It binds the compact certificate back to the preserved evidence for reconstruction and audit, but `verify_compact` does not compare the evidence digest against the execution candidate. In production, integrity of that linkage therefore depends on the signed or otherwise integrity-protected certificate representation. The Rocq model makes this separation explicit rather than claiming that every carried field is a runtime predicate.
+The evidence archive digest has a distinct role from runtime decision guards. It binds the authenticated compact certificate back to preserved evidence for reconstruction and audit, but the compact verifier does not traverse that evidence.
 
-## Proven properties
+## Trusted current state
 
-`rocq/AuthorityCompression.v` proves:
+`rocq/AuthorityCompressionCurrentState.v` adds the mutable facts needed to decide present executability:
 
-- compression preserves the reconstructed authority result
-- compression binds action, policy, identity, and evidence archive digests
-- compact verification is sound with respect to reconstructed authority
-- compact execution implies the original ClaimSieve adjudication result was `Allow`
-- unauthorized, revoked, consumed, expired, and not-yet-valid certificates fail closed
-- action, policy, and identity mutations invalidate the certificate
-- archives with the same authority-relevant projection produce the same fast-path result regardless of archived payload detail
-- every accepted compressed certificate has reconstructible authority under the preserved archive
+- currently effective policy digest
+- currently effective identity digest
+- policy active state
+- identity active state
+- campaign active state
+- global execution freeze
+- campaign suspension
+- permit revocation
+- permit consumption
 
-`rocq/AuthorityCompressionNecessity.v` strengthens the minimality claim. It proves pointwise necessity for every runtime guard currently used by `verify_compact`: historical authority, revocation, consumption, action binding, policy binding, identity binding, not-before freshness, and expiry. For each guard, the file supplies a concrete witness where omitting only that guard changes an unsafe execution from reject to accept.
+The module proves that each blocking current condition dominates execution while historical authority remains independently reconstructible. In particular:
 
-That result is deliberately called **pointwise necessity**, not global information-theoretic minimality. It establishes that no current runtime predicate can simply be deleted while preserving the modeled safety behavior. It does not prove that the certificate representation uses the fewest possible bits or that no mathematically equivalent encoding exists.
+- current revocation blocks execution
+- current consumption blocks execution
+- policy or identity deactivation blocks execution
+- policy or identity replacement blocks execution
+- campaign inactivity or suspension blocks execution
+- global freeze blocks execution
+- current execution implies historical authority
+- revocation and global freeze do not rewrite historical authority
 
-The same module also proves that the evidence archive digest is not itself a runtime guard: changing only that field leaves `verify_compact` unchanged. This clarifies that the digest belongs to the reconstructibility and audit binding layer rather than the execution predicate layer.
+## Pointwise minimality
+
+Minimality is split across immutable and mutable state instead of mixing them into one record.
+
+`rocq/AuthorityCompressionNecessity.v` gives omission witnesses for every immutable compact-verifier guard:
+
+- historical authority
+- action binding
+- policy binding
+- identity binding
+- not-before freshness
+- expiry
+
+`rocq/AuthorityCompressionCurrentStateNecessity.v` gives omission witnesses for every modeled live current-state guard:
+
+- current policy digest
+- current identity digest
+- policy active state
+- identity active state
+- campaign active state
+- global freeze
+- campaign suspension
+- current revocation
+- current consumption
+
+These are **pointwise necessity** results. They show that removing an individual guard admits at least one unsafe state represented by the model. They do not claim globally minimal bit encoding or uniqueness of representation.
+
+The evidence digest remains outside both guard-minimality sets. It is an authenticated reconstruction commitment, not a predicate that should require reading full evidence at execution.
 
 ## Authenticated certificate boundary
 
-`rocq/AuthorityCompressionAuthenticity.v` models the system boundary that exists outside the compact semantics kernel:
+`rocq/AuthorityCompressionAuthenticity.v` models:
 
-`external signature and trust verification -> authenticated envelope -> verify_compact`.
+`external signature/trust verification -> authenticated certificate -> compact verification`.
 
-The outer model carries the Boolean result of certificate authenticity verification and proves:
+It proves that unauthenticated certificates fail closed, authenticated execution implies compact execution, and authenticity is independently necessary.
 
-- an unauthenticated envelope always fails closed
-- authenticated execution implies the underlying compact verifier accepted
-- authenticated execution of a compressed archive implies the original ClaimSieve `decide` result was `Allow`
-- the authenticity gate is independently necessary because a semantically valid raw certificate can pass `verify_compact` while the same certificate is rejected when its authenticity result is false
-- once authenticity is established, the wrapper is transparent to the compact verifier
-
-This abstraction matches the production permit architecture, where permits carry an authority key identifier and Ed25519 signature and verification is performed against externally supplied trusted authority keys before permit bindings are accepted. The formal module does not prove Ed25519, external trust-root correctness, canonicalization, or key custody; it proves the control-flow consequence of the external verifier's Boolean result.
-
-`rocq/CheckAuthorityCompression.v`, `rocq/CheckAuthorityCompressionNecessity.v`, and `rocq/CheckAuthorityCompressionAuthenticity.v` print assumptions for each theorem. CI rejects `Admitted`, `admit`, `Axiom`, and `Parameter` in Rocq proof sources.
+The production permit path already carries an authority key identifier and Ed25519 signature. The formal model abstracts the Boolean result of that external cryptographic verification. It does not prove Ed25519, trust-root correctness, key custody, or canonical serialization.
 
 ## Executable model tests
 
-`python/tests/test_authority_compression_model.py` mirrors the compact verifier independently of Rocq. It exhaustively evaluates 13,824 small-domain verifier states, checks reconstruction and payload separation, verifies every guard can independently block, constructs one omission witness for each runtime guard, measures the exhaustive omission matrix, confirms that changing only the evidence archive digest does not change the fast-path result, and verifies that certificate authenticity acts as an outer fail-closed gate.
+`python/tests/test_authority_compression_model.py` mirrors the immutable certificate verifier. Its finite domain exhaustively evaluates 3,456 states. The full verifier accepts 80 states. Omitting historical authority, action, policy, or identity creates 80 additional unsafe accepts per guard; omitting either validity-bound guard creates 64.
 
-The local executable model currently passes 8 tests. In the exhaustive finite domain, the full verifier accepts 80 states. Removing authority, revocation, consumption, action, policy, or identity introduces 80 unsafe accepts each; removing either validity-window guard introduces 64.
+`python/tests/test_authority_compression_shadow_vectors.py` separately models present executability. It contains named reference-versus-shadow vectors and an exhaustive 512-combination current-state sweep. With historical authority and immutable bindings held valid, only one of those 512 current-state combinations remains executable: every required live condition is current and nonblocking.
+
+This separation prevents the test model from falsely treating mutable revocation or consumption as facts frozen inside an immutable permit.
+
+## Formal-to-production conformance
+
+The current Rust reference executor still receives full policy, evidence, decision, and campaign state and reruns the deterministic kernel. That is conservative but keeps full evidence on the execution path.
+
+The shadow-only `claimsieve-compact-admission` crate models the target interface without full `Policy`, `Evidence`, or `Decision` arguments. It is not an execution authority and cannot be promoted until its current-state inputs have trusted provenance, one-use reservation is atomic, reference-versus-shadow equivalence is demonstrated broadly, and both Rust and Rocq toolchains compile successfully.
+
+See `docs/AUTHORITY_COMPRESSION_CONFORMANCE.md` and GitHub Issue #24.
 
 ## Proof boundary
 
-The Rocq model intentionally does not claim to prove cryptographic collision resistance, canonical serialization, certificate signature verification, storage durability, clock correctness, key custody, or that numeric digests correspond to production cryptographic digests. Those remain implementation and assurance obligations outside this formal kernel.
+The formal work intentionally does not prove cryptographic collision resistance, canonical serialization, certificate signature implementation, trusted-state service correctness, durable storage, clock correctness, key custody, or that abstract numeric digests equal production cryptographic digests.
 
-This means the mathematical statement is a conditional system invariant: once production components correctly establish the archive digests, authenticate and protect the compact certificate, and preserve the archive, the execution boundary can operate on the compact certificate without traversing the full evidence record while retaining reconstructible authority.
+The resulting system claim is conditional but precise:
+
+> If the compact certificate is authentically derived from the preserved archive, if trusted current-state facts are correct and fresh, and if the execution implementation refines the modeled predicates, then present execution implies reconstructible historical authority without requiring traversal of the full evidence archive on the latency-critical path.

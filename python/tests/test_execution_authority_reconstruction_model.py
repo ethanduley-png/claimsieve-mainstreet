@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from itertools import product
+import unittest
 
 
 @dataclass(frozen=True)
@@ -119,123 +120,125 @@ def base_current() -> CurrentState:
     return CurrentState(22, 33, True, True, True, False, False, False, False)
 
 
-def test_valid_execution_is_prior_exact_and_reconstructable():
-    entry = base_entry()
-    candidate = base_candidate()
-    current = base_current()
-    store = (entry,)
-
-    assert lineage_valid(entry)
-    assert executable_now(entry, candidate, current)
-    assert reconstruct_from_store(store, entry.authority_id) is True
-    assert entry.certificate.action_digest == candidate.action_digest
-    assert entry.certificate.policy_digest == candidate.policy_digest
-    assert entry.certificate.identity_digest == candidate.identity_digest
-    assert entry.certificate.evidence_digest == entry.archive.evidence_digest
-
-
-def test_missing_archive_is_not_reconstructable():
-    assert reconstruct_from_store(tuple(), 7) is None
-
-
-def test_authority_relevant_mutations_fail_closed():
-    entry = base_entry()
-    current = base_current()
-    candidates = (
-        Candidate(99, 22, 33, 12),
-        Candidate(11, 99, 33, 12),
-        Candidate(11, 22, 99, 12),
-        Candidate(11, 22, 33, 9),
-        Candidate(11, 22, 33, 16),
-    )
-    assert all(not executable_now(entry, candidate, current) for candidate in candidates)
-
-
-def test_archive_evidence_mutation_breaks_lineage_without_changing_hot_path():
-    entry = base_entry()
-    mutated = PersistedAuthority(
-        entry.authority_id,
-        entry.certificate,
-        Archive(11, 22, 33, 999, True),
-    )
-
-    assert executable_now(mutated, base_candidate(), base_current())
-    assert not lineage_valid(mutated)
-
-
-def test_unauthorized_archive_cannot_support_valid_lineage_and_execution():
-    certificate = Certificate(True, 11, 22, 33, 44, 10, 15)
-    archive = Archive(11, 22, 33, 44, False)
-    entry = PersistedAuthority(7, certificate, archive)
-
-    assert executable_now(entry, base_candidate(), base_current())
-    assert not lineage_valid(entry)
-
-
-def test_exhaustive_invariant_no_counterexample():
-    checked = 0
-    qualifying = 0
-    violations = 0
-
-    for bits in product((False, True), repeat=14):
-        (
-            authorized,
-            reconstructs_allow,
-            candidate_action_matches,
-            candidate_policy_matches,
-            candidate_identity_matches,
-            archive_action_matches,
-            archive_policy_matches,
-            archive_identity_matches,
-            archive_evidence_matches,
-            policy_active,
-            identity_active,
-            campaign_active,
-            execution_frozen,
-            revoked,
-        ) = bits
-
-        certificate = Certificate(authorized, 11, 22, 33, 44, 10, 15)
-        archive = Archive(
-            11 if archive_action_matches else 101,
-            22 if archive_policy_matches else 202,
-            33 if archive_identity_matches else 303,
-            44 if archive_evidence_matches else 404,
-            reconstructs_allow,
-        )
-        entry = PersistedAuthority(7, certificate, archive)
-        candidate = Candidate(
-            11 if candidate_action_matches else 111,
-            22 if candidate_policy_matches else 222,
-            33 if candidate_identity_matches else 333,
-            12,
-        )
-        current = CurrentState(
-            22,
-            33,
-            policy_active,
-            identity_active,
-            campaign_active,
-            execution_frozen,
-            False,
-            revoked,
-            False,
-        )
+class ExecutionAuthorityReconstructionModelTests(unittest.TestCase):
+    def test_valid_execution_is_prior_exact_and_reconstructable(self) -> None:
+        entry = base_entry()
+        candidate = base_candidate()
+        current = base_current()
         store = (entry,)
-        checked += 1
 
-        if lineage_valid(entry) and executable_now(entry, candidate, current):
-            qualifying += 1
-            invariant = (
-                reconstruct_from_store(store, 7) is True
-                and certificate.action_digest == candidate.action_digest
-                and certificate.policy_digest == candidate.policy_digest
-                and certificate.identity_digest == candidate.identity_digest
-                and certificate.evidence_digest == archive.evidence_digest
+        self.assertTrue(lineage_valid(entry))
+        self.assertTrue(executable_now(entry, candidate, current))
+        self.assertIs(reconstruct_from_store(store, entry.authority_id), True)
+        self.assertEqual(entry.certificate.action_digest, candidate.action_digest)
+        self.assertEqual(entry.certificate.policy_digest, candidate.policy_digest)
+        self.assertEqual(entry.certificate.identity_digest, candidate.identity_digest)
+        self.assertEqual(entry.certificate.evidence_digest, entry.archive.evidence_digest)
+
+    def test_missing_archive_is_not_reconstructable(self) -> None:
+        self.assertIsNone(reconstruct_from_store(tuple(), 7))
+
+    def test_authority_relevant_mutations_fail_closed(self) -> None:
+        entry = base_entry()
+        current = base_current()
+        candidates = (
+            Candidate(99, 22, 33, 12),
+            Candidate(11, 99, 33, 12),
+            Candidate(11, 22, 99, 12),
+            Candidate(11, 22, 33, 9),
+            Candidate(11, 22, 33, 16),
+        )
+        for candidate in candidates:
+            with self.subTest(candidate=candidate):
+                self.assertFalse(executable_now(entry, candidate, current))
+
+    def test_archive_evidence_mutation_breaks_lineage_without_hot_path_change(self) -> None:
+        entry = base_entry()
+        mutated = PersistedAuthority(
+            entry.authority_id,
+            entry.certificate,
+            Archive(11, 22, 33, 999, True),
+        )
+
+        self.assertTrue(executable_now(mutated, base_candidate(), base_current()))
+        self.assertFalse(lineage_valid(mutated))
+
+    def test_unauthorized_archive_cannot_support_valid_lineage_and_execution(self) -> None:
+        certificate = Certificate(True, 11, 22, 33, 44, 10, 15)
+        archive = Archive(11, 22, 33, 44, False)
+        entry = PersistedAuthority(7, certificate, archive)
+
+        self.assertTrue(executable_now(entry, base_candidate(), base_current()))
+        self.assertFalse(lineage_valid(entry))
+
+    def test_exhaustive_invariant_no_counterexample(self) -> None:
+        checked = 0
+        qualifying = 0
+        violations = 0
+
+        for bits in product((False, True), repeat=14):
+            (
+                authorized,
+                reconstructs_allow,
+                candidate_action_matches,
+                candidate_policy_matches,
+                candidate_identity_matches,
+                archive_action_matches,
+                archive_policy_matches,
+                archive_identity_matches,
+                archive_evidence_matches,
+                policy_active,
+                identity_active,
+                campaign_active,
+                execution_frozen,
+                revoked,
+            ) = bits
+
+            certificate = Certificate(authorized, 11, 22, 33, 44, 10, 15)
+            archive = Archive(
+                11 if archive_action_matches else 101,
+                22 if archive_policy_matches else 202,
+                33 if archive_identity_matches else 303,
+                44 if archive_evidence_matches else 404,
+                reconstructs_allow,
             )
-            if not invariant:
-                violations += 1
+            entry = PersistedAuthority(7, certificate, archive)
+            candidate = Candidate(
+                11 if candidate_action_matches else 111,
+                22 if candidate_policy_matches else 222,
+                33 if candidate_identity_matches else 333,
+                12,
+            )
+            current = CurrentState(
+                22,
+                33,
+                policy_active,
+                identity_active,
+                campaign_active,
+                execution_frozen,
+                False,
+                revoked,
+                False,
+            )
+            store = (entry,)
+            checked += 1
 
-    assert checked == 16384
-    assert qualifying > 0
-    assert violations == 0
+            if lineage_valid(entry) and executable_now(entry, candidate, current):
+                qualifying += 1
+                invariant = (
+                    reconstruct_from_store(store, 7) is True
+                    and certificate.action_digest == candidate.action_digest
+                    and certificate.policy_digest == candidate.policy_digest
+                    and certificate.identity_digest == candidate.identity_digest
+                    and certificate.evidence_digest == archive.evidence_digest
+                )
+                if not invariant:
+                    violations += 1
+
+        self.assertEqual(checked, 16_384)
+        self.assertGreater(qualifying, 0)
+        self.assertEqual(violations, 0)
+
+
+if __name__ == "__main__":
+    unittest.main()

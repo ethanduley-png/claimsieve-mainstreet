@@ -27,6 +27,7 @@ jobs:
               rocq compile -Q . ClaimSieve AuthorityCompressionAuthenticity.v
               rocq compile -Q . ClaimSieve AuthorityCompressionCurrentState.v
               rocq compile -Q . ClaimSieve AuthorityCompressionCurrentStateNecessity.v
+              rocq compile -Q . ClaimSieve ExecutionAuthorityReconstruction.v
               rocq compile -Q . ClaimSieve Check.v
               rocq compile -Q . ClaimSieve CheckDurableState.v
               rocq compile -Q . ClaimSieve CheckAuthorityCompression.v
@@ -34,6 +35,7 @@ jobs:
               rocq compile -Q . ClaimSieve CheckAuthorityCompressionAuthenticity.v
               rocq compile -Q . ClaimSieve CheckAuthorityCompressionCurrentState.v
               rocq compile -Q . ClaimSieve CheckAuthorityCompressionCurrentStateNecessity.v
+              rocq compile -Q . ClaimSieve CheckExecutionAuthorityReconstruction.v
             ' 2>&1 | tee evidence/ROCQ_ASSUMPTIONS.txt
       - name: Reject admitted or axiomatized proof source
         run: '! grep -R -n -E "(^|[^A-Za-z])(Admitted|admit|Axiom|Parameter)([^A-Za-z]|$)" --include="*.v" rocq'

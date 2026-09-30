@@ -1,12 +1,15 @@
 {
   "id": "mainstreet-claimsieve-proposal",
   "name": "MainStreet ClaimSieve Proposal Bridge",
-  "version": "0.33.0",
-  "description": "Pure proposal preparation and acknowledgement validation. No transport or provider execution authority.",
-  "entry": "../src/index.js",
+  "version": "0.34.0",
+  "description": "Pure proposal preparation plus non-authoritative agent ergonomics. No transport, provider execution, permit, or policy authority.",
+  "entry": "../src/openclaw-entry.js",
   "capabilities": [
     "proposal.prepare",
-    "acknowledgement.validate"
+    "acknowledgement.validate",
+    "ergonomics.skills.list",
+    "ergonomics.agents.list",
+    "ergonomics.memory.unreviewed.create"
   ],
   "requiredEnvironment": [
     "CLAIMSIEVE_INTAKE_SPIFFE_ID"

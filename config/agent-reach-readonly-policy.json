@@ -7,6 +7,17 @@
   },
   "trust_class": "UNTRUSTED_CAPABILITY_PLANE",
   "authority": "NONE",
+  "claim_sieve_authorization_required": true,
+  "claimsieve_effect_binding": {
+    "kind": "fetch_artifact",
+    "effect_class": "network_boundary",
+    "scheme": "agent-reach",
+    "trust_domain": "agent-reach-untrusted",
+    "method": "READ",
+    "reversibility": "reversible",
+    "required_risk_tag": "UNTRUSTED_NETWORK_EGRESS",
+    "permit_max_uses": 1
+  },
   "authenticated_social_channels_enabled": false,
   "max_output_bytes": 262144,
   "operations": [
@@ -18,17 +29,25 @@
     {
       "channel": "web",
       "operation": "read",
-      "parameters": ["url"]
+      "parameters": [
+        "url"
+      ]
     },
     {
       "channel": "github",
       "operation": "search_repositories",
-      "parameters": ["query", "limit"]
+      "parameters": [
+        "query",
+        "limit"
+      ]
     },
     {
       "channel": "search",
       "operation": "exa",
-      "parameters": ["query", "limit"]
+      "parameters": [
+        "query",
+        "limit"
+      ]
     },
     {
       "channel": "v2ex",
@@ -38,7 +57,10 @@
     {
       "channel": "bilibili",
       "operation": "search",
-      "parameters": ["query", "limit"]
+      "parameters": [
+        "query",
+        "limit"
+      ]
     }
   ],
   "forbidden_classes": [

@@ -1,12 +1,13 @@
 {
   "id": "mainstreet-agent-reach-observer",
-  "name": "MainStreet Agent Reach Untrusted Observer",
+  "name": "MainStreet Permit-Gated Agent Reach Observer",
   "version": "0.34.0",
-  "description": "Prepares read-only capability requests and validates tainted observations. It has no execution authority.",
+  "description": "Prepares read-only capability requests and exact ClaimSieve bindings, then validates permit-bound tainted observations. It has no execution authority of its own.",
   "entry": "../src/agent-reach-untrusted.js",
   "trust": "explicitly-untrusted",
   "capabilities": [
     "observation.request.prepare",
+    "observation.claimsieve_binding.prepare",
     "observation.envelope.validate"
   ],
   "requiredEnvironment": [
@@ -14,7 +15,6 @@
   ],
   "forbiddenEnvironmentPrefixes": [
     "CLAIMSIEVE_SIGNING_",
-    "CLAIMSIEVE_PERMIT_",
     "TWILIO_",
     "STRIPE_",
     "AWS_SECRET_",
@@ -22,10 +22,10 @@
     "GITHUB_WRITER_"
   ],
   "forbiddenCapabilities": [
+    "network.prepermit",
     "provider.write",
     "provider.execute",
     "permit.sign",
-    "permit.reserve",
     "approval.create",
     "shell.generic"
   ]

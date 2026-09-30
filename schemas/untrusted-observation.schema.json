@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://claimsieve.local/schemas/untrusted-observation.schema.json",
+  "title": "MainStreet Untrusted Observation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "observation_id",
+    "request_id",
+    "trace_id",
+    "tenant_id",
+    "plane",
+    "channel",
+    "operation",
+    "observed_at_seq",
+    "request_digest",
+    "content_digest",
+    "content",
+    "taint_labels",
+    "authority",
+    "executable",
+    "instructions_are_data",
+    "claim_sieve_disposition"
+  ],
+  "properties": {
+    "schema_version": { "const": "mainstreet.untrusted_observation.v1" },
+    "observation_id": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "request_id": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "trace_id": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "tenant_id": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "plane": { "const": "agent-reach-untrusted" },
+    "channel": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "operation": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "observed_at_seq": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+    "request_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "content_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "content": { "type": "string", "minLength": 1 },
+    "taint_labels": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string" },
+      "allOf": [
+        { "contains": { "const": "UNTRUSTED_EXTERNAL_CONTENT" } },
+        { "contains": { "const": "NO_AUTHORITY" } },
+        { "contains": { "const": "REQUIRES_INDEPENDENT_VERIFICATION" } }
+      ]
+    },
+    "authority": { "const": "NONE" },
+    "executable": { "const": false },
+    "instructions_are_data": { "const": true },
+    "claim_sieve_disposition": { "const": "OBSERVATION_ONLY" }
+  }
+}

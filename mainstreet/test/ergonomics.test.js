@@ -3,13 +3,13 @@ import test from "node:test";
 import { ProposalOnlyBridge } from "../src/index.js";
 import {
   ErgonomicsBoundaryError,
-  ProposalSkill,
   createUnreviewedMemory,
   ergonomicsCapabilityManifest,
   normalizeAgentManifest,
   normalizeSkillManifest
 } from "../src/ergonomics.js";
 import { founderGitHubIssueSkill } from "../ergonomics/skills/founder-github-issue.js";
+import { FounderGitHubIssueSkill } from "../ergonomics/skills/founder-github-issue-runtime.js";
 import { founderOperatorAgent } from "../ergonomics/agents/founder-operator.js";
 
 const identity = {
@@ -21,18 +21,20 @@ function bridge() {
   return new ProposalOnlyBridge({ identity });
 }
 
+function skill() {
+  return new FounderGitHubIssueSkill({ bridge: bridge(), tenantId: "tenant-demo" });
+}
+
 function prepareInput() {
   return {
     proposalId: "proposal-ergonomics-1",
     traceId: "trace-ergonomics-1",
-    tenantId: "tenant-demo",
     campaignId: "campaign-1",
     sessionId: "session-1",
     bindings: { repository: "ethanduley-png/claimsieve-mainstreet" },
     parameters: {
       title: "Implement governed skill catalog",
       body: "Track the first ECC-inspired Main Street ergonomics slice.",
-      correlation_marker: "claimsieve:proposal-ergonomics-1",
       work_item_id: "work-1"
     },
     evidenceRefs: ["sha256:evidence"],
@@ -49,30 +51,38 @@ test("normalizes an ECC-inspired skill but preserves ClaimSieve authority", () =
   assert.ok(Object.isFrozen(manifest));
 });
 
-test("skill prepares a proposal and exposes no execution method", () => {
-  const skill = new ProposalSkill({ bridge: bridge(), manifest: founderGitHubIssueSkill });
-  const proposal = skill.prepare(prepareInput());
+test("builder-backed skill prepares a proposal and exposes no execution method", () => {
+  const selected = skill();
+  const proposal = selected.prepare(prepareInput());
   assert.equal(proposal.action.destination.authority, "ethanduley-png/claimsieve-mainstreet");
   assert.equal(proposal.action.destination.resource, "issues");
   assert.equal(proposal.action.method, "CREATE");
+  assert.equal(proposal.action.parameters.correlation_marker, "claimsieve:proposal-ergonomics-1");
   assert.equal(proposal.approval, null);
-  assert.equal(typeof skill.execute, "undefined");
+  assert.equal(typeof selected.execute, "undefined");
 });
 
-test("skill rejects undeclared parameters", () => {
-  const skill = new ProposalSkill({ bridge: bridge(), manifest: founderGitHubIssueSkill });
+test("builder-backed skill rejects undeclared parameters including caller correlation marker", () => {
+  const selected = skill();
   const input = prepareInput();
-  input.parameters.execute_now = true;
-  assert.throws(() => skill.prepare(input), (error) =>
-    error instanceof ErgonomicsBoundaryError && error.code === "UNDECLARED_ERGONOMIC_INPUT");
+  input.parameters.correlation_marker = "attacker-controlled";
+  assert.throws(() => selected.prepare(input), (error) =>
+    error instanceof ErgonomicsBoundaryError && error.code === "BUILDER_INPUT_MISMATCH");
 });
 
-test("skill rejects undeclared destination bindings", () => {
-  const skill = new ProposalSkill({ bridge: bridge(), manifest: founderGitHubIssueSkill });
+test("builder-backed skill rejects undeclared destination bindings", () => {
+  const selected = skill();
   const input = prepareInput();
   input.bindings.owner_token = "secret";
-  assert.throws(() => skill.prepare(input), (error) =>
-    error instanceof ErgonomicsBoundaryError && error.code === "UNDECLARED_ERGONOMIC_INPUT");
+  assert.throws(() => selected.prepare(input), (error) =>
+    error instanceof ErgonomicsBoundaryError && error.code === "BUILDER_INPUT_MISMATCH");
+});
+
+test("builder-backed skill preserves Founder OS repository validation", () => {
+  const selected = skill();
+  const input = prepareInput();
+  input.bindings.repository = "https://github.com/ethanduley-png/claimsieve-mainstreet";
+  assert.throws(() => selected.prepare(input), /owner\/name/);
 });
 
 test("skill rejects direct execution authority", () => {

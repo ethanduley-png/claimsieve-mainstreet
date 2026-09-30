@@ -3,12 +3,12 @@
   "version": "0.34.0",
   "private": true,
   "type": "module",
-  "description": "Proposal-only boundary with Founder OS GitHub issue proposal slice",
+  "description": "Proposal-only boundary with ECC-inspired non-authoritative agent ergonomics",
   "engines": {
     "node": ">=22"
   },
   "scripts": {
     "test": "node --test",
-    "check": "node --check src/index.js && node --check src/ergonomics.js && node --check test/proposal-bridge.test.js && node --check test/ergonomics.test.js && node --check ergonomics/skills/founder-github-issue.js && node --check ergonomics/agents/founder-operator.js"
+    "check": "node --check src/index.js && node --check src/ergonomics.js && node --check src/openclaw-entry.js && node --check test/proposal-bridge.test.js && node --check test/ergonomics.test.js && node --check ergonomics/catalog.js && node --check ergonomics/skills/founder-github-issue.js && node --check ergonomics/skills/founder-github-issue-runtime.js && node --check ergonomics/agents/founder-operator.js"
   }
 }

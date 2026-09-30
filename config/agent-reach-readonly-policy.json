@@ -1,0 +1,67 @@
+{
+  "schema_version": "mainstreet.agent_reach_policy.v1",
+  "upstream": {
+    "repository": "Panniantong/Agent-Reach",
+    "version": "1.5.0",
+    "pinned_commit": "a19a171fa980a0785849596492e0af4db800c82f"
+  },
+  "trust_class": "UNTRUSTED_CAPABILITY_PLANE",
+  "authority": "NONE",
+  "authenticated_social_channels_enabled": false,
+  "max_output_bytes": 262144,
+  "operations": [
+    {
+      "channel": "agent-reach",
+      "operation": "status",
+      "parameters": []
+    },
+    {
+      "channel": "web",
+      "operation": "read",
+      "parameters": ["url"]
+    },
+    {
+      "channel": "github",
+      "operation": "search_repositories",
+      "parameters": ["query", "limit"]
+    },
+    {
+      "channel": "search",
+      "operation": "exa",
+      "parameters": ["query", "limit"]
+    },
+    {
+      "channel": "v2ex",
+      "operation": "hot",
+      "parameters": []
+    },
+    {
+      "channel": "bilibili",
+      "operation": "search",
+      "parameters": ["query", "limit"]
+    }
+  ],
+  "forbidden_classes": [
+    "mutation",
+    "posting",
+    "messaging",
+    "comments",
+    "likes",
+    "follows",
+    "uploads",
+    "provider_configuration",
+    "login_automation",
+    "cookie_extraction",
+    "caller_supplied_commands",
+    "caller_supplied_environment",
+    "permit_signing",
+    "approval_creation",
+    "execution"
+  ],
+  "required_taint_labels": [
+    "UNTRUSTED_EXTERNAL_CONTENT",
+    "NO_AUTHORITY",
+    "REQUIRES_INDEPENDENT_VERIFICATION"
+  ],
+  "claim_sieve_disposition": "OBSERVATION_ONLY"
+}

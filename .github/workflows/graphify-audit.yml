@@ -1,0 +1,117 @@
+name: Graphify audit
+
+on:
+  push:
+    branches:
+      - audit/graphify-ponytail-20260929
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  graphify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Graphify
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install graphifyy
+          python - <<'PY'
+          import importlib.metadata
+          print('graphifyy', importlib.metadata.version('graphifyy'))
+          PY
+
+      - name: Repository metrics
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from collections import Counter
+          exts = {'.py','.rs','.js','.mjs','.ts','.tsx','.v','.json','.yaml','.yml','.toml','.sh','.ps1'}
+          counts = Counter(); lines = Counter(); total_files = total_lines = 0
+          for p in Path('.').rglob('*'):
+              if not p.is_file() or '.git' in p.parts or 'graphify-out' in p.parts:
+                  continue
+              if p.suffix.lower() not in exts:
+                  continue
+              try:
+                  n = sum(1 for _ in p.open('r', encoding='utf-8', errors='ignore'))
+              except Exception:
+                  continue
+              counts[p.suffix.lower()] += 1
+              lines[p.suffix.lower()] += n
+              total_files += 1; total_lines += n
+          print(f'code/config files: {total_files}')
+          print(f'code/config lines: {total_lines}')
+          for ext in sorted(counts):
+              print(f'{ext}: {counts[ext]} files, {lines[ext]} lines')
+          PY
+
+      - name: Build local code graph
+        run: |
+          graphify extract . --code-only --timing
+
+      - name: Graphify structural summary
+        run: |
+          echo '=== GRAPHIFY PACKAGE ==='
+          python - <<'PY'
+          import importlib.metadata
+          print(importlib.metadata.version('graphifyy'))
+          PY
+          echo '=== OUTPUT FILES ==='
+          find graphify-out -maxdepth 2 -type f -printf '%p %s bytes\n' | sort
+          echo '=== REPORT ==='
+          if [ -f graphify-out/GRAPH_REPORT.md ]; then sed -n '1,260p' graphify-out/GRAPH_REPORT.md; fi
+          echo '=== GOD NODES ==='
+          graphify god-nodes --top 30 --graph graphify-out/graph.json || true
+          echo '=== QUERY: AUTHORITY TO EXECUTION ==='
+          graphify query 'authorization permit policy evidence execution runtime verifier ledger' --graph graphify-out/graph.json --budget 3500 || true
+          echo '=== QUERY: DEEPAGENTS TO CLAIMSIEVE ==='
+          graphify query 'DeepAgents adapter middleware intake ClaimSieve runtime execution' --graph graphify-out/graph.json --budget 3500 || true
+          echo '=== QUERY: DURABLE STATE ==='
+          graphify query 'durable state authorization execution outcome ledger' --graph graphify-out/graph.json --budget 3500 || true
+          echo '=== GRAPH JSON SUMMARY ==='
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from collections import Counter
+          p = Path('graphify-out/graph.json')
+          data = json.loads(p.read_text())
+          nodes = data.get('nodes') or data.get('elements', {}).get('nodes') or []
+          edges = data.get('links') or data.get('edges') or data.get('elements', {}).get('edges') or []
+          print('nodes', len(nodes))
+          print('edges', len(edges))
+          rels = Counter(); prov = Counter(); kinds = Counter(); sources = Counter()
+          for n in nodes:
+              d = n.get('data', n)
+              kinds[str(d.get('type') or d.get('kind') or d.get('node_type') or 'UNKNOWN')] += 1
+              loc = str(d.get('source_location') or d.get('file') or d.get('path') or '')
+              if loc:
+                  sources[loc.split(':',1)[0]] += 1
+          for e in edges:
+              d = e.get('data', e)
+              rels[str(d.get('relation') or d.get('type') or d.get('label') or 'UNKNOWN')] += 1
+              pv = d.get('provenance') or d.get('confidence') or d.get('source_type') or d.get('origin')
+              if pv is not None: prov[str(pv)] += 1
+          print('node_types', dict(kinds.most_common(30)))
+          print('edge_relations', dict(rels.most_common(40)))
+          print('edge_provenance', dict(prov.most_common(20)))
+          print('top_source_files')
+          for k,v in sources.most_common(40): print(v, k)
+          PY
+
+      - name: Upload Graphify output
+        uses: actions/upload-artifact@v4
+        with:
+          name: graphify-claimsieve-audit
+          path: graphify-out/
+          if-no-files-found: error
+          retention-days: 7

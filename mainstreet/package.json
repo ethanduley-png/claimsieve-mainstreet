@@ -9,6 +9,6 @@
   },
   "scripts": {
     "test": "node --test",
-    "check": "node --check src/index.js && node --check test/proposal-bridge.test.js"
+    "check": "node --check src/index.js && node --check src/ergonomics.js && node --check test/proposal-bridge.test.js && node --check test/ergonomics.test.js && node --check ergonomics/skills/founder-github-issue.js && node --check ergonomics/agents/founder-operator.js"
   }
 }

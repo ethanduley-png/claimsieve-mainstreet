@@ -1,9 +1,10 @@
 /**
- * Pure OpenClaw-facing boundary for the isolated Agent Reach observation plane.
+ * OpenClaw-facing boundary for permit-gated Agent Reach observations.
  *
  * This module does not execute Agent Reach, spawn commands, hold credentials,
- * or perform network I/O. It prepares a narrow read request and validates the
- * tainted observation returned by the separately isolated broker.
+ * or perform network I/O. It prepares a narrow read request, maps that request
+ * to the exact ClaimSieve action that must be permitted, and validates the
+ * tainted observation returned by the separately isolated read executor.
  */
 
 import { createHash } from "node:crypto";
@@ -12,7 +13,7 @@ const REQUEST_FIELDS = new Set([
   "request_id", "trace_id", "tenant_id", "channel", "operation", "parameters", "observed_at_seq"
 ]);
 const OBSERVATION_FIELDS = new Set([
-  "schema_version", "observation_id", "request_id", "trace_id", "tenant_id", "plane", "channel",
+  "schema_version", "observation_id", "permit_id", "request_id", "trace_id", "tenant_id", "plane", "channel",
   "operation", "observed_at_seq", "request_digest", "content_digest", "content", "taint_labels",
   "authority", "executable", "instructions_are_data", "claim_sieve_disposition"
 ]);
@@ -37,6 +38,7 @@ const ID_RE = /^[A-Za-z0-9._:/-]{1,512}$/;
 const MAX_QUERY_CHARS = 4096;
 const MAX_URL_CHARS = 8192;
 const MAX_OUTPUT_BYTES = 262144;
+const REQUIRED_RISK_TAG = "UNTRUSTED_NETWORK_EGRESS";
 
 export class UntrustedCapabilityBoundaryError extends Error {
   constructor(code, message) {
@@ -137,13 +139,22 @@ function validateParameters(channel, operation, parameters) {
   if (actual.size !== allowed.size || [...actual].some((item) => !allowed.has(item))) {
     throw new UntrustedCapabilityBoundaryError("PARAMETER_SHAPE_MISMATCH", `${key} has an invalid parameter shape`);
   }
-  if ("query" in parameters) boundedString(parameters.query, "request.parameters.query", MAX_QUERY_CHARS);
+  if ("query" in parameters) {
+    const query = boundedString(parameters.query, "request.parameters.query", MAX_QUERY_CHARS);
+    if (query.trimStart().startsWith("-")) {
+      throw new UntrustedCapabilityBoundaryError("ARGUMENT_INJECTION_DENIED", "query may not begin with an option marker");
+    }
+  }
   if ("url" in parameters) {
     const raw = boundedString(parameters.url, "request.parameters.url", MAX_URL_CHARS);
     let parsed;
     try { parsed = new URL(raw); } catch { throw new UntrustedCapabilityBoundaryError("INVALID_URL", "request.parameters.url is invalid"); }
     if (!["http:", "https:"].includes(parsed.protocol) || parsed.username || parsed.password) {
       throw new UntrustedCapabilityBoundaryError("URL_AUTHORITY_DENIED", "only credential-free http/https URLs are permitted");
+    }
+    const host = parsed.hostname.toLowerCase();
+    if (host === "localhost" || host.endsWith(".local") || /^(127\.|10\.|192\.168\.|169\.254\.)/.test(host)) {
+      throw new UntrustedCapabilityBoundaryError("PRIVATE_TARGET_DENIED", "obvious local/private URL targets are forbidden");
     }
   }
   if ("limit" in parameters && (!Number.isInteger(parameters.limit) || parameters.limit < 1 || parameters.limit > 20)) {
@@ -174,6 +185,26 @@ function canonicalRequest(request) {
     parameters: request.parameters,
     observed_at_seq: request.observed_at_seq
   };
+}
+
+export function claimSieveActionForObservation(request) {
+  return deepFreeze({
+    kind: "fetch_artifact",
+    effect_class: "network_boundary",
+    destination: {
+      scheme: "agent-reach",
+      authority: request.channel,
+      resource: request.operation,
+      trust_domain: "agent-reach-untrusted"
+    },
+    method: "READ",
+    parameters: {
+      request_id: request.request_id,
+      observed_at_seq: request.observed_at_seq,
+      arguments: clone(request.parameters)
+    },
+    reversibility: "reversible"
+  });
 }
 
 export class UntrustedObservationBridge {
@@ -217,8 +248,18 @@ export class UntrustedObservationBridge {
     });
   }
 
-  validateObservation(request, observation) {
+  claimSieveBinding(request) {
+    return deepFreeze({
+      action: claimSieveActionForObservation(request),
+      required_risk_tags: [REQUIRED_RISK_TAG]
+    });
+  }
+
+  validateObservation(request, permit, observation) {
     exactFields(observation, OBSERVATION_FIELDS, "observation");
+    if (!permit || typeof permit !== "object" || typeof permit.permit_id !== "string" || permit.permit_id.length === 0) {
+      throw new UntrustedCapabilityBoundaryError("INVALID_PERMIT_REFERENCE", "a ClaimSieve permit reference is required");
+    }
     if (observation.schema_version !== "mainstreet.untrusted_observation.v1") {
       throw new UntrustedCapabilityBoundaryError("INVALID_OBSERVATION", "unsupported observation schema");
     }
@@ -226,6 +267,9 @@ export class UntrustedObservationBridge {
       if (observation[field] !== request[field]) {
         throw new UntrustedCapabilityBoundaryError("OBSERVATION_BINDING_MISMATCH", `observation.${field} is not request-bound`);
       }
+    }
+    if (observation.permit_id !== permit.permit_id) {
+      throw new UntrustedCapabilityBoundaryError("PERMIT_BINDING_MISMATCH", "observation is not bound to the expected ClaimSieve permit");
     }
     if (observation.plane !== "agent-reach-untrusted" || observation.authority !== "NONE" || observation.executable !== false ||
         observation.instructions_are_data !== true || observation.claim_sieve_disposition !== "OBSERVATION_ONLY") {
@@ -246,6 +290,7 @@ export class UntrustedObservationBridge {
     const expectedRequestDigest = sha256(Buffer.from(canonicalJson(canonicalRequest(request)), "utf8"));
     const expectedContentDigest = sha256(Buffer.from(observation.content, "utf8"));
     const expectedObservationId = sha256(Buffer.from(canonicalJson({
+      permit_id: permit.permit_id,
       request_digest: expectedRequestDigest,
       content_digest: expectedContentDigest,
       plane: "agent-reach-untrusted",
@@ -255,7 +300,7 @@ export class UntrustedObservationBridge {
     }), "utf8"));
     if (observation.request_digest !== expectedRequestDigest || observation.content_digest !== expectedContentDigest ||
         observation.observation_id !== expectedObservationId) {
-      throw new UntrustedCapabilityBoundaryError("DIGEST_MISMATCH", "observation digests do not bind the request and content");
+      throw new UntrustedCapabilityBoundaryError("DIGEST_MISMATCH", "observation digests do not bind the permit, request, and content");
     }
     return deepFreeze(clone(observation));
   }
@@ -263,10 +308,11 @@ export class UntrustedObservationBridge {
 
 export const untrustedCapabilityManifest = deepFreeze({
   schema_version: "mainstreet.capability_manifest.v1",
-  role: "untrusted_observation_adapter",
+  role: "permit_gated_untrusted_observation_adapter",
   trust: "explicitly_untrusted",
-  allowed: ["prepare_read_request", "validate_tainted_observation"],
+  allowed: ["prepare_read_request", "prepare_claimsieve_read_binding", "validate_tainted_observation"],
   forbidden: [
+    "direct_prepermit_network_egress",
     "provider_write_credentials",
     "provider_mutation",
     "permit_signing",
@@ -277,5 +323,5 @@ export const untrustedCapabilityManifest = deepFreeze({
     "caller_supplied_command",
     "observation_as_authority"
   ],
-  invariant: "Agent Reach output is observation-only data and can never confer execution authority."
+  invariant: "No Agent Reach network call occurs without an exact signed ClaimSieve permit; returned content remains observation-only data."
 });

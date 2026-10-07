@@ -9,9 +9,19 @@ function exactPlainObject(value, keys, name) {
   if (value === null || typeof value !== "object" || Array.isArray(value) || Object.getPrototypeOf(value) !== Object.prototype) {
     throw new ErgonomicsBoundaryError("INVALID_ERGONOMIC_OBJECT", `${name} must be a plain object`);
   }
+  const ownKeys = Reflect.ownKeys(value);
+  if (ownKeys.some((key) => typeof key !== "string")) {
+    throw new ErgonomicsBoundaryError("BUILDER_INPUT_MISMATCH", `${name} must not contain symbol properties`);
+  }
   const actual = Object.keys(value);
-  if (actual.length !== keys.length || keys.some((key) => !Object.hasOwn(value, key))) {
+  if (actual.length !== keys.length || ownKeys.length !== keys.length || keys.some((key) => !Object.hasOwn(value, key))) {
     throw new ErgonomicsBoundaryError("BUILDER_INPUT_MISMATCH", `${name} must contain exactly ${keys.join(", ")}`);
+  }
+  for (const key of keys) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (!descriptor || descriptor.get || descriptor.set || !descriptor.enumerable) {
+      throw new ErgonomicsBoundaryError("NON_DATA_ERGONOMIC_PROPERTY", `${name}.${key} must be an enumerable data property`);
+    }
   }
 }
 

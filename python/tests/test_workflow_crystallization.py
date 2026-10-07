@@ -197,11 +197,11 @@ class WorkflowCrystallizationTests(unittest.TestCase):
 
     def test_hostile_fact_names_cannot_inject_generated_code(self) -> None:
         hostile_keys = [
-            "x\')\\n    print(\'INJECTED\')\\n    if 0:\\n        raise ValueError(\'",
-            "x\'); print(\'INJECTED\'); (\'",
-            "x\\ny",
+            "x')\n    print('INJECTED')\n    if 0:\n        raise ValueError('",
+            "x'); print('INJECTED'); ('",
+            "x\ny",
             "has space",
-            "quote\'name",
+            "quote'name",
             "",
             "a" * 129,
         ]

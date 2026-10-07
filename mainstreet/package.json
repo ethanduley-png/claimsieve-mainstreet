@@ -3,12 +3,12 @@
   "version": "0.34.0",
   "private": true,
   "type": "module",
-  "description": "Proposal-only boundary with Founder OS GitHub issue proposal slice",
+  "description": "Proposal-only ClaimSieve boundary plus an explicitly untrusted Agent Reach observation boundary",
   "engines": {
     "node": ">=22"
   },
   "scripts": {
     "test": "node --test",
-    "check": "node --check src/index.js && node --check test/proposal-bridge.test.js"
+    "check": "node --check src/index.js && node --check src/agent-reach-untrusted.js && node --check test/proposal-bridge.test.js && node --check test/agent-reach-untrusted.test.js"
   }
 }

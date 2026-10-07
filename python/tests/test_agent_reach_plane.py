@@ -1,6 +1,7 @@
 import copy
 import json
 from pathlib import Path
+import tempfile
 import unittest
 
 from claimsieve_ref.fixtures import evidence, keypairs, policy, proposal, signed_policy
@@ -116,7 +117,7 @@ class PermitFixture:
         self.gate = ClaimSieveReadPermitGate(
             {self.keys["authority"].key_id: self.keys["authority"].public},
             self.containment.view(),
-            PermitUseStore(),
+            PermitUseStore(":memory:"),
         )
 
     def run(self, text="external data"):
@@ -191,6 +192,20 @@ class AgentReachPlaneTests(unittest.TestCase):
             observe(fixture.raw_request, runner, gate=fixture.gate, proposal=fixture.prop, permit=fixture.permit, seq=11)
         self.assertEqual(caught.exception.code, "PERMIT_REPLAY")
         self.assertEqual(runner.calls, [])
+
+    def test_permit_use_store_survives_process_style_reopen(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = str(Path(directory) / "permit-uses.sqlite3")
+            first = PermitUseStore(path)
+            self.assertTrue(first.reserve("permit:persistent"))
+            first.close()
+
+            reopened = PermitUseStore(path)
+            try:
+                self.assertFalse(reopened.reserve("permit:persistent"))
+                self.assertTrue(reopened.reserve("permit:new"))
+            finally:
+                reopened.close()
 
     def test_revoked_permit_is_blocked(self):
         fixture = PermitFixture()

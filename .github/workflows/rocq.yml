@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - name: Compile Rocq model and audit assumptions
+      - name: Compile Rocq model, audit assumptions, and test OCaml extraction
         run: |
           set -euo pipefail
           mkdir -p evidence
@@ -27,6 +27,7 @@ jobs:
               rocq compile -Q . ClaimSieve Check.v
               rocq compile -Q . ClaimSieve CheckDurableState.v
               rocq compile -Q . ClaimSieve CheckExecutionAssurance.v
+              rocq compile -Q . ClaimSieve ExtractRefinement.v
             ' | tee evidence/ROCQ_ASSUMPTIONS.txt
       - name: Reject unproved assumptions
         run: '! grep -R -n -E "(^|[^A-Za-z])(Admitted|admit|Axiom|Parameter)([^A-Za-z]|$)" --include="*.v" rocq'

@@ -191,7 +191,11 @@ pub fn verify_shadow_compact_preflight(
     check_binding("trace_id", &permit.trace_id, &proposal.trace_id)?;
     check_binding("tenant_id", &permit.tenant_id, &proposal.tenant_id)?;
     check_binding("campaign_id", &permit.campaign_id, &proposal.campaign_id)?;
-    check_binding("current_campaign_id", &permit.campaign_id, &current.campaign_id)?;
+    check_binding(
+        "current_campaign_id",
+        &permit.campaign_id,
+        &current.campaign_id,
+    )?;
     check_binding("principal", &permit.principal, &proposal.principal)?;
     check_binding(
         "policy_digest",
@@ -248,9 +252,7 @@ pub fn verify_shadow_compact_preflight(
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        CompactAdmissionError, CurrentAuthorityFacts, verify_shadow_compact_preflight,
-    };
+    use super::{CompactAdmissionError, CurrentAuthorityFacts, verify_shadow_compact_preflight};
     use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
     use claimsieve_protocol::{
         Action, Destination, Objective, Permit, Proposal, action_digest, approval_digest,
@@ -322,10 +324,7 @@ mod tests {
         }
     }
 
-    fn sign_test_permit(
-        permit: &Permit,
-        signing_key: &SigningKey,
-    ) -> Result<String, String> {
+    fn sign_test_permit(permit: &Permit, signing_key: &SigningKey) -> Result<String, String> {
         let unsigned = UnsignedPermitForTest {
             schema_version: &permit.schema_version,
             permit_id: &permit.permit_id,
@@ -413,13 +412,9 @@ mod tests {
         let (permit, proposal, signing_key) = sample_signed_permit()?;
         let mut keys = BTreeMap::new();
         keys.insert(permit.authority_key_id.clone(), signing_key.verifying_key());
-        let admission = verify_shadow_compact_preflight(
-            &permit,
-            &proposal,
-            &current(&permit),
-            &keys,
-        )
-        .map_err(|error| error.to_string())?;
+        let admission =
+            verify_shadow_compact_preflight(&permit, &proposal, &current(&permit), &keys)
+                .map_err(|error| error.to_string())?;
         assert_eq!(admission.action_digest, permit.action_digest);
         assert_eq!(admission.evidence_root, permit.evidence_root);
         Ok(())
@@ -460,12 +455,7 @@ mod tests {
         let mut keys = BTreeMap::new();
         keys.insert(permit.authority_key_id.clone(), signing_key.verifying_key());
         proposal.action.destination.authority = "+15555550999".to_owned();
-        let result = verify_shadow_compact_preflight(
-            &permit,
-            &proposal,
-            &current(&permit),
-            &keys,
-        );
+        let result = verify_shadow_compact_preflight(&permit, &proposal, &current(&permit), &keys);
         assert!(matches!(
             result,
             Err(CompactAdmissionError::Binding("proposal_digest"))

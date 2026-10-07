@@ -5,7 +5,11 @@ They must not own provider credentials, permit-signing keys, executor keys, or
 observer keys.
 """
 
-from .claimsieve_intake import ClaimSieveIntakeError, DeepAgentsFounderIntake
+from .claimsieve_intake import (
+    ClaimSieveIntakeError,
+    DeepAgentsFounderIntake,
+    OpenHandsFounderIntake,
+)
 from .deepagents_adapter import (
     ClaimSieveRuntimeContext,
     ConsequentialToolIntent,
@@ -13,13 +17,20 @@ from .deepagents_adapter import (
     DeepAgentsProposalAdapter,
 )
 from .openhands_adapter import (
+    PINNED_OPENHANDS_COMMIT,
     OpenHandsAdapterError,
     OpenHandsConsequentialIntent,
     OpenHandsProposalAdapter,
     OpenHandsRuntimeContext,
 )
+from .openhands_transport import (
+    AuthenticatedRuntimeBinding,
+    OpenHandsAuthenticatedRoute,
+    OpenHandsTransportError,
+)
 
 __all__ = [
+    "AuthenticatedRuntimeBinding",
     "ClaimSieveIntakeError",
     "ClaimSieveRuntimeContext",
     "ConsequentialToolIntent",
@@ -27,7 +38,11 @@ __all__ = [
     "DeepAgentsFounderIntake",
     "DeepAgentsProposalAdapter",
     "OpenHandsAdapterError",
+    "OpenHandsAuthenticatedRoute",
     "OpenHandsConsequentialIntent",
+    "OpenHandsFounderIntake",
     "OpenHandsProposalAdapter",
     "OpenHandsRuntimeContext",
+    "OpenHandsTransportError",
+    "PINNED_OPENHANDS_COMMIT",
 ]

@@ -48,6 +48,25 @@ def trace(index: int, *, phone: str | None = None, body: str | None = None, risk
     )
 
 
+def trace_with_fact_key(index: int, key: str) -> AgentTrace:
+    """Trace whose destination source uses a caller-chosen fact key."""
+    base = trace(index)
+    phone = base.input_facts["lead_phone"]
+    facts = {k: v for k, v in base.input_facts.items() if k != "lead_phone"}
+    facts[key] = phone
+    return AgentTrace(
+        trace_id=base.trace_id,
+        capability_id=base.capability_id,
+        risk_class=base.risk_class,
+        input_facts=facts,
+        proposed_action=base.proposed_action,
+        claimsieve_verdict=base.claimsieve_verdict,
+        terminal_outcome=base.terminal_outcome,
+        policy_digest=base.policy_digest,
+        evidence_root=base.evidence_root,
+    )
+
+
 class WorkflowCrystallizationTests(unittest.TestCase):
     def test_stable_repeated_agent_work_crystallizes(self) -> None:
         history = [trace(i) for i in range(1, 7)]
@@ -175,6 +194,60 @@ class WorkflowCrystallizationTests(unittest.TestCase):
         decision = promotion_gate(candidate, shadow, minimum_shadow_cases=20)
         self.assertTrue(any("policy drift" in item for item in shadow.safety_violations))
         self.assertFalse(decision.promotable)
+
+    def test_hostile_fact_names_cannot_inject_generated_code(self) -> None:
+        hostile_keys = [
+            "x\')\\n    print(\'INJECTED\')\\n    if 0:\\n        raise ValueError(\'",
+            "x\'); print(\'INJECTED\'); (\'",
+            "x\\ny",
+            "has space",
+            "quote\'name",
+            "",
+            "a" * 129,
+        ]
+        for key in hostile_keys:
+            with self.subTest(key=key):
+                history = [trace_with_fact_key(i, key) for i in range(1, 7)]
+                with self.assertRaises(CrystallizationError):
+                    candidate = learn_candidate(history, minimum_support=5)
+                    render_python_module(candidate)
+
+    def test_benign_unusual_fact_names_render_to_expected_ast(self) -> None:
+        import ast
+
+        history = [trace_with_fact_key(i, "lead.phone-number_2") for i in range(1, 7)]
+        candidate = learn_candidate(history, minimum_support=5)
+        source = render_python_module(candidate)
+        tree = ast.parse(source)
+        builder = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "build_proposal")
+        calls = []
+        for node in ast.walk(builder):
+            if isinstance(node, ast.Call):
+                self.assertIsInstance(node.func, ast.Name)
+                calls.append(node.func.id)
+        self.assertEqual(set(calls), {"ValueError", "_set_path"})
+        self.assertNotIn("print", calls)
+        self.assertNotIn("__import__", calls)
+        self.assertNotIn("exec", calls)
+
+    def test_function_name_must_not_be_a_keyword(self) -> None:
+        candidate = learn_candidate([trace(i) for i in range(1, 7)], minimum_support=5)
+        for name in ("class", "def", "import", "not an identifier"):
+            with self.subTest(name=name):
+                with self.assertRaises(CrystallizationError):
+                    render_python_module(candidate, function_name=name)
+
+    def test_codegen_rejects_string_subclasses_before_repr(self) -> None:
+        class HostileStr(str):
+            def __repr__(self) -> str:
+                raise AssertionError("custom repr must never reach code generation")
+
+        candidate = learn_candidate(
+            [trace(i, policy=HostileStr(POLICY)) for i in range(1, 7)],
+            minimum_support=5,
+        )
+        with self.assertRaisesRegex(CrystallizationError, "exact built-in"):
+            render_python_module(candidate)
 
     def test_generated_python_is_proposal_only_and_equivalent(self) -> None:
         candidate = learn_candidate([trace(i) for i in range(1, 6)])

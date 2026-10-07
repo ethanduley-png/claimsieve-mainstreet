@@ -1,0 +1,9 @@
+{
+  "name": "MainStreet",
+  "short_name": "MainStreet",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4f5f7",
+  "theme_color": "#111827",
+  "description": "MainStreet AI business command center"
+}

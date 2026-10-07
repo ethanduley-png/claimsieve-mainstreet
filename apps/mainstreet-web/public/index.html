@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#111827">
+  <meta name="description" content="MainStreet AI business command center">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="stylesheet" href="/styles.css">
+  <title>MainStreet</title>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="MainStreet home">MainStreet</a>
+      <div class="topbar-actions">
+        <label class="business-picker" for="business-select">
+          <span>Business</span>
+          <select id="business-select" disabled aria-label="Choose business">
+            <option>Loading…</option>
+          </select>
+        </label>
+        <a class="quiet-link" href="/auth/logout" id="logout-link" hidden>Sign out</a>
+      </div>
+    </header>
+
+    <main>
+      <section id="loading-view" class="center-card" aria-live="polite">
+        <p class="eyebrow">MainStreet</p>
+        <h1>Opening your command center…</h1>
+        <p>Checking your secure business session.</p>
+      </section>
+
+      <section id="signed-out-view" class="center-card" hidden>
+        <p class="eyebrow">For small business teams</p>
+        <h1>Your business, in one place.</h1>
+        <p>See what needs attention, ask MainStreet for help, and approve important actions before they happen.</p>
+        <a class="primary-button" href="/auth/login?return_to=%2F">Sign in</a>
+        <p class="fine-print">MainStreet does not collect your password on this page. Sign in is handled by the configured authentication service.</p>
+      </section>
+
+      <section id="no-business-view" class="center-card" hidden>
+        <p class="eyebrow">Signed in</p>
+        <h1>No business access yet.</h1>
+        <p>Your account is valid, but it is not an active member of a MainStreet business.</p>
+      </section>
+
+      <section id="app-view" hidden>
+        <nav class="primary-nav" aria-label="Main navigation">
+          <button class="nav-item active" type="button" data-view="today">Today</button>
+          <button class="nav-item" type="button" data-view="ask">Ask</button>
+          <button class="nav-item" type="button" data-view="inbox">Inbox</button>
+          <button class="nav-item" type="button" data-view="tasks">Tasks</button>
+          <button class="nav-item" type="button" data-view="notes">Notes</button>
+          <button class="nav-item" type="button" data-view="approvals">Approvals</button>
+          <button class="nav-item" type="button" data-view="activity">Activity</button>
+        </nav>
+
+        <div class="content">
+          <section id="view-today" class="view-panel">
+            <div class="page-heading">
+              <div>
+                <p class="eyebrow">Command center</p>
+                <h1>Today</h1>
+              </div>
+              <span id="role-badge" class="badge"></span>
+            </div>
+            <div id="today-list" class="card-list" aria-live="polite"></div>
+          </section>
+
+          <section id="view-ask" class="view-panel" hidden>
+            <div class="page-heading">
+              <div>
+                <p class="eyebrow">Proposal only</p>
+                <h1>Ask MainStreet</h1>
+              </div>
+            </div>
+            <form id="assistant-form" class="assistant-card">
+              <label for="assistant-text">What do you want help with?</label>
+              <textarea id="assistant-text" name="text" maxlength="32000" rows="5" placeholder="Follow up with the new leads and tell me what needs my approval." required></textarea>
+              <button class="primary-button" type="submit">Prepare request</button>
+              <p class="fine-print">This screen creates a proposal. Consequential actions still go through the ClaimSieve authorization boundary.</p>
+            </form>
+            <div id="assistant-result" class="result-card" hidden aria-live="polite"></div>
+          </section>
+
+          <section id="view-inbox" class="view-panel placeholder" hidden><h1>Inbox</h1><p>Customer communications will land here.</p></section>
+          <section id="view-tasks" class="view-panel placeholder" hidden><h1>Tasks</h1><p>Open work and follow ups will land here.</p></section>
+          <section id="view-notes" class="view-panel placeholder" hidden>
+            <h1>Notes</h1>
+            <p>The camera and document intake flow will connect to the governed OCR pipeline next.</p>
+          </section>
+          <section id="view-approvals" class="view-panel placeholder" hidden><h1>Approvals</h1><p>Actions requiring owner review will appear here.</p></section>
+          <section id="view-activity" class="view-panel placeholder" hidden><h1>Activity</h1><p>Verified action and audit history will appear here.</p></section>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

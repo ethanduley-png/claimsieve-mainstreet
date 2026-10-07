@@ -1,0 +1,60 @@
+name: OpenHands Adapter Baseline
+
+on:
+  pull_request:
+    paths:
+      - "python/mainstreet_runtimes/**"
+      - "python/tests/test_openhands_*.py"
+      - "scripts/check_openhands_contract.py"
+      - "docs/OPENHANDS_RUNTIME_ADAPTER.md"
+      - ".github/workflows/openhands-adapter.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  adapter-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: python/requirements-test.txt
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r python/requirements-test.txt
+      - name: Run OpenHands proposal-boundary tests
+        env:
+          PYTHONPATH: python
+        run: |
+          python -m unittest discover \
+            -s python/tests \
+            -p 'test_openhands_*.py' \
+            -v
+
+  upstream-contract:
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Check pinned OpenHands ActionEvent contract
+        run: |
+          python scripts/check_openhands_contract.py \
+            --commit ea7a85c27628a6abad4d5738527e5044b34b91ff \
+            --output openhands-contract-baseline.json
+      - name: Preserve OpenHands contract evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: openhands-contract-baseline
+          path: openhands-contract-baseline.json
+          if-no-files-found: warn

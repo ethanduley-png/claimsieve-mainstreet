@@ -1,0 +1,155 @@
+name: Strix adversarial baseline
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deterministic-boundary-baseline:
+    name: Deterministic boundary baseline
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install reference test dependencies
+        run: python -m pip install --disable-pip-version-check -r python/requirements-test.txt
+      - name: Run focused adversarial unit tests
+        env:
+          PYTHONPATH: python
+        run: |
+          python -m unittest discover -s python/tests -p 'test_adversarial.py' -v
+          python -m unittest discover -s python/tests -p 'test_runtime.py' -v
+      - name: Run executable red-team harness
+        env:
+          PYTHONPATH: python
+        run: |
+          mkdir -p evidence/strix
+          python scripts/run_red_team.py | tee evidence/strix/DETERMINISTIC_RED_TEAM.txt
+      - name: Upload deterministic adversarial evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: claimsieve-deterministic-adversarial-baseline
+          path: evidence/strix/
+          if-no-files-found: warn
+
+  strix:
+    name: Strix autonomous adversary
+    needs: deterministic-boundary-baseline
+    # Never expose model credentials to pull-request code. Autonomous scans run
+    # only against the trusted main branch, either after merge or by an explicit
+    # manual dispatch of main.
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    # Baseline phase is deliberately nonblocking. Findings are evidence to triage,
+    # not an automatic merge gate until reproducibility and severity are established.
+    continue-on-error: true
+    env:
+      STRIX_LLM: ${{ secrets.STRIX_LLM }}
+      LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Prepare evidence directory
+        run: mkdir -p evidence/strix
+      - name: Detect Strix credentials without printing them
+        id: creds
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -n "${STRIX_LLM:-}" && -n "${LLM_API_KEY:-}" ]]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+            printf '%s\n' '{"configured":true,"mode":"self-hosted-cli"}' > evidence/strix/STRIX_STATUS.json
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            printf '%s\n' '{"configured":false,"mode":"self-hosted-cli","reason":"STRIX_LLM and/or LLM_API_KEY GitHub Actions secrets are not configured"}' > evidence/strix/STRIX_STATUS.json
+          fi
+      - name: Install pinned Strix CLI
+        if: steps.creds.outputs.configured == 'true'
+        run: python -m pip install --disable-pip-version-check 'strix-agent==1.6.2'
+      - name: Verify Docker sandbox availability
+        if: steps.creds.outputs.configured == 'true'
+        run: docker info >/dev/null
+      - name: Run Strix quick adversarial scan
+        if: steps.creds.outputs.configured == 'true'
+        id: scan
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -uo pipefail
+          set +e
+          strix -n \
+            --target ./ \
+            --scan-mode quick \
+            --max-budget 10 \
+            --instruction "$(cat security/strix/INSTRUCTIONS.md)" \
+            2>&1 | tee evidence/strix/STRIX_CONSOLE.txt
+          code=${PIPESTATUS[0]}
+          printf '%s\n' "$code" > evidence/strix/STRIX_EXIT_CODE.txt
+          printf 'exit_code=%s\n' "$code" >> "$GITHUB_OUTPUT"
+          if [[ -d strix_runs ]]; then
+            cp -R strix_runs evidence/strix/strix_runs
+          fi
+          # Preserve the actual Strix exit code as evidence while keeping the
+          # initial integration nonblocking.
+          exit "$code"
+      - name: Record Strix completion state
+        if: always() && steps.creds.outputs.configured == 'true'
+        env:
+          STRIX_EXIT_CODE: ${{ steps.scan.outputs.exit_code }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          summary = {
+              "configured": True,
+              "exit_code": os.environ.get("STRIX_EXIT_CODE") or None,
+              "completed": False,
+              "run_status": "missing",
+          }
+          run_jsons = list(Path("strix_runs").glob("*/run.json"))
+          if run_jsons:
+              latest = max(run_jsons, key=lambda path: path.stat().st_mtime)
+              summary["run_json"] = str(latest)
+              try:
+                  run = json.loads(latest.read_text(encoding="utf-8"))
+                  summary["run_status"] = run.get("status")
+                  summary["completed"] = run.get("status") == "completed"
+              except (OSError, json.JSONDecodeError):
+                  summary["run_status"] = "unreadable"
+
+          Path("evidence/strix/STRIX_COMPLETION.json").write_text(
+              json.dumps(summary, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          PY
+      - name: Record skipped scan
+        if: steps.creds.outputs.configured != 'true'
+        run: |
+          cat > evidence/strix/README.txt <<'EOF'
+          Strix was integrated but the autonomous scan did not execute because
+          the repository does not currently expose both STRIX_LLM and LLM_API_KEY
+          to this trusted-main GitHub Actions run. The deterministic ClaimSieve
+          red-team job still executes independently and remains authoritative.
+          EOF
+      - name: Upload Strix evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: claimsieve-strix-adversarial-baseline
+          path: evidence/strix/
+          if-no-files-found: warn

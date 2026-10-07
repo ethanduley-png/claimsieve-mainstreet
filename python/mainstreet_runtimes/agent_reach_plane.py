@@ -26,6 +26,7 @@ import json
 import os
 import re
 import socket
+import sqlite3
 import subprocess
 import threading
 import unicodedata
@@ -359,19 +360,63 @@ def claimsieve_action_for_request(request: CapabilityRequest) -> dict[str, Any]:
     }
 
 
-@dataclass
 class PermitUseStore:
-    """Atomic one-use reservation for the reference read executor."""
+    """SQLite-backed one-use reservation for Agent Reach read permits.
 
-    _used: set[str] = field(default_factory=set)
-    _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
+    The default file survives process restart. Tests may explicitly use
+    ':memory:' when restart durability is not under test.
+    """
+
+    def __init__(
+        self,
+        path: str = "/var/lib/mainstreet-agent-reach/permit-uses.sqlite3",
+    ) -> None:
+        if not isinstance(path, str) or not path:
+            raise ValueError("permit-use store path must be non-empty")
+        self.path = path
+        if path != ":memory:":
+            db_path = Path(path)
+            if not db_path.is_absolute():
+                raise ValueError("permit-use store path must be absolute")
+            db_path.parent.mkdir(parents=True, exist_ok=True)
+        self._lock = threading.Lock()
+        self._connection = sqlite3.connect(
+            path,
+            timeout=30.0,
+            isolation_level=None,
+            check_same_thread=False,
+        )
+        self._connection.execute("PRAGMA busy_timeout = 30000")
+        if path != ":memory:":
+            self._connection.execute("PRAGMA journal_mode = WAL")
+            self._connection.execute("PRAGMA synchronous = FULL")
+        self._connection.execute(
+            "CREATE TABLE IF NOT EXISTS used_permits (permit_id TEXT PRIMARY KEY)"
+        )
 
     def reserve(self, permit_id: str) -> bool:
         with self._lock:
-            if permit_id in self._used:
+            try:
+                self._connection.execute("BEGIN IMMEDIATE")
+                self._connection.execute(
+                    "INSERT INTO used_permits(permit_id) VALUES(?)",
+                    (permit_id,),
+                )
+                self._connection.execute("COMMIT")
+                return True
+            except sqlite3.IntegrityError:
+                self._connection.execute("ROLLBACK")
                 return False
-            self._used.add(permit_id)
-            return True
+            except BaseException:
+                try:
+                    self._connection.execute("ROLLBACK")
+                except sqlite3.Error:
+                    pass
+                raise
+
+    def close(self) -> None:
+        with self._lock:
+            self._connection.close()
 
 
 @dataclass
@@ -387,7 +432,7 @@ class ClaimSieveReadPermitGate:
 
     authority_keys: Mapping[str, AuthorityPublicKey]
     containment: ContainmentView
-    permit_uses: PermitUseStore = field(default_factory=PermitUseStore)
+    permit_uses: PermitUseStore
 
     def _check_containment(self, permit: Mapping[str, Any], campaign_id: str) -> None:
         permit_id = str(permit.get("permit_id", ""))

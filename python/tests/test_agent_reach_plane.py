@@ -6,6 +6,7 @@ import unittest
 from claimsieve_ref.fixtures import evidence, keypairs, policy, proposal, signed_policy
 from claimsieve_ref.kernel import evaluate
 from claimsieve_ref.runtime import Authority, CampaignStateStore, ContainmentController
+from claimsieve_ref.trust import sign_evidence
 from mainstreet_runtimes.agent_reach_plane import (
     CapabilityExecutionError,
     CapabilityPolicyError,
@@ -47,7 +48,28 @@ def request(**overrides):
 class PermitFixture:
     def __init__(self):
         self.keys = keypairs()
-        self.ev = evidence(10)
+        self.ev = [
+            item
+            for item in evidence(10)
+            if item["type"] != "destination_registry"
+        ]
+        self.ev.append(
+            sign_evidence(
+                {
+                    "schema_version": "claimsieve.evidence.v1",
+                    "type": "destination_registry",
+                    "source": "spiffe://claimsieve.local/registry",
+                    "subject": "agent-reach-github-read",
+                    "observed_at_seq": 10,
+                    "verified": True,
+                    "content": {
+                        "authority": "github",
+                        "trust_domain": "agent-reach-untrusted",
+                    },
+                },
+                self.keys["registry_evidence"],
+            )
+        )
         self.signed_pol = signed_policy(
             allowed_trust_domains=policy()["allowed_trust_domains"] + ["agent-reach-untrusted"],
             allowed_subgoals=policy()["allowed_subgoals"] + ["external_research"],

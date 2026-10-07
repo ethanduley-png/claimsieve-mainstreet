@@ -70,6 +70,43 @@ class BoundedOperationalStateTests(unittest.TestCase):
         with self.assertRaises(ProtectedOperationalStateError):
             OperationalState(version=0, payload_json=payload_json, state_digest=state_digest)
 
+    def test_manual_state_constructor_cannot_bypass_hard_byte_budget(self) -> None:
+        payload = {"notes": "n" * 40_000}
+        payload_json = canonical_bytes(payload).decode("utf-8")
+        state_digest = digest(
+            {
+                "schema_version": "claimsieve.operational_state.v1",
+                "version": 0,
+                "payload": payload,
+            }
+        )
+        with self.assertRaises(OperationalStateBoundsError):
+            OperationalState(version=0, payload_json=payload_json, state_digest=state_digest)
+
+    def test_manual_patch_constructor_cannot_bypass_hard_patch_budget(self) -> None:
+        state = OperationalState.from_payload({"goal": "x"})
+        changes = {"notes": "n" * 9_000}
+        changes_json = canonical_bytes(changes).decode("utf-8")
+        patch_digest = digest(
+            {
+                "schema_version": "claimsieve.operational_state_patch.v1",
+                "base_version": state.version,
+                "base_state_digest": state.state_digest,
+                "actor": "worker:a",
+                "changes": changes,
+                "deletions": [],
+            }
+        )
+        with self.assertRaises(OperationalStateBoundsError):
+            OperationalStatePatch(
+                base_version=state.version,
+                base_state_digest=state.state_digest,
+                actor="worker:a",
+                changes_json=changes_json,
+                deletions=(),
+                patch_digest=patch_digest,
+            )
+
     def test_non_authoritative_summaries_remain_possible(self) -> None:
         state = OperationalState.from_payload(
             {"evidence_summary": {"known": 2, "unknown": 1}, "approval_summary": "review required"}

@@ -1,0 +1,169 @@
+name: OpenWorker Production Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+  attestations: write
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/claimsieve-openworker
+  PYTHON_BASE_TAG: python:3.11.16-slim
+  OPENWORKER_COMMIT: 86c57f0692a5a318e55d1b9e0188d798b9fc5690
+  AISUITE_COMMIT: 1b4bbf303ec21968230b1ec869a144d054e9b3c4
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11.16"
+
+      - name: Validate exact release source
+        env:
+          PYTHONPATH: python
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -r python/requirements-openworker.lock.txt
+          python -m pip check
+          python -m pip freeze --exclude pip --exclude setuptools --exclude wheel > /tmp/openworker.freeze.txt
+          diff -u python/requirements-openworker.lock.txt /tmp/openworker.freeze.txt
+          python - <<'PY'
+          import json
+          from importlib import metadata
+          from mainstreet_runtimes.openworker_native_bridge import verify_pinned_openworker_runtime
+          resolved = verify_pinned_openworker_runtime()
+          if resolved != "86c57f0692a5a318e55d1b9e0188d798b9fc5690":
+              raise SystemExit(f"unexpected OpenWorker commit: {resolved}")
+          raw = metadata.distribution("aisuite").read_text("direct_url.json")
+          if not raw:
+              raise SystemExit("aisuite has no PEP 610 provenance")
+          vcs = json.loads(raw).get("vcs_info", {})
+          if vcs.get("vcs") != "git" or vcs.get("commit_id") != "1b4bbf303ec21968230b1ec869a144d054e9b3c4":
+              raise SystemExit(f"unexpected aisuite provenance: {vcs}")
+          PY
+          python -m unittest discover -s python/tests -p 'test_openworker_*.py' -v
+          python - <<'PY'
+          from mainstreet_runtimes.openworker_deployment_policy import validate_openworker_deployment_template_file
+          validate_openworker_deployment_template_file("deploy/openworker/kubernetes.json")
+          PY
+
+      - uses: docker/setup-buildx-action@v4.3.0
+
+      - name: Resolve immutable Python base image
+        id: base
+        shell: bash
+        run: |
+          set -euo pipefail
+          digest="$(docker buildx imagetools inspect "$PYTHON_BASE_TAG" | awk '/^Digest:/ {print $2; exit}')"
+          if [[ ! "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "invalid base digest: $digest" >&2
+            exit 1
+          fi
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          echo "ref=${PYTHON_BASE_TAG}@${digest}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/login-action@v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push immutable runtime image
+        id: build
+        uses: docker/build-push-action@v7.3.0
+        with:
+          context: .
+          file: deploy/openworker/Dockerfile
+          push: true
+          tags: ${{ env.IMAGE }}:${{ github.sha }}
+          build-args: |
+            PYTHON_BASE_IMAGE=${{ steps.base.outputs.ref }}
+            REPOSITORY_COMMIT=${{ github.sha }}
+            OPENWORKER_COMMIT=${{ env.OPENWORKER_COMMIT }}
+            AISUITE_COMMIT=${{ env.AISUITE_COMMIT }}
+          provenance: mode=max
+          sbom: true
+          no-cache: true
+
+      - name: Require content-addressed image digest
+        shell: bash
+        run: |
+          set -euo pipefail
+          digest='${{ steps.build.outputs.digest }}'
+          if [[ ! "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "build did not produce a valid image digest: $digest" >&2
+            exit 1
+          fi
+          docker buildx imagetools inspect "$IMAGE@$digest" >/dev/null
+
+      - name: Block known high and critical release vulnerabilities
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ env.IMAGE }}@${{ steps.build.outputs.digest }}
+          format: table
+          exit-code: "1"
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+
+      - name: Build and verify closed release record
+        env:
+          PYTHONPATH: python
+          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+          REPOSITORY_COMMIT: ${{ github.sha }}
+          BASE_IMAGE_REF: ${{ steps.base.outputs.ref }}
+        run: |
+          mkdir -p release/openworker
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          from mainstreet_runtimes.openworker_release import build_openworker_release, verify_openworker_release
+
+          record = build_openworker_release(
+              repository_commit=os.environ["REPOSITORY_COMMIT"],
+              image_digest=os.environ["IMAGE_DIGEST"],
+              dependency_lock_path="python/requirements-openworker.lock.txt",
+              deployment_template_path="deploy/openworker/kubernetes.json",
+          )
+          Path("release/openworker/release.json").write_text(
+              json.dumps(record, sort_keys=True, indent=2) + "\n", encoding="utf-8"
+          )
+          Path("release/openworker/deployment.json").write_text(
+              json.dumps(record["rendered_deployment"], sort_keys=True, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          Path("release/openworker/base-image.txt").write_text(
+              os.environ["BASE_IMAGE_REF"] + "\n", encoding="utf-8"
+          )
+          verify_openworker_release(
+              json.loads(Path("release/openworker/release.json").read_text(encoding="utf-8")),
+              dependency_lock_path="python/requirements-openworker.lock.txt",
+              deployment_template_path="deploy/openworker/kubernetes.json",
+          )
+          PY
+          sha256sum release/openworker/* > release/openworker/SHA256SUMS
+
+      - name: Attest pushed container provenance
+        uses: actions/attest-build-provenance@v4.2.2
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+
+      - name: Upload release evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: openworker-release-${{ github.sha }}
+          path: release/openworker
+          if-no-files-found: error
+          retention-days: 90

@@ -1,0 +1,129 @@
+name: OpenWorker Adapter
+
+on:
+  pull_request:
+    paths:
+      - "python/mainstreet_runtimes/openworker_*.py"
+      - "python/tests/test_openworker_*.py"
+      - "python/requirements-openworker.lock.txt"
+      - "deploy/openworker/**"
+      - ".github/workflows/openworker-adapter.yml"
+      - ".github/workflows/openworker-release.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-compatibility:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      OPENWORKER_COMMIT: 86c57f0692a5a318e55d1b9e0188d798b9fc5690
+      AISUITE_COMMIT: 1b4bbf303ec21968230b1ec869a144d054e9b3c4
+      PYTHON_BASE_TAG: python:3.11.16-slim
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11.16"
+          cache: pip
+          cache-dependency-path: python/requirements-openworker.lock.txt
+      - name: Install frozen OpenWorker runtime graph
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r python/requirements-openworker.lock.txt
+          python -m pip check
+      - name: Verify frozen dependency graph
+        run: |
+          python -m pip freeze --exclude pip --exclude setuptools --exclude wheel > /tmp/openworker.freeze.txt
+          diff -u python/requirements-openworker.lock.txt /tmp/openworker.freeze.txt
+      - name: Verify installed VCS provenance and native API seam
+        env:
+          PYTHONPATH: python
+        run: |
+          python - <<'PY'
+          import json
+          from importlib import metadata
+          from mainstreet_runtimes.openworker_native_bridge import PINNED_OPENWORKER_COMMIT, verify_pinned_openworker_runtime
+          resolved = verify_pinned_openworker_runtime()
+          if resolved != PINNED_OPENWORKER_COMMIT:
+              raise SystemExit(f"unexpected OpenWorker commit: {resolved}")
+          raw = metadata.distribution("aisuite").read_text("direct_url.json")
+          if not raw:
+              raise SystemExit("aisuite has no PEP 610 provenance")
+          vcs = json.loads(raw).get("vcs_info", {})
+          if vcs.get("vcs") != "git" or vcs.get("commit_id") != "1b4bbf303ec21968230b1ec869a144d054e9b3c4":
+              raise SystemExit(f"unexpected aisuite provenance: {vcs}")
+          PY
+      - name: Validate deployment template and production renderer
+        env:
+          PYTHONPATH: python
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from mainstreet_runtimes.openworker_deployment_policy import render_openworker_production_manifest, validate_openworker_deployment_template_file, validate_openworker_production_manifest
+          path = Path("deploy/openworker/kubernetes.json")
+          validate_openworker_deployment_template_file(path)
+          template = json.loads(path.read_text())
+          rendered = render_openworker_production_manifest(template, "sha256:" + "1" * 64)
+          validate_openworker_production_manifest(rendered)
+          PY
+      - name: Run OpenWorker contract and native adversarial tests
+        env:
+          PYTHONPATH: python
+        run: |
+          python -m unittest discover -s python/tests -p 'test_openworker_*.py' -v
+
+      - uses: docker/setup-buildx-action@v4.3.0
+      - name: Resolve immutable Python base image
+        id: base
+        shell: bash
+        run: |
+          set -euo pipefail
+          digest="$(docker buildx imagetools inspect "$PYTHON_BASE_TAG" | awk '/^Digest:/ {print $2; exit}')"
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+          echo "ref=${PYTHON_BASE_TAG}@${digest}" >> "$GITHUB_OUTPUT"
+      - name: Build production image without publishing
+        uses: docker/build-push-action@v7.3.0
+        with:
+          context: .
+          file: deploy/openworker/Dockerfile
+          load: true
+          tags: claimsieve-openworker:pr-test
+          build-args: |
+            PYTHON_BASE_IMAGE=${{ steps.base.outputs.ref }}
+            REPOSITORY_COMMIT=${{ github.sha }}
+            OPENWORKER_COMMIT=${{ env.OPENWORKER_COMMIT }}
+            AISUITE_COMMIT=${{ env.AISUITE_COMMIT }}
+          provenance: false
+          sbom: false
+          no-cache: true
+      - name: Verify final image attack surface and launch metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(docker inspect --format '{{.Config.User}}' claimsieve-openworker:pr-test)" = "65532:65532"
+          test "$(docker inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' claimsieve-openworker:pr-test)" = "${GITHUB_SHA}"
+          test "$(docker inspect --format '{{index .Config.Labels "io.mainstreet.openworker.commit"}}' claimsieve-openworker:pr-test)" = "${OPENWORKER_COMMIT}"
+          test "$(docker inspect --format '{{index .Config.Labels "io.mainstreet.aisuite.commit"}}' claimsieve-openworker:pr-test)" = "${AISUITE_COMMIT}"
+          docker run --rm -i --entrypoint python claimsieve-openworker:pr-test - <<'PY'
+          import shutil
+          import mainstreet_runtimes.openworker_production_server as server
+          import coworker
+          if shutil.which("git") is not None:
+              raise SystemExit("git must not exist in the production runtime image")
+          if server.DEFAULT_PORT != 8080:
+              raise SystemExit("unexpected production server port")
+          print("verified minimal production image")
+          PY
+      - name: Block known high and critical runtime vulnerabilities
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: claimsieve-openworker:pr-test
+          format: table
+          exit-code: "1"
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: HIGH,CRITICAL

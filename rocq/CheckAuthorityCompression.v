@@ -1,0 +1,20 @@
+From ClaimSieve Require Import AuthorityCompression.
+
+Print Assumptions compression_reconstruction_equivalence.
+Print Assumptions compression_binds_evidence_archive.
+Print Assumptions compression_binds_action.
+Print Assumptions compression_binds_policy.
+Print Assumptions compression_binds_identity.
+Print Assumptions certificate_soundness.
+Print Assumptions execution_implies_original_decision_allow.
+Print Assumptions unauthorized_certificate_fails_closed.
+Print Assumptions action_binding_of_compact_verifier.
+Print Assumptions policy_binding_of_compact_verifier.
+Print Assumptions identity_binding_of_compact_verifier.
+Print Assumptions action_mutation_invalidates_compact_certificate.
+Print Assumptions policy_mutation_invalidates_compact_certificate.
+Print Assumptions identity_mutation_invalidates_compact_certificate.
+Print Assumptions expired_compact_certificate_invalid.
+Print Assumptions not_yet_valid_compact_certificate_invalid.
+Print Assumptions archived_payload_outside_fast_path.
+Print Assumptions execution_implies_reconstructible_authority.

@@ -1,0 +1,12 @@
+From ClaimSieve Require Import AuthorityCompressionCurrentStateNecessity.
+
+Print Assumptions current_policy_digest_guard_is_necessary.
+Print Assumptions current_identity_digest_guard_is_necessary.
+Print Assumptions policy_active_guard_is_necessary.
+Print Assumptions identity_active_guard_is_necessary.
+Print Assumptions campaign_active_guard_is_necessary.
+Print Assumptions global_freeze_guard_is_necessary.
+Print Assumptions campaign_suspension_guard_is_necessary.
+Print Assumptions current_revocation_guard_is_necessary.
+Print Assumptions current_consumption_guard_is_necessary.
+Print Assumptions current_runtime_guard_set_is_pointwise_necessary.

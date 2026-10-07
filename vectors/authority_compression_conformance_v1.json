@@ -1,0 +1,143 @@
+{
+  "schema_version": "claimsieve.authority_compression_conformance.v1",
+  "formal_source": "rocq/AuthorityCompression.v",
+  "necessity_source": "rocq/AuthorityCompressionNecessity.v",
+  "authenticity_source": "rocq/AuthorityCompressionAuthenticity.v",
+  "current_state_source": "rocq/AuthorityCompressionCurrentState.v",
+  "production_source": "rust/crates/runtime/src/lib.rs",
+  "shadow_candidate_source": "rust/crates/compact-admission/src/lib.rs",
+  "permit_schema": "schemas/permit.schema.json",
+  "target": "execution authority factors through an authenticated compact permit plus trusted current authority state without traversing the full evidence archive",
+  "guards": [
+    {
+      "name": "authenticity",
+      "formal_tokens": ["authenticated", "verify_authenticated"],
+      "production_tokens": ["authority_keys", "verify_signature(authority, \"permit-v1\""],
+      "shadow_tokens": ["authority_keys", "verify_permit_signature(permit, authority_key)"],
+      "status": "implemented"
+    },
+    {
+      "name": "historical_authority",
+      "formal_tokens": ["cert_authorized", "execution_implies_original_decision_allow", "current_execution_implies_historical_authority"],
+      "production_tokens": ["decision.verdict != Verdict::Allow", "decision does not match independent kernel reevaluation", "sign(&self.signing_key, \"permit-v1\""],
+      "shadow_tokens": ["verify_permit_signature(permit, authority_key)"],
+      "status": "reference_rechecks_allow_and_kernel;shadow_relies_on_authenticated_issuance_invariant"
+    },
+    {
+      "name": "revocation",
+      "formal_tokens": ["current_permit_revoked", "current_revocation_blocks_execution", "revocation_does_not_rewrite_historical_authority"],
+      "production_tokens": ["self.containment.is_revoked(&permit.permit_id)", "permit revoked"],
+      "shadow_tokens": ["current.permit_revoked", "PermitRevoked"],
+      "status": "current_state_guard_implemented"
+    },
+    {
+      "name": "consumption",
+      "formal_tokens": ["current_permit_consumed", "current_consumption_blocks_execution"],
+      "production_tokens": ["permit.max_uses != 1", ".reserve(&permit.permit_id, &permit.action_digest, sequence)?", "RuntimeError::Replay"],
+      "shadow_tokens": ["current.permit_consumed", "permit.max_uses != 1"],
+      "status": "reference_atomic;shadow_snapshot_only_not_execution_safe"
+    },
+    {
+      "name": "action_binding",
+      "formal_tokens": ["cert_action_digest", "action_binding_of_compact_verifier"],
+      "production_tokens": ["permit.action_digest.clone()", "action_digest(proposal)?", "permit binding mismatch: {name}"],
+      "shadow_tokens": ["action_digest(proposal)", "destination_digest(proposal)", "parameter_digest(proposal)"],
+      "status": "implemented"
+    },
+    {
+      "name": "policy_binding",
+      "formal_tokens": ["current_policy_digest", "current_policy_active", "current_policy_replacement_blocks_execution", "current_policy_inactive_blocks_execution"],
+      "production_tokens": ["permit.policy_digest.clone()", "digest(policy)?", "permit.signed_policy_digest != signed_policy_digest"],
+      "shadow_tokens": ["current.effective_policy_digest", "current.effective_signed_policy_digest", "current.policy_active"],
+      "status": "reference_full_policy;shadow_bounded_current_policy_facts"
+    },
+    {
+      "name": "identity_binding",
+      "formal_tokens": ["current_identity_digest", "current_identity_active", "current_identity_replacement_blocks_execution", "current_identity_inactive_blocks_execution"],
+      "production_tokens": ["permit.tenant_id.clone()", "permit.campaign_id.clone()", "permit.principal.clone()"],
+      "shadow_tokens": ["tenant_id", "campaign_id", "principal", "current.principal_active"],
+      "status": "implemented_as_explicit_tuple_not_single_digest"
+    },
+    {
+      "name": "campaign_currentness",
+      "formal_tokens": ["current_campaign_active", "current_campaign_suspended", "current_campaign_inactive_blocks_execution", "current_campaign_suspension_blocks_execution"],
+      "production_tokens": ["self.containment.is_suspended(&permit.campaign_id)", "state.status != \"ACTIVE\""],
+      "shadow_tokens": ["current.campaign_active", "current.campaign_suspended"],
+      "status": "implemented"
+    },
+    {
+      "name": "global_freeze",
+      "formal_tokens": ["current_execution_frozen", "current_global_freeze_blocks_execution", "global_freeze_does_not_rewrite_historical_authority"],
+      "production_tokens": ["self.containment.is_frozen()", "execution globally frozen"],
+      "shadow_tokens": ["current.execution_frozen", "ExecutionFrozen"],
+      "status": "implemented"
+    },
+    {
+      "name": "not_before",
+      "formal_tokens": ["cert_valid_from", "not_yet_valid_compact_certificate_invalid"],
+      "production_tokens": ["sequence < permit.valid_from_seq", "permit outside validity sequence"],
+      "shadow_tokens": ["current.sequence < permit.valid_from_seq", "OutsideValidity"],
+      "status": "implemented"
+    },
+    {
+      "name": "expiry",
+      "formal_tokens": ["cert_expires_at", "expired_compact_certificate_invalid"],
+      "production_tokens": ["sequence > permit.expires_at_seq", "permit outside validity sequence"],
+      "shadow_tokens": ["current.sequence > permit.expires_at_seq", "OutsideValidity"],
+      "status": "implemented"
+    }
+  ],
+  "audit_links": [
+    {
+      "name": "evidence_root",
+      "formal_tokens": ["cert_evidence_digest", "evidence_digest_is_not_runtime_guard"],
+      "production_tokens": ["permit.evidence_root.clone()", "decision.evidence_root != evidence_root(evidence)?"],
+      "shadow_tokens": ["evidence_root: permit.evidence_root.clone()"],
+      "target_role": "signed reconstruction pointer, not full evidence traversal"
+    },
+    {
+      "name": "decision_digest",
+      "formal_tokens": ["execution_implies_reconstructible_authority"],
+      "production_tokens": ["permit.decision_digest != digest(decision)?"],
+      "shadow_tokens": ["decision_digest: permit.decision_digest.clone()"],
+      "target_role": "signed pointer to exact authorizing decision"
+    }
+  ],
+  "known_gaps": [
+    {
+      "id": "FULL_EVIDENCE_ON_REFERENCE_EXECUTION_PATH",
+      "severity": "architectural",
+      "status": "open",
+      "production_tokens": ["evidence: &[Evidence]", "evaluate(proposal, policy, evidence, state, sequence)", "decision.evidence_root != evidence_root(evidence)?"],
+      "target": "promoted executor receives compact authority state and current revocation/freshness state, while full evidence remains outside the latency-critical path"
+    },
+    {
+      "id": "FULL_POLICY_AND_DECISION_ON_REFERENCE_EXECUTION_PATH",
+      "severity": "architectural",
+      "status": "open",
+      "production_tokens": ["policy: &Policy", "decision: &Decision", "signed_policy_digest: &str"],
+      "target": "promoted executor receives only bounded current policy identity/status commitments required to determine present executability"
+    },
+    {
+      "id": "SHADOW_CONSUMPTION_IS_NOT_ATOMIC",
+      "severity": "safety",
+      "status": "open",
+      "shadow_tokens": ["permit_consumed: bool", "shadow comparison", "atomic reservation operation at the commit point"],
+      "target": "compact dispatch must use the same or stronger linearizable one-use reservation primitive as the reference executor"
+    },
+    {
+      "id": "SHADOW_CURRENT_FACTS_NEED_TRUSTED_SOURCE",
+      "severity": "safety",
+      "status": "open",
+      "shadow_tokens": ["separately trusted state services", "derive them from trusted policy, identity, containment, and reservation"],
+      "target": "current authority facts must be obtained from independently authenticated state services rather than caller-controlled booleans"
+    },
+    {
+      "id": "SHADOW_PATH_NOT_YET_EQUIVALENCE_TESTED_AGAINST_REFERENCE",
+      "severity": "assurance",
+      "status": "open",
+      "shadow_tokens": ["shadow equivalence", "must not directly authorize a provider call"],
+      "target": "broad valid and adversarial Rust corpus demonstrates fail-closed decision equivalence before promotion"
+    }
+  ]
+}

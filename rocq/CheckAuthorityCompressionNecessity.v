@@ -1,0 +1,10 @@
+From ClaimSieve Require Import AuthorityCompressionNecessity.
+
+Print Assumptions authority_guard_is_necessary.
+Print Assumptions action_guard_is_necessary.
+Print Assumptions policy_guard_is_necessary.
+Print Assumptions identity_guard_is_necessary.
+Print Assumptions not_before_guard_is_necessary.
+Print Assumptions expiry_guard_is_necessary.
+Print Assumptions evidence_digest_is_not_runtime_guard.
+Print Assumptions compact_runtime_guard_set_is_pointwise_necessary.

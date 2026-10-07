@@ -1,0 +1,7 @@
+From ClaimSieve Require Import AuthorityCompressionAuthenticity.
+
+Print Assumptions unauthenticated_envelope_fails_closed.
+Print Assumptions authenticated_execution_implies_compact_execution.
+Print Assumptions authenticated_compressed_execution_implies_original_decision_allow.
+Print Assumptions authenticity_gate_is_necessary.
+Print Assumptions authentic_wrapper_is_transparent.

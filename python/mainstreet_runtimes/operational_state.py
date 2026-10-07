@@ -166,6 +166,8 @@ class OperationalState:
             raise OperationalStateError("operational state version must be a non-negative integer")
         payload = _canonical_object(self.payload_json, field="payload_json")
         _validate_root_keys(payload)
+        encoded = canonical_bytes(payload)
+        _validate_payload_bounds(payload, encoded, DEFAULT_OPERATIONAL_STATE_BOUNDS)
         expected = digest(
             {
                 "schema_version": "claimsieve.operational_state.v1",
@@ -234,10 +236,21 @@ class OperationalStatePatch:
             raise OperationalStateError("patch actor must be a non-empty string")
         changes = _canonical_object(self.changes_json, field="changes_json")
         _validate_root_keys(changes)
+        encoded_changes = canonical_bytes(changes)
+        if len(encoded_changes) > DEFAULT_OPERATIONAL_STATE_BOUNDS.max_patch_bytes:
+            raise OperationalStateBoundsError(
+                f"operational patch encodes to {len(encoded_changes)} bytes; "
+                f"hard limit is {DEFAULT_OPERATIONAL_STATE_BOUNDS.max_patch_bytes}"
+            )
         if any(not isinstance(key, str) or not key for key in self.deletions):
             raise OperationalStateError("patch deletion keys must be non-empty strings")
         if len(set(self.deletions)) != len(self.deletions):
             raise OperationalStateError("patch deletions must be unique")
+        if len(self.deletions) > DEFAULT_OPERATIONAL_STATE_BOUNDS.max_deletions_per_patch:
+            raise OperationalStateBoundsError(
+                f"operational patch deletes {len(self.deletions)} roots; "
+                f"hard limit is {DEFAULT_OPERATIONAL_STATE_BOUNDS.max_deletions_per_patch}"
+            )
         if tuple(sorted(self.deletions)) != self.deletions:
             raise OperationalStateError("patch deletions must be sorted")
         _validate_root_keys({key: None for key in self.deletions})

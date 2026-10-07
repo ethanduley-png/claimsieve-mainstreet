@@ -137,8 +137,16 @@ pub fn verify_reconstruction_index(
         &handle.decision_digest,
         &index.decision_digest,
     )?;
-    require_equal("valid_from_seq", &handle.valid_from_seq, &index.valid_from_seq)?;
-    require_equal("expires_at_seq", &handle.expires_at_seq, &index.expires_at_seq)?;
+    require_equal(
+        "valid_from_seq",
+        &handle.valid_from_seq,
+        &index.valid_from_seq,
+    )?;
+    require_equal(
+        "expires_at_seq",
+        &handle.expires_at_seq,
+        &index.expires_at_seq,
+    )?;
     Ok(())
 }
 

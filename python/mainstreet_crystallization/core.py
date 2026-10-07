@@ -43,7 +43,7 @@ class CrystallizationError(ValueError):
     """Raised when a trace or candidate violates the crystallization contract."""
 
 
-_FACT_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_.\\-]{0,127}$")
+_FACT_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_.\-]{0,127}$")
 
 
 def _check_fact_name(name: object) -> str:

@@ -78,6 +78,28 @@ test("builder-backed skill rejects undeclared destination bindings", () => {
     error instanceof ErgonomicsBoundaryError && error.code === "BUILDER_INPUT_MISMATCH");
 });
 
+test("builder-backed skill rejects accessor and symbol input properties", () => {
+  const selected = skill();
+
+  const accessorInput = prepareInput();
+  let accessed = false;
+  Object.defineProperty(accessorInput.parameters, "title", {
+    enumerable: true,
+    get() {
+      accessed = true;
+      return "side effect";
+    }
+  });
+  assert.throws(() => selected.prepare(accessorInput), (error) =>
+    error instanceof ErgonomicsBoundaryError && error.code === "NON_DATA_ERGONOMIC_PROPERTY");
+  assert.equal(accessed, false);
+
+  const symbolInput = prepareInput();
+  symbolInput.bindings[Symbol("hidden")] = "secret";
+  assert.throws(() => selected.prepare(symbolInput), (error) =>
+    error instanceof ErgonomicsBoundaryError && error.code === "BUILDER_INPUT_MISMATCH");
+});
+
 test("builder-backed skill preserves Founder OS repository validation", () => {
   const selected = skill();
   const input = prepareInput();

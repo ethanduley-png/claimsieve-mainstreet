@@ -13,7 +13,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: 1.90.0
-      - name: Run isolated Rust refinement candidate
+      - name: Run production Rust reconciliation boundary
         run: |
           set -euo pipefail
           mkdir -p evidence

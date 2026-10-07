@@ -1,0 +1,174 @@
+{
+  "native": {
+    "executor_receipt": {
+      "action_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "attempted_at_seq": 12,
+      "campaign_id": "c1",
+      "containment_epoch": 1,
+      "executor_key_id": "executor-1",
+      "fencing_token": 3,
+      "idempotency_key": "idem-1",
+      "permit_id": "p1",
+      "provider_id": "provider-1",
+      "provider_status": "accepted",
+      "request_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "reservation_id": "r1",
+      "schema_version": "claimsieve.executor_receipt.v2",
+      "signature": "ed25519:def",
+      "trace_id": "t1"
+    },
+    "observer_receipt": {
+      "campaign_id": "c1",
+      "observed_action_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "observed_at_seq": 13,
+      "observer_key_id": "observer-1",
+      "permit_id": "p1",
+      "provider_record_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "receipt_conflict": false,
+      "reconciliation": "CONFIRMED_SUCCESS",
+      "reservation_id": "r1",
+      "schema_version": "claimsieve.observer_receipt.v2",
+      "signature": "ed25519:ghi"
+    },
+    "permit": {
+      "action_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "approval_digest": null,
+      "authority_key_id": "authority-1",
+      "campaign_id": "c1",
+      "campaign_state_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "decision_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "destination_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "evidence_root": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "expires_at_seq": 20,
+      "max_uses": 1,
+      "nonce": "abababababababababababababababab",
+      "parameter_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "permit_id": "p1",
+      "policy_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "principal": "spiffe://example/principal",
+      "prior_campaign_state_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "proposal_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "schema_version": "claimsieve.permit.v1",
+      "signature": "ed25519:abc",
+      "signed_policy_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "tenant_id": "tenant",
+      "trace_id": "t1",
+      "valid_from_seq": 10
+    }
+  },
+  "schema_version": "claimsieve.intoto.conformance.v1",
+  "statements": {
+    "execution": {
+      "_type": "https://in-toto.io/Statement/v1",
+      "predicate": {
+        "action_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "attempted_at_seq": 12,
+        "campaign_id": "c1",
+        "containment_epoch": 1,
+        "fencing_token": 3,
+        "idempotency_key": "idem-1",
+        "native_record": {
+          "digest": "sha256:8d864fa836a51b28b38a41b16581f9348c4255652c9b639019a5c513a634e887",
+          "key_id": "executor-1",
+          "schema_version": "claimsieve.executor_receipt.v2",
+          "signature": "ed25519:def",
+          "signature_format": "claimsieve-native",
+          "signature_verification": "NOT_PERFORMED"
+        },
+        "permit_id": "p1",
+        "provider_id": "provider-1",
+        "provider_status": "accepted",
+        "request_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "reservation_id": "r1",
+        "trace_id": "t1"
+      },
+      "predicateType": "https://claimsieve.example/attestation/execution-attempt/v0.1",
+      "subject": [
+        {
+          "digest": {"sha256": "8d864fa836a51b28b38a41b16581f9348c4255652c9b639019a5c513a634e887"},
+          "name": "claimsieve-executor-receipt:r1"
+        },
+        {
+          "digest": {"sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
+          "name": "claimsieve-attempted-action"
+        }
+      ]
+    },
+    "observation": {
+      "_type": "https://in-toto.io/Statement/v1",
+      "predicate": {
+        "campaign_id": "c1",
+        "native_record": {
+          "digest": "sha256:5c7bba16c7b8b9bc77fce7b430dd0d6aba57ceb8f703a17da2bf90f69d203c76",
+          "key_id": "observer-1",
+          "schema_version": "claimsieve.observer_receipt.v2",
+          "signature": "ed25519:ghi",
+          "signature_format": "claimsieve-native",
+          "signature_verification": "NOT_PERFORMED"
+        },
+        "observed_action_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "observed_at_seq": 13,
+        "permit_id": "p1",
+        "provider_record_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "receipt_conflict": false,
+        "reconciliation": "CONFIRMED_SUCCESS",
+        "reservation_id": "r1"
+      },
+      "predicateType": "https://claimsieve.example/attestation/outcome-observation/v0.1",
+      "subject": [
+        {
+          "digest": {"sha256": "5c7bba16c7b8b9bc77fce7b430dd0d6aba57ceb8f703a17da2bf90f69d203c76"},
+          "name": "claimsieve-observer-receipt:r1"
+        },
+        {
+          "digest": {"sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
+          "name": "claimsieve-observed-action"
+        }
+      ]
+    },
+    "permit": {
+      "_type": "https://in-toto.io/Statement/v1",
+      "predicate": {
+        "action_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "approval_digest": null,
+        "campaign_id": "c1",
+        "campaign_state_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "decision_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "destination_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "evidence_root": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "expires_at_seq": 20,
+        "max_uses": 1,
+        "native_record": {
+          "digest": "sha256:b659ee9d8dc0c9270bd803cc959dcb2a4e16966956a30492c73c6508b918bab7",
+          "key_id": "authority-1",
+          "schema_version": "claimsieve.permit.v1",
+          "signature": "ed25519:abc",
+          "signature_format": "claimsieve-native",
+          "signature_verification": "NOT_PERFORMED"
+        },
+        "nonce": "abababababababababababababababab",
+        "parameter_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "permit_id": "p1",
+        "policy_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "principal": "spiffe://example/principal",
+        "prior_campaign_state_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "proposal_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "signed_policy_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "tenant_id": "tenant",
+        "trace_id": "t1",
+        "valid_from_seq": 10
+      },
+      "predicateType": "https://claimsieve.example/attestation/authorization-permit/v0.1",
+      "subject": [
+        {
+          "digest": {"sha256": "b659ee9d8dc0c9270bd803cc959dcb2a4e16966956a30492c73c6508b918bab7"},
+          "name": "claimsieve-permit:p1"
+        },
+        {
+          "digest": {"sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
+          "name": "claimsieve-authorized-action"
+        }
+      ]
+    }
+  }
+}

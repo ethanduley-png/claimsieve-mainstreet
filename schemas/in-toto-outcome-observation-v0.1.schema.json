@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://claimsieve.example/schemas/in-toto-outcome-observation-v0.1.schema.json",
+  "title": "ClaimSieve in-toto outcome observation predicate v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "reservation_id", "permit_id", "campaign_id", "provider_record_digest",
+    "observed_action_digest", "reconciliation", "receipt_conflict", "observed_at_seq",
+    "native_record"
+  ],
+  "properties": {
+    "reservation_id": {"type": "string", "minLength": 1},
+    "permit_id": {"type": "string", "minLength": 1},
+    "campaign_id": {"type": "string", "minLength": 1},
+    "provider_record_digest": {"anyOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
+    "observed_action_digest": {"anyOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
+    "reconciliation": {"enum": ["CONFIRMED_SUCCESS", "CONFIRMED_FAILURE", "DIVERGENT_EFFECT", "OUTCOME_UNKNOWN"]},
+    "receipt_conflict": {"type": "boolean"},
+    "observed_at_seq": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+    "native_record": {"$ref": "#/$defs/nativeRecord"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "nativeRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "digest", "key_id", "signature", "signature_format", "signature_verification"],
+      "properties": {
+        "schema_version": {"const": "claimsieve.observer_receipt.v2"},
+        "digest": {"$ref": "#/$defs/sha256"},
+        "key_id": {"type": "string", "minLength": 1},
+        "signature": {"type": "string", "minLength": 1},
+        "signature_format": {"const": "claimsieve-native"},
+        "signature_verification": {"const": "NOT_PERFORMED"}
+      }
+    }
+  }
+}

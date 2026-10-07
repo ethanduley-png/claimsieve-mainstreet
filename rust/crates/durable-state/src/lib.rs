@@ -92,6 +92,18 @@ pub fn reconcile_from_independent_provider(
     }
 }
 
+/// Decide whether an independent provider observation requires containment.
+///
+/// Conflict is not a terminal outcome, but it is still unsafe to leave campaign
+/// authority active while independent evidence disagrees.
+#[must_use]
+pub fn observation_requires_containment(observation: ProviderObservation) -> bool {
+    matches!(
+        observation,
+        ProviderObservation::ProviderAcceptedDivergent | ProviderObservation::ProviderConflicting
+    )
+}
+
 /// One durable campaign record.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CampaignRecord {
@@ -416,19 +428,25 @@ impl DurableState {
         provider_observation: ProviderObservation,
         observer_authenticated: bool,
     ) -> Result<Outcome, DurableStateError> {
+        if !observer_authenticated {
+            return Err(DurableStateError::ObserverAuthenticationRequired);
+        }
         let outcome = reconcile_from_independent_provider(executor_report, provider_observation);
-        self.reconcile_classified(permit_id, outcome.clone(), observer_authenticated)?;
+        let requires_containment = observation_requires_containment(provider_observation);
+        self.reconcile_classified_with_containment(
+            permit_id,
+            outcome.clone(),
+            requires_containment,
+            true,
+        )?;
         Ok(outcome)
     }
 
-    /// Apply an already classified outcome inside the durable transition.
-    ///
-    /// Keeping this private prevents callers from bypassing the independent
-    /// provider observation classifier at the public production boundary.
-    fn reconcile_classified(
+    fn reconcile_classified_with_containment(
         &mut self,
         permit_id: &str,
         outcome: Outcome,
+        requires_containment: bool,
         observer_authenticated: bool,
     ) -> Result<(), DurableStateError> {
         if !observer_authenticated {
@@ -439,20 +457,19 @@ impl DurableState {
             .get_mut(permit_id)
             .ok_or(DurableStateError::ReservationNotFound)?;
         let campaign_id = record.campaign_id.clone();
-        if let Some(existing) = &record.outcome {
-            if existing != &outcome {
-                return Err(DurableStateError::TerminalOutcomeRewrite);
-            }
-            let should_contain = existing == &Outcome::DivergentEffect;
-            if should_contain {
-                self.contain_campaign(&campaign_id);
-            }
-            return Ok(());
+        if let Some(existing) = &record.outcome
+            && existing != &Outcome::Unknown
+            && existing != &outcome
+        {
+            return Err(DurableStateError::TerminalOutcomeRewrite);
         }
-        let should_contain = outcome == Outcome::DivergentEffect;
+        record.phase = if outcome == Outcome::Unknown {
+            ReservationPhase::OutcomeUnknown
+        } else {
+            ReservationPhase::Reconciled
+        };
         record.outcome = Some(outcome);
-        record.phase = ReservationPhase::Reconciled;
-        if should_contain {
+        if requires_containment {
             self.contain_campaign(&campaign_id);
         }
         Ok(())
@@ -546,7 +563,12 @@ mod tests {
         let mut state = DurableState::new();
         assert!(reserve(&mut state).is_ok());
         assert_eq!(
-            state.reconcile_classified("p", Outcome::ConfirmedSuccess, false),
+            state.reconcile_classified_with_containment(
+                "p",
+                Outcome::ConfirmedSuccess,
+                false,
+                false
+            ),
             Err(DurableStateError::ObserverAuthenticationRequired)
         );
     }
@@ -557,11 +579,16 @@ mod tests {
         assert!(reserve(&mut state).is_ok());
         assert!(
             state
-                .reconcile_classified("p", Outcome::ConfirmedSuccess, true)
+                .reconcile_classified_with_containment("p", Outcome::ConfirmedSuccess, false, true)
                 .is_ok()
         );
         assert_eq!(
-            state.reconcile_classified("p", Outcome::ConfirmedFailure, true),
+            state.reconcile_classified_with_containment(
+                "p",
+                Outcome::ConfirmedFailure,
+                false,
+                true
+            ),
             Err(DurableStateError::TerminalOutcomeRewrite)
         );
     }
@@ -572,7 +599,7 @@ mod tests {
         assert!(reserve(&mut state).is_ok());
         assert!(
             state
-                .reconcile_classified("p", Outcome::DivergentEffect, true)
+                .reconcile_classified_with_containment("p", Outcome::DivergentEffect, true, true)
                 .is_ok()
         );
         assert!(
@@ -600,7 +627,7 @@ mod tests {
         assert!(state.begin_execution("p2", "executor-2", true).is_ok());
         assert!(
             state
-                .reconcile_classified("p", Outcome::DivergentEffect, true)
+                .reconcile_classified_with_containment("p", Outcome::DivergentEffect, true, true)
                 .is_ok()
         );
         assert_eq!(
@@ -615,13 +642,13 @@ mod tests {
         assert!(reserve(&mut state).is_ok());
         assert!(
             state
-                .reconcile_classified("p", Outcome::DivergentEffect, true)
+                .reconcile_classified_with_containment("p", Outcome::DivergentEffect, true, true)
                 .is_ok()
         );
         let contained_epoch = state.containment_epoch;
         assert!(
             state
-                .reconcile_classified("p", Outcome::DivergentEffect, true)
+                .reconcile_classified_with_containment("p", Outcome::DivergentEffect, true, true)
                 .is_ok()
         );
         assert_eq!(state.containment_epoch, contained_epoch);
@@ -633,7 +660,7 @@ mod tests {
         assert!(reserve(&mut state).is_ok());
         assert!(
             state
-                .reconcile_classified("p", Outcome::ConfirmedFailure, true)
+                .reconcile_classified_with_containment("p", Outcome::ConfirmedFailure, false, true)
                 .is_ok()
         );
         assert!(

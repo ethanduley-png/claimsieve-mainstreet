@@ -165,7 +165,7 @@ See [Remaining Limitations](docs/REMAINING_LIMITATIONS.md) and [Roadmap](docs/RO
 
 ## License
 
-**Source availability is not a license grant.** The repository's current [LICENSE](LICENSE) says **all rights reserved** and does not grant patent rights. Until a replacement license is explicitly adopted, do not assume this repository is MIT- or Apache-licensed.
+Licensed under the **Apache License, Version 2.0** ([LICENSE](LICENSE)). You may use, modify, and distribute the covered code under its terms, including its notice and attribution requirements. Apache 2.0 includes an express patent license from contributors for applicable patent claims. See [NOTICE](NOTICE) for project attribution; third-party materials retain their applicable licenses.
 
 ---
 

@@ -6,6 +6,7 @@ members = [
   "crates/ledger",
   "crates/runtime",
   "crates/compact-admission",
+  "crates/execution-authority-reconstruction",
   "crates/durable-state",
   "crates/verifier",
   "crates/cli",

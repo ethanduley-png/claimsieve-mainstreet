@@ -1,7 +1,6 @@
 name: Full assurance candidate
 on:
   workflow_dispatch:
-  pull_request:
 permissions:
   contents: read
 jobs:

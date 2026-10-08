@@ -1,0 +1,9 @@
+From ClaimSieve Require Import ExecutionAuthorityReconstruction.
+
+Print Assumptions execution_implies_prior_exact_authority.
+Print Assumptions execution_authority_reconstruction_invariant.
+Print Assumptions missing_authority_is_not_reconstructable.
+Print Assumptions evidence_archive_mutation_breaks_lineage.
+Print Assumptions action_mutation_blocks_stored_execution.
+Print Assumptions policy_mutation_blocks_stored_execution.
+Print Assumptions identity_mutation_blocks_stored_execution.

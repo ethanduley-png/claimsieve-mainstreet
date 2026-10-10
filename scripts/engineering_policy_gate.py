@@ -102,6 +102,29 @@ def check_required_commands(path: str, text: str) -> list[str]:
             for command in REQUIRED_COMMANDS.get(path, ()) if command not in active]
 
 
+# Full-length commit pins avoid silent mutable external action upgrades.
+# Reviewers remain responsible for approving the selected upstream commits.
+ACTION_REF = re.compile(r"^\s*(?:-\s*)?uses:\s*(\S+)", re.MULTILINE)
+PINNED_REMOTE = re.compile(
+    r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_./-]+)?@[0-9a-f]{40}$"
+)
+PINNED_DOCKER = re.compile(r"^docker://[A-Za-z0-9_./-]+@sha256:[0-9a-f]{64}$")
+
+
+def check_action_pins(path: str, text: str) -> list[str]:
+    """Reject tag, branch, short-hash and expression references to actions."""
+    errors: list[str] = []
+    for reference in ACTION_REF.findall("\n".join(active_lines(text))):
+        if reference.startswith("./"):
+            # Local actions run from the reviewed repository revision.
+            if reference.startswith("./.github/") and ".." not in Path(reference).parts:
+                continue
+        elif PINNED_REMOTE.fullmatch(reference) or PINNED_DOCKER.fullmatch(reference):
+            continue
+        errors.append(f"{path}: action must use immutable full-length SHA: {reference}")
+    return errors
+
+
 def validate_repository(root: Path = ROOT) -> list[str]:
     folder = root / ".github" / "workflows"
     problems: list[str] = []
@@ -114,6 +137,7 @@ def validate_repository(root: Path = ROOT) -> list[str]:
         content = path.read_text(encoding="utf-8")
         problems.extend(check_workflow(path.name, content))
         problems.extend(check_required_commands(path.name, content))
+        problems.extend(check_action_pins(path.name, content))
     for required in REQUIRED_COMMANDS:
         if not (folder / required).is_file():
             problems.append(f"missing required assurance workflow: {required}")

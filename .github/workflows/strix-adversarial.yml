@@ -15,8 +15,8 @@ jobs:
     name: Deterministic boundary baseline
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: '3.12'
       - name: Install reference test dependencies
@@ -35,7 +35,7 @@ jobs:
           python scripts/run_red_team.py | tee evidence/strix/DETERMINISTIC_RED_TEAM.txt
       - name: Upload deterministic adversarial evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: claimsieve-deterministic-adversarial-baseline
           path: evidence/strix/
@@ -56,10 +56,10 @@ jobs:
       STRIX_LLM: ${{ secrets.STRIX_LLM }}
       LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: '3.12'
       - name: Prepare evidence directory
@@ -148,7 +148,7 @@ jobs:
           EOF
       - name: Upload Strix evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: claimsieve-strix-adversarial-baseline
           path: evidence/strix/

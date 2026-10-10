@@ -60,6 +60,37 @@ class EngineeringPolicyGateTests(unittest.TestCase):
             (folder / "other.yml").write_text(SAFE, encoding="utf-8")
             self.assertTrue(any("missing required assurance workflow" in item for item in GATE.validate_repository(Path(tmp))))
 
+    def test_mutable_and_short_action_refs_fail(self) -> None:
+        for action in (
+            "actions/checkout@v6",
+            "actions/checkout@main",
+            "actions/checkout@d23441a",
+            "actions/checkout@\u0024{{ github.ref }}",
+        ):
+            self.assertTrue(
+                GATE.check_action_pins("test.yml", f"steps:\n  - uses: {action}\n"),
+                action,
+            )
+
+    def test_pinned_remote_and_local_action_refs_pass(self) -> None:
+        sha = "d23441a48e516b6c34aea4fa41551a30e30af803"
+        self.assertEqual([], GATE.check_action_pins(
+            "test.yml", f"jobs:\n  test:\n    steps:\n      - uses: actions/checkout@{sha} # v6\n"
+        ))
+        self.assertEqual([], GATE.check_action_pins(
+            "test.yml", "jobs:\n  local:\n    uses: ./.github/workflows/shared.yml\n"
+        ))
+
+    def test_unpinned_reusable_workflow_rejected(self) -> None:
+        self.assertTrue(GATE.check_action_pins(
+            "test.yml", "jobs:\n  untrusted:\n    uses: attacker/reusable/.github/workflows/build.yml@main\n"
+        ))
+
+    def test_non_local_path_traversal_rejected(self) -> None:
+        self.assertTrue(GATE.check_action_pins(
+            "test.yml", "steps:\n  - uses: ./.github/../evil/action\n"
+        ))
+
     def test_real_repository_conforms(self) -> None:
         self.assertEqual([], GATE.validate_repository(SCRIPT.parents[1]))
 

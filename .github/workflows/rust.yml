@@ -18,6 +18,6 @@ jobs:
           toolchain: 1.90.0
           components: rustfmt, clippy
       - run: cargo fmt --check
-      - run: cargo clippy --workspace --all-targets --all-features -- -D warnings
-      - run: cargo test --workspace --all-features
+      - run: cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
+      - run: cargo test --locked --workspace --all-features
       # v0.31 portable verifier parity is a known incomplete gate; see docs/RUST_IMPLEMENTATION_REPORT.md.

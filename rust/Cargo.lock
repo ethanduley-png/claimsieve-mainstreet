@@ -50,6 +50,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "claimsieve-compact-admission"
+version = "0.33.0"
+dependencies = [
+ "base64",
+ "claimsieve-protocol",
+ "claimsieve-runtime",
+ "ed25519-dalek",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
 name = "claimsieve-durable-state"
 version = "0.33.0"
 dependencies = [

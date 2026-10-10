@@ -23,6 +23,7 @@ jobs:
       - run: node --test mainstreet/test/*.test.js
       - run: python scripts/source_gate.py
       - run: python scripts/context_contract_gate.py
+      - run: python scripts/engineering_policy_gate.py
       - run: PYTHONPATH=python python evidence/V033_PATCHED_TRACE_PROBE.py
       - run: PYTHONPATH=python python scripts/provider_contract_gate.py
       - run: PYTHONPATH=python python scripts/semantic_divergence_gate.py

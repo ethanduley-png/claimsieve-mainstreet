@@ -37,10 +37,8 @@ fn run_vectors(path: &str) -> Result<String, String> {
             .ok_or("missing vector id")?;
         let status = case.get("response_status").and_then(Value::as_str);
         let observed = case.get("observed_action_digest").and_then(Value::as_str);
-        let (actual, conflict) = match status {
-            None => (Reconciliation::OutcomeUnknown, false),
-            Some(status) => classify_provider_observation(status, observed, intended),
-        };
+        let (actual, conflict) =
+            classify_provider_observation(status.unwrap_or(""), observed, intended);
         outputs.push(json!({
             "id": id,
             "actual_reconciliation": actual,

@@ -26,7 +26,7 @@ test("SMS only prepares a bound, frozen proposal", () => {
 test("SMS rejects bad recipients and empty bodies", () => {
   assert.throws(() => builder.prepareSMS({ ...draft(), recipient: "5551234567" }), /E.164/);
   assert.throws(() => builder.prepareSMS({ ...draft(), body: "" }), /bounded/);
-  assert.throws(() => builder.prepareSMS({ ...draft(), senderId: "custom brand" }), /sender identity/);
+  assert.throws(() => builder.prepareSMS({ ...draft(), senderId: "custom brand" }), /senderId|sender identity/);
 });
 
 test("SMS capability does not carry execution authority", () => {

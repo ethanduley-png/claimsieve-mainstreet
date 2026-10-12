@@ -10,13 +10,12 @@ import re
 from pathlib import Path
 from typing import Any, Iterable
 
-from .canonical import digest
 from .durable_state import DispatchTicket, DurableProviderSimulator, DurableStateError
 
 _E164 = re.compile(r"^\+[1-9][0-9]{7,14}$")
 _ACTION_FIELDS = frozenset({"kind", "effect_class", "destination", "method", "parameters", "reversibility"})
 _DEST_FIELDS = frozenset({"scheme", "authority", "resource", "trust_domain"})
-_PARAM_FIELDS = frozenset({"sender_id", "body"})
+_PARAM_FIELDS = frozenset({"body"})
 
 
 class SMSBoundaryError(DurableStateError):
@@ -31,15 +30,16 @@ class SandboxSMSProvider:
         path: str | Path,
         *,
         allowed_recipients: Iterable[str],
-        sender_id: str = "MainStreet",
+        allowed_resources: Iterable[str],
     ) -> None:
         recipients = frozenset(allowed_recipients)
         if not recipients or any(not isinstance(item, str) or not _E164.fullmatch(item) for item in recipients):
             raise SMSBoundaryError("explicit E.164 recipient allowlist required")
-        if type(sender_id) is not str or not re.fullmatch(r"[A-Za-z0-9]{1,11}", sender_id):
-            raise SMSBoundaryError("invalid sandbox sender identity")
+        resources = frozenset(allowed_resources)
+        if not resources or any(type(value) is not str or not re.fullmatch(r"[A-Za-z0-9._:-]{1,128}", value) for value in resources):
+            raise SMSBoundaryError("explicit bounded lead resource allowlist required")
         self._recipients = recipients
-        self._sender_id = sender_id
+        self._resources = resources
         # Durable test backend, NOT a transport or external SMS provider.
         self._simulator = DurableProviderSimulator(path, mode="success")
 
@@ -53,19 +53,17 @@ class SandboxSMSProvider:
         if type(params) is not dict or set(params) != _PARAM_FIELDS:
             raise SMSBoundaryError("unexpected SMS parameter structure")
         if (
-            action["kind"] != "run_connector"
+            action["kind"] != "send_message"
             or action["effect_class"] != "external_write"
             or action["method"] != "SEND"
             or action["reversibility"] != "irreversible"
             or dest["scheme"] != "sms"
-            or dest["resource"] != "outbound-message"
-            or dest["trust_domain"] != "sms-sandbox"
+            or dest["resource"] not in self._resources
+            or dest["trust_domain"] != "sms-provider"
         ):
             raise SMSBoundaryError("action not permitted by SMS sandbox contract")
         if type(dest["authority"]) is not str or dest["authority"] not in self._recipients:
             raise SMSBoundaryError("recipient not allowlisted")
-        if params["sender_id"] != self._sender_id:
-            raise SMSBoundaryError("sender substitution")
         body = params["body"]
         if (
             type(body) is not str or not (1 <= len(body) <= 1000)

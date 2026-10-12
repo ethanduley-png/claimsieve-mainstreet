@@ -2,7 +2,6 @@
 
 //! Command-line verifier and cross-language outcome conformance runner.
 
-use claimsieve_protocol::Reconciliation;
 use claimsieve_runtime::classify_provider_observation;
 use claimsieve_verifier::verify_json;
 use serde_json::{Value, json};

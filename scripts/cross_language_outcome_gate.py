@@ -44,6 +44,33 @@ def main() -> int:
             "Cross-language semantic divergence:\nPython " + repr(expected)
             + "\nRust " + repr(rust)
         )
+    from jsonschema import Draft202012Validator
+
+    schema_path = ROOT / "schemas" / "observer-receipt-v2.schema.json"
+    observer_schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    Draft202012Validator.check_schema(observer_schema)
+    validator = Draft202012Validator(observer_schema)
+    observer_path = ROOT / "vectors" / "observer_receipt_wire_v2.json"
+    observer_vectors = json.loads(observer_path.read_text(encoding="utf-8"))["vectors"]
+    expected_wire = []
+    for case in observer_vectors:
+        accepted = validator.is_valid(case["receipt"])
+        if accepted != case["expected_accept"]:
+            raise AssertionError("Python observer wire validation mismatch: " + case["id"])
+        expected_wire.append({"id": case["id"], "accepted": accepted})
+    native = subprocess.run([
+        "cargo", "run", "--quiet", "--locked",
+        "--manifest-path", str(ROOT / "rust" / "Cargo.toml"),
+        "-p", "claimsieve-cli", "--",
+        "observer-vectors", str(observer_path),
+    ], cwd=ROOT, capture_output=True, text=True, check=True, timeout=180)
+    actual_wire = json.loads(native.stdout)
+    if actual_wire != expected_wire:
+        raise AssertionError(
+            "Observer-v2 wire acceptance diverged:\\nPython " + repr(expected_wire)
+            + "\\nRust " + repr(actual_wire)
+        )
+    print(f"OBSERVER_RECEIPT_V2_WIRE_CONFORMANCE: PASS ({len(expected_wire)} executed vectors)")
     print(f"CROSS_LANGUAGE_OUTCOME_CONFORMANCE: PASS ({len(expected)} executed vectors)")
     return 0
 

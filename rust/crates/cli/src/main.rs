@@ -2,9 +2,9 @@
 
 //! Command-line verifier and cross-language outcome conformance runner.
 
-use claimsieve_verifier::verify_json;
-use claimsieve_runtime::classify_provider_observation;
 use claimsieve_protocol::Reconciliation;
+use claimsieve_runtime::classify_provider_observation;
+use claimsieve_verifier::verify_json;
 use serde_json::{Value, json};
 use std::{env, fs, process::ExitCode};
 
@@ -17,16 +17,24 @@ fn run_vectors(path: &str) -> Result<String, String> {
     let input = fs::read_to_string(path).map_err(|e| e.to_string())?;
     let doc: Value = serde_json::from_str(&input).map_err(|e| e.to_string())?;
     if doc.get("schema_version").and_then(Value::as_str)
-        != Some("claimsieve.outcome_semantics_vectors.v1") {
+        != Some("claimsieve.outcome_semantics_vectors.v1")
+    {
         return Err("unexpected conformance vector version".to_owned());
     }
-    let intended = doc.get("intended_action_digest").and_then(Value::as_str)
+    let intended = doc
+        .get("intended_action_digest")
+        .and_then(Value::as_str)
         .ok_or("missing intended action digest")?;
-    let cases = doc.get("vectors").and_then(Value::as_array)
+    let cases = doc
+        .get("vectors")
+        .and_then(Value::as_array)
         .ok_or("missing outcome vectors")?;
     let mut outputs = Vec::new();
     for case in cases {
-        let id = case.get("id").and_then(Value::as_str).ok_or("missing vector id")?;
+        let id = case
+            .get("id")
+            .and_then(Value::as_str)
+            .ok_or("missing vector id")?;
         let status = case.get("response_status").and_then(Value::as_str);
         let observed = case.get("observed_action_digest").and_then(Value::as_str);
         let (actual, conflict) = match status {
@@ -46,8 +54,14 @@ fn main() -> ExitCode {
     let args: Vec<String> = env::args().collect();
     if args.len() == 3 && args[1] == "outcome-vectors" {
         return match run_vectors(&args[2]) {
-            Ok(result) => { println!("{result}"); ExitCode::SUCCESS }
-            Err(error) => { eprintln!("native outcome vectors failed: {error}"); ExitCode::from(2) }
+            Ok(result) => {
+                println!("{result}");
+                ExitCode::SUCCESS
+            }
+            Err(error) => {
+                eprintln!("native outcome vectors failed: {error}");
+                ExitCode::from(2)
+            }
         };
     }
     if args.len() != 4 || args[1] != "verify" {

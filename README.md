@@ -143,7 +143,7 @@ See [MainStreet boundary](mainstreet/README.md), [Agent Reach integration](docs/
 This is important to the trust model:
 
 - **No general production safety certification.** One controlled GitHub canary is not a representative production test.
-- **No full Rust/Python semantic parity.** Known observer receipt/schema divergence remains documented.
+- **No full Rust/Python semantic parity.** The candidate observer-v2 and outcome-vector conformance work narrows the gap; native executor-v2, signature/canonicalization and durable replay refinement remain incomplete.
 - **No blanket end-to-end formal verification.** Rocq results prove specified modeled statements under their assumptions; implementation refinement, cryptography, parsing, key custody, and deployment need independent evidence.
 - **No distributed high availability.** SQLite provides local atomicity, not multi-node consensus or independent failure domains.
 - **No guaranteed provider truth or native GitHub idempotency.** Read-back can be stale or incomplete; conflicting or absent results remain unknown.

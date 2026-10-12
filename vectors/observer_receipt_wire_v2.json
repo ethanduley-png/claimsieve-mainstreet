@@ -138,7 +138,7 @@
       "expected_accept": false
     },
     {
-      "id": "floating-observed-sequence",
+      "id": "string-observed-sequence",
       "receipt": {
         "schema_version": "claimsieve.observer_receipt.v2",
         "reservation_id": "reservation-1",
@@ -148,7 +148,7 @@
         "observed_action_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
         "reconciliation": "CONFIRMED_SUCCESS",
         "receipt_conflict": false,
-        "observed_at_seq": 8.5,
+        "observed_at_seq": "8.5",
         "observer_key_id": "observer-1",
         "signature": "ed25519:fixture"
       },

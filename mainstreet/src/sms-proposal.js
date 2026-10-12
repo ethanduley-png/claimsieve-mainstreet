@@ -22,15 +22,15 @@ export class SMSProposalBuilder {
     Object.freeze(this);
   }
 
-  prepareSMS({ proposalId, traceId, campaignId, sessionId, recipient, senderId = "MainStreet",
-    body, evidenceRefs, requestedAtSeq }) {
+  prepareSMS({ proposalId, traceId, campaignId, sessionId, recipient,
+    resourceId, body, evidenceRefs, requestedAtSeq }) {
     if (typeof recipient !== "string" || !E164.test(recipient)) {
       throw new ProposalBoundaryError("INVALID_SMS_RECIPIENT", "exact E.164 recipient required");
     }
     const message = bounded(body, "body", 1000);
-    const sender = bounded(senderId, "senderId", 11);
-    if (!/^[A-Za-z0-9]{1,11}$/.test(sender)) {
-      throw new ProposalBoundaryError("INVALID_SMS_SENDER", "invalid sender identity");
+    const resource = bounded(resourceId, "resourceId", 128);
+    if (!/^[A-Za-z0-9._:-]{1,128}$/.test(resource)) {
+      throw new ProposalBoundaryError("INVALID_SMS_RESOURCE", "invalid lead resource");
     }
     return this.#bridge.prepare({
       proposal_id: bounded(proposalId, "proposalId", 128),
@@ -41,7 +41,7 @@ export class SMSProposalBuilder {
       parent_action_id: null,
       objective: {
         root: "Respond to an existing customer request under explicit owner oversight.",
-        subgoal: "send_approved_sms",
+        subgoal: "respond_to_lead",
         expected_effect: "Exactly one bounded SMS message is proposed for the approved recipient.",
         constraints: [
           "No network execution from MainStreet",
@@ -51,14 +51,14 @@ export class SMSProposalBuilder {
         ]
       },
       action: {
-        kind: "run_connector",
+        kind: "send_message",
         effect_class: "external_write",
         destination: {
           scheme: "sms", authority: recipient,
-          resource: "outbound-message", trust_domain: "sms-sandbox"
+          resource, trust_domain: "sms-provider"
         },
         method: "SEND",
-        parameters: { sender_id: sender, body: message },
+        parameters: { body: message },
         reversibility: "irreversible"
       },
       evidence_refs: evidenceRefs,

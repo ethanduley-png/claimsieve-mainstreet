@@ -1,8 +1,8 @@
 # Remaining Limitations — v0.34.0
 
-## 1. Rust observer receipt divergence
+## 1. Remaining native protocol/refinement divergence
 
-Rust emits an observer receipt v1 shape while Python and the schema use v2. Portable verifier and canonicalization parity are not established.
+The Rust independent observer in the proposed hardening branch now emits v2-shaped receipts, with strict type and receipt-shape conformance vectors and portable verifier support. This is not end-to-end parity: the Rust executor still emits legacy v1-shaped receipts while the Python durable executor uses v2. Complete request-digest, fencing-token, containment-epoch, canonical-signature, replay-state, and bundled-receipt semantic refinement still require native differential tests and design work. Do not promote partial protocol agreement to a production assurance claim.
 
 ## 2. Live provider evidence is one narrow canary
 

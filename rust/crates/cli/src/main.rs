@@ -62,11 +62,16 @@ fn run_observer_vectors(path: &str) -> Result<String, String> {
         .ok_or("missing observer wire vectors")?;
     let mut outputs = Vec::new();
     for case in cases {
-        let id = case.get("id").and_then(Value::as_str).ok_or("missing vector id")?;
+        let id = case
+            .get("id")
+            .and_then(Value::as_str)
+            .ok_or("missing vector id")?;
         let receipt = case.get("receipt").cloned().ok_or("missing receipt")?;
         let accepted = serde_json::from_value::<claimsieve_protocol::ObserverReceipt>(receipt)
-            .map(|parsed| parsed.schema_version == "claimsieve.observer_receipt.v2"
-                && parsed.observed_at_seq <= 9_007_199_254_740_991)
+            .map(|parsed| {
+                parsed.schema_version == "claimsieve.observer_receipt.v2"
+                    && parsed.observed_at_seq <= 9_007_199_254_740_991
+            })
             .unwrap_or(false);
         outputs.push(json!({ "id": id, "accepted": accepted }));
     }

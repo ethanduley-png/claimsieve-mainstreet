@@ -46,7 +46,7 @@ class SMSSandboxTests(unittest.TestCase):
 
     def test_idempotency_survives_restart(self):
         first = self.provider.invoke(action(), ticket())
-        restarted = SandboxSMSProvider(self.path, allowed_recipients={"+15551234567"})
+        restarted = SandboxSMSProvider(self.path, allowed_recipients={"+15551234567"}, allowed_resources={"lead-123"})
         second = restarted.invoke(action(), ticket())
         self.assertEqual(first["provider_id"], second["provider_id"])
         self.assertTrue(second["idempotent_replay"])

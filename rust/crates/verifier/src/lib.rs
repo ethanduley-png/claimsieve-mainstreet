@@ -297,6 +297,13 @@ fn verify_receipt(
         .get("schema_version")
         .and_then(Value::as_str)
         .unwrap_or_default();
+    if schema == "claimsieve.observer_receipt.v2" {
+        if let Err(error) = serde_json::from_value::<claimsieve_protocol::ObserverReceipt>(
+            receipt.clone(),
+        ) {
+            errors.push(format!("invalid v2 observer receipt shape: {error}"));
+        }
+    }
     let (key_field, role, domain, requires_execution_binding) = match schema {
         "claimsieve.executor_receipt.v1" => (
             "executor_key_id",
@@ -308,6 +315,12 @@ fn verify_receipt(
             "observer_key_id",
             "observer_signers",
             "observer-receipt-v1",
+            true,
+        ),
+        "claimsieve.observer_receipt.v2" => (
+            "observer_key_id",
+            "observer_signers",
+            "observer-receipt-v2",
             true,
         ),
         "claimsieve.containment_receipt.v1" => (
@@ -343,7 +356,8 @@ fn verify_receipt(
         None => errors.push(format!("unknown receipt key: {key_id}")),
     }
     if requires_execution_binding {
-        if object.get("trace_id").and_then(Value::as_str) != Some(trace_id) {
+        if schema != "claimsieve.observer_receipt.v2"
+            && object.get("trace_id").and_then(Value::as_str) != Some(trace_id) {
             errors.push("receipt trace mismatch".to_owned());
         }
         match permit_id {
@@ -997,7 +1011,7 @@ pub fn verify_bundle(bundle: &EvidenceBundle, trust_root: &TrustRoot) -> Verific
         ));
         let record_type = match receipt.get("schema_version").and_then(Value::as_str) {
             Some("claimsieve.executor_receipt.v1") => Some("EXECUTOR_RECEIPT"),
-            Some("claimsieve.observer_receipt.v1") => Some("OBSERVER_RECEIPT"),
+            Some("claimsieve.observer_receipt.v1" | "claimsieve.observer_receipt.v2") => Some("OBSERVER_RECEIPT"),
             Some("claimsieve.containment_receipt.v1") => Some("CONTAINMENT_RECEIPT"),
             _ => None,
         };
@@ -1037,6 +1051,8 @@ pub fn verify_bundle(bundle: &EvidenceBundle, trust_root: &TrustRoot) -> Verific
             .filter(|receipt| {
                 receipt.get("schema_version").and_then(Value::as_str)
                     == Some("claimsieve.observer_receipt.v1")
+                    || receipt.get("schema_version").and_then(Value::as_str)
+                        == Some("claimsieve.observer_receipt.v2")
             })
             .collect::<Vec<_>>();
         if !bundle.receipts.is_empty()
@@ -1063,6 +1079,33 @@ pub fn verify_bundle(bundle: &EvidenceBundle, trust_root: &TrustRoot) -> Verific
             }
         }
         if let Some(observer_receipt) = observer_receipts.first() {
+            if observer_receipt.get("schema_version").and_then(Value::as_str)
+                == Some("claimsieve.observer_receipt.v2")
+            {
+                if observer_receipt.get("campaign_id").and_then(Value::as_str)
+                    != Some(permit.campaign_id.as_str())
+                {
+                    errors.push("v2 observer campaign mismatch".to_owned());
+                }
+                if let Some(reservation) = matching_reservations.first()
+                    && observer_receipt.get("reservation_id").and_then(Value::as_str)
+                        != reservation.get("reservation_id").and_then(Value::as_str)
+                {
+                    errors.push("v2 observer reservation mismatch".to_owned());
+                }
+                if observer_receipt.get("receipt_conflict").and_then(Value::as_bool) == Some(true)
+                    && observer_receipt.get("reconciliation").and_then(Value::as_str)
+                        != Some("OUTCOME_UNKNOWN")
+                {
+                    errors.push("conflicting v2 observer receipt claimed terminal outcome".to_owned());
+                }
+                if observer_receipt.get("provider_record_digest").is_some_and(Value::is_null)
+                    && observer_receipt.get("reconciliation").and_then(Value::as_str)
+                        != Some("OUTCOME_UNKNOWN")
+                {
+                    errors.push("v2 observer lacks provider evidence for terminal outcome".to_owned());
+                }
+            }
             let reconciliation = observer_receipt
                 .get("reconciliation")
                 .and_then(Value::as_str);
@@ -1097,6 +1140,9 @@ pub fn verify_bundle(bundle: &EvidenceBundle, trust_root: &TrustRoot) -> Verific
         if let (Some(executor_receipt), Some(observer_receipt)) =
             (executor_receipts.first(), observer_receipts.first())
         {
+            if observer_receipt.get("schema_version").and_then(Value::as_str)
+                == Some("claimsieve.observer_receipt.v1")
+            {
             match digest(*executor_receipt) {
                 Ok(expected)
                     if observer_receipt
@@ -1107,6 +1153,7 @@ pub fn verify_bundle(bundle: &EvidenceBundle, trust_root: &TrustRoot) -> Verific
                     errors.push("observer receipt is not bound to executor receipt".to_owned())
                 }
                 Err(error) => errors.push(format!("executor receipt digest failed: {error}")),
+            }
             }
             let status = executor_receipt
                 .get("provider_status")

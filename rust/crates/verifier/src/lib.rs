@@ -297,12 +297,11 @@ fn verify_receipt(
         .get("schema_version")
         .and_then(Value::as_str)
         .unwrap_or_default();
-    if schema == "claimsieve.observer_receipt.v2" {
-        if let Err(error) =
+    if schema == "claimsieve.observer_receipt.v2"
+        && let Err(error) =
             serde_json::from_value::<claimsieve_protocol::ObserverReceipt>(receipt.clone())
-        {
-            errors.push(format!("invalid v2 observer receipt shape: {error}"));
-        }
+    {
+        errors.push(format!("invalid v2 observer receipt shape: {error}"));
     }
     let (key_field, role, domain, requires_execution_binding) = match schema {
         "claimsieve.executor_receipt.v1" => (

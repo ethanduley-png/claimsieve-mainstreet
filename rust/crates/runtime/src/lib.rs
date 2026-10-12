@@ -849,7 +849,13 @@ pub fn classify_provider_observation(
     observed_action_digest: Option<&str>,
     intended_action_digest: &str,
 ) -> (Reconciliation, bool) {
-    let conflict = (status == "rejected" && observed_action_digest.is_some())
+    // An unknown status never certifies an outcome. Empty status represents
+    // a missing provider response in portable outcome vectors.
+    if !matches!(status, "" | "accepted" | "rejected" | "timeout_unknown") {
+        return (Reconciliation::OutcomeUnknown, true);
+    }
+    let conflict = (status.is_empty() && observed_action_digest.is_some())
+        || (status == "rejected" && observed_action_digest.is_some())
         || (status == "accepted" && observed_action_digest.is_none());
     if conflict {
         return (Reconciliation::OutcomeUnknown, true);

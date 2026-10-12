@@ -1268,20 +1268,24 @@ impl<'a, O: ObservationSource> IndependentObserver<'a, O> {
         }
         let provider = self.source.query(&permit.permit_id)?;
         let intended_action_digest = digest(&proposal.action)?;
-        let (provider_record_digest, observed_action_digest, reconciliation, provider_evidence_conflict) =
-            match provider {
-                None => (None, None, Reconciliation::OutcomeUnknown, false),
-                Some(record) => {
-                    let record_digest = digest(&record)?;
-                    let observed = record.observed_action.as_ref().map(digest).transpose()?;
-                    let (outcome, conflict) = classify_provider_observation(
-                        record.status.as_str(),
-                        observed.as_deref(),
-                        &intended_action_digest,
-                    );
-                    (Some(record_digest), observed, outcome, conflict)
-                }
-            };
+        let (
+            provider_record_digest,
+            observed_action_digest,
+            reconciliation,
+            provider_evidence_conflict,
+        ) = match provider {
+            None => (None, None, Reconciliation::OutcomeUnknown, false),
+            Some(record) => {
+                let record_digest = digest(&record)?;
+                let observed = record.observed_action.as_ref().map(digest).transpose()?;
+                let (outcome, conflict) = classify_provider_observation(
+                    record.status.as_str(),
+                    observed.as_deref(),
+                    &intended_action_digest,
+                );
+                (Some(record_digest), observed, outcome, conflict)
+            }
+        };
         let unsigned_observer = UnsignedObserverReceipt {
             schema_version: "claimsieve.observer_receipt.v2",
             reservation_id: &reservation.reservation_id,

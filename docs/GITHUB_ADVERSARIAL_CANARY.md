@@ -35,6 +35,8 @@ The evaluation uses a deterministic fake GitHub transport, never real credential
 14. Idempotent repeat => no second write.
 15. Ticket/action-digest mismatch => OUTCOME_UNKNOWN.
 16. Incomplete pagination window => OUTCOME_UNKNOWN.
+17. Real durable executor refuses action B with zero GitHub POSTs.
+18. Real durable executor refuses changed destination with zero GitHub POSTs.
 
 ## Non-negotiable security boundaries
 

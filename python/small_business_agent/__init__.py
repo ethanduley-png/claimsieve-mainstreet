@@ -1,7 +1,36 @@
 from .brain import BusinessProfile, BusinessSignal, BusinessSnapshot, merge_signals
 from .brief import BriefItem, FounderBrief, build_founder_brief
+from .document_extraction import (
+    CANDIDATE_EVIDENCE,
+    UNVERIFIED_CANDIDATE,
+    CandidateClaim,
+    DocumentExtraction,
+    DocumentExtractor,
+    ExtractedSpan,
+    PaddleOCRExtractor,
+    bind_candidate_claim,
+    sha256_hex,
+    validate_candidate_claim_binding,
+)
 from .inbox import InboxMessage, InboxTriage, triage_message
 from .model import ActionRisk, BusinessDomain, Intent, ProposedWorkItem, WorkPlan
+from .note_memory import (
+    ACCEPTED_BUSINESS_KNOWLEDGE,
+    NON_AUTHORITATIVE_INTERPRETATION,
+    UNVERIFIED_NOTE_CANDIDATE,
+    AcceptedKnowledgeRecord,
+    NoteCandidate,
+    NoteCandidateKind,
+    NoteInterpretation,
+    NoteMemoryStore,
+    RuleBasedNoteInterpreter,
+    ValidationDisposition,
+    ValidationRecord,
+    detect_knowledge_conflicts,
+    promote_note_candidate,
+    validate_note_interpretation_binding,
+)
+from .note_signal import accepted_note_to_signal
 from .planner import plan_intent
 from .registry import CAPABILITIES, Capability
 
@@ -24,4 +53,29 @@ __all__ = [
     "InboxMessage",
     "InboxTriage",
     "triage_message",
+    "CANDIDATE_EVIDENCE",
+    "UNVERIFIED_CANDIDATE",
+    "CandidateClaim",
+    "DocumentExtraction",
+    "DocumentExtractor",
+    "ExtractedSpan",
+    "PaddleOCRExtractor",
+    "bind_candidate_claim",
+    "sha256_hex",
+    "validate_candidate_claim_binding",
+    "UNVERIFIED_NOTE_CANDIDATE",
+    "NON_AUTHORITATIVE_INTERPRETATION",
+    "ACCEPTED_BUSINESS_KNOWLEDGE",
+    "NoteCandidateKind",
+    "NoteCandidate",
+    "NoteInterpretation",
+    "ValidationDisposition",
+    "ValidationRecord",
+    "AcceptedKnowledgeRecord",
+    "RuleBasedNoteInterpreter",
+    "NoteMemoryStore",
+    "validate_note_interpretation_binding",
+    "promote_note_candidate",
+    "detect_knowledge_conflicts",
+    "accepted_note_to_signal",
 ]

@@ -675,7 +675,7 @@ impl ContainmentController {
 }
 
 /// Provider response made available by a provider adapter.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ConnectorResponse {
     /// `accepted`, `rejected`, or `timeout_unknown`.
     pub status: String,
@@ -800,10 +800,13 @@ struct UnsignedExecutorReceipt<'a> {
 #[derive(Serialize)]
 struct UnsignedObserverReceipt<'a> {
     schema_version: &'static str,
-    trace_id: &'a str,
+    reservation_id: &'a str,
     permit_id: &'a str,
+    campaign_id: &'a str,
+    provider_record_digest: &'a Option<String>,
     observed_action_digest: &'a Option<String>,
     reconciliation: Reconciliation,
+    receipt_conflict: bool,
     observed_at_seq: u64,
     observer_key_id: &'a str,
 }
@@ -846,7 +849,13 @@ pub fn classify_provider_observation(
     observed_action_digest: Option<&str>,
     intended_action_digest: &str,
 ) -> (Reconciliation, bool) {
-    let conflict = (status == "rejected" && observed_action_digest.is_some())
+    // An unknown status never certifies an outcome. Empty status represents
+    // a missing provider response in portable outcome vectors.
+    if !matches!(status, "" | "accepted" | "rejected" | "timeout_unknown") {
+        return (Reconciliation::OutcomeUnknown, true);
+    }
+    let conflict = (status.is_empty() && observed_action_digest.is_some())
+        || (status == "rejected" && observed_action_digest.is_some())
         || (status == "accepted" && observed_action_digest.is_none());
     if conflict {
         return (Reconciliation::OutcomeUnknown, true);
@@ -1265,38 +1274,50 @@ impl<'a, O: ObservationSource> IndependentObserver<'a, O> {
         }
         let provider = self.source.query(&permit.permit_id)?;
         let intended_action_digest = digest(&proposal.action)?;
-        let (observed_action_digest, reconciliation, provider_evidence_conflict) = match provider {
-            None => (None, Reconciliation::OutcomeUnknown, false),
+        let (
+            provider_record_digest,
+            observed_action_digest,
+            reconciliation,
+            provider_evidence_conflict,
+        ) = match provider {
+            None => (None, None, Reconciliation::OutcomeUnknown, false),
             Some(record) => {
+                let record_digest = digest(&record)?;
                 let observed = record.observed_action.as_ref().map(digest).transpose()?;
                 let (outcome, conflict) = classify_provider_observation(
                     record.status.as_str(),
                     observed.as_deref(),
                     &intended_action_digest,
                 );
-                (observed, outcome, conflict)
+                (Some(record_digest), observed, outcome, conflict)
             }
         };
         let unsigned_observer = UnsignedObserverReceipt {
-            schema_version: "claimsieve.observer_receipt.v1",
-            trace_id: &proposal.trace_id,
+            schema_version: "claimsieve.observer_receipt.v2",
+            reservation_id: &reservation.reservation_id,
             permit_id: &permit.permit_id,
+            campaign_id: &permit.campaign_id,
+            provider_record_digest: &provider_record_digest,
             observed_action_digest: &observed_action_digest,
             reconciliation,
+            receipt_conflict: provider_evidence_conflict,
             observed_at_seq: sequence,
             observer_key_id: &self.observer_key_id,
         };
         let signature = sign(
             &self.observer_signing_key,
-            "observer-receipt-v1",
+            "observer-receipt-v2",
             &unsigned_observer,
         )?;
         let observer_receipt = ObserverReceipt {
-            schema_version: "claimsieve.observer_receipt.v1".to_owned(),
-            trace_id: proposal.trace_id.clone(),
+            schema_version: "claimsieve.observer_receipt.v2".to_owned(),
+            reservation_id: reservation.reservation_id.clone(),
             permit_id: permit.permit_id.clone(),
+            campaign_id: permit.campaign_id.clone(),
+            provider_record_digest,
             observed_action_digest,
             reconciliation,
+            receipt_conflict: provider_evidence_conflict,
             observed_at_seq: sequence,
             observer_key_id: self.observer_key_id.clone(),
             signature,

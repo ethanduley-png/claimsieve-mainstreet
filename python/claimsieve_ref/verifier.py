@@ -283,11 +283,24 @@ def verify_bundle(bundle: dict[str, Any], trust_root: dict[str, Any] | None = No
                 "executor-receipt-v1", unsigned, receipt.get("signature"), "executor receipt",
             )
             _require_recorded(errors, ledgers, "execution", "EXECUTOR_RECEIPT", receipt, "executor receipt")
-        elif schema == "claimsieve.observer_receipt.v1":
+        elif schema in {"claimsieve.observer_receipt.v1", "claimsieve.observer_receipt.v2"}:
             observer_receipts.append(receipt)
+            if schema == "claimsieve.observer_receipt.v2":
+                expected_fields = {
+                    "schema_version", "reservation_id", "permit_id", "campaign_id",
+                    "provider_record_digest", "observed_action_digest", "reconciliation",
+                    "receipt_conflict", "observed_at_seq", "observer_key_id", "signature",
+                }
+                if set(receipt) != expected_fields:
+                    errors.append("v2 observer receipt fields mismatch")
+                if type(receipt.get("receipt_conflict")) is not bool:
+                    errors.append("v2 observer conflict must be boolean")
+                if type(receipt.get("observed_at_seq")) is not int or receipt.get("observed_at_seq", -1) < 0:
+                    errors.append("v2 observer sequence invalid")
             _verify_signature(
                 errors, keys, trust_root, "observer_signers", receipt.get("observer_key_id"),
-                "observer-receipt-v1", unsigned, receipt.get("signature"), "observer receipt",
+                "observer-receipt-v2" if schema.endswith(".v2") else "observer-receipt-v1",
+                unsigned, receipt.get("signature"), "observer receipt",
             )
             _require_recorded(errors, ledgers, "execution", "OBSERVER_RECEIPT", receipt, "observer receipt")
         elif schema == "claimsieve.containment_receipt.v1":
@@ -305,8 +318,24 @@ def verify_bundle(bundle: dict[str, Any], trust_root: dict[str, Any] | None = No
         if executor_receipts and executor_receipts[0].get("action_digest") != permit.get("action_digest"):
             errors.append("executor receipt action digest mismatch")
         if executor_receipts and observer_receipts:
-            if observer_receipts[0].get("executor_receipt_digest") != digest(executor_receipts[0]):
-                errors.append("observer receipt is not bound to executor receipt")
+            observer_receipt = observer_receipts[0]
+            if observer_receipt.get("schema_version") == "claimsieve.observer_receipt.v1":
+                if observer_receipt.get("executor_receipt_digest") != digest(executor_receipts[0]):
+                    errors.append("observer receipt is not bound to executor receipt")
+            else:
+                if observer_receipt.get("permit_id") != permit.get("permit_id"):
+                    errors.append("v2 observer permit mismatch")
+                if observer_receipt.get("campaign_id") != permit.get("campaign_id"):
+                    errors.append("v2 observer campaign mismatch")
+                reservations = [record.get("payload", {}) for record in reservation_records
+                                if isinstance(record.get("payload"), dict)
+                                and record["payload"].get("permit_id") == permit.get("permit_id")]
+                if len(reservations) != 1 or observer_receipt.get("reservation_id") != reservations[0].get("reservation_id"):
+                    errors.append("v2 observer reservation mismatch")
+                if observer_receipt.get("receipt_conflict") is True and observer_receipt.get("reconciliation") != "OUTCOME_UNKNOWN":
+                    errors.append("conflicting v2 receipt claimed a terminal outcome")
+                if observer_receipt.get("provider_record_digest") is None and observer_receipt.get("reconciliation") != "OUTCOME_UNKNOWN":
+                    errors.append("v2 observer lacks independent provider evidence")
             observed = observer_receipts[0].get("observed_action_digest")
             reconciliation = observer_receipts[0].get("reconciliation")
             exact = digest(proposal.get("action"))

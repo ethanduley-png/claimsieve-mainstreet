@@ -36,7 +36,7 @@ GitHub App installation identity binding remains a production target; the curren
 
 ## Second target
 
-Native compilation is complete locally: Rust format, warning-denied Clippy, 28 tests, v0.34 bundle verification, and all four Rocq compilation/assumption gates pass. The remaining target is to make Rust consume the complete Founder OS and provider-outcome vector sets and to resolve or explicitly preserve the observer receipt v1/v2 divergence.
+Native compilation is complete locally: Rust format, warning-denied Clippy, 28 tests, v0.34 bundle verification, and all four Rocq compilation/assumption gates pass. The hardening PR adds an executable Rust/Python provider-outcome and v2 observer-wire differential gate. Rust native executor receipts are still v1 and do not yet carry the Python durable executor's request digest, idempotency key, fencing token, containment epoch, or campaign binding. Next: implement honest durable dispatch state and executor-v2/refinement tests, not fabricated placeholder values.
 
 ## Reporting standard
 

@@ -23,4 +23,9 @@ jobs:
       - run: cargo fmt --check
       - run: cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
       - run: cargo test --locked --workspace --all-features
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - run: python3 -m pip install --disable-pip-version-check -r ../python/requirements-test.txt
+      - run: python3 ../scripts/cross_language_outcome_gate.py
       # v0.31 portable verifier parity is a known incomplete gate; see docs/RUST_IMPLEMENTATION_REPORT.md.

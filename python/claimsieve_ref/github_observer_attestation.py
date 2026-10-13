@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import re
 import secrets
+import sqlite3
 import time
+from pathlib import Path
 from typing import Any, Mapping
 
 from .canonical import digest
@@ -42,6 +44,89 @@ _REASONS = {
 class GitHubObserverAttestationError(ValueError):
     """Untrusted, malformed, replayed, stale or mismatched observer receipt."""
 
+
+
+class GitHubVerifierChallengeStore:
+    """Durably issue and atomically consume fresh challenges in trusted verifier.
+
+    This reference single-host SQLite store needs off-host anti-rollback in
+    production: a privileged local administrator can restore an old snapshot.
+    """
+
+    def __init__(self, path: str | Path) -> None:
+        self.path = str(path)
+        Path(self.path).parent.mkdir(parents=True, exist_ok=True)
+        with self._connect() as connection:
+            connection.execute(
+                "CREATE TABLE IF NOT EXISTS challenges ("
+                "challenge TEXT PRIMARY KEY, ticket_digest TEXT NOT NULL,"
+                "action_digest TEXT NOT NULL, issued_at INTEGER NOT NULL,"
+                "expires_at INTEGER NOT NULL, consumed INTEGER NOT NULL DEFAULT 0"
+                " CHECK(consumed IN (0, 1)))"
+            )
+
+    def _connect(self) -> sqlite3.Connection:
+        connection = sqlite3.connect(self.path, timeout=15, isolation_level=None)
+        connection.execute("PRAGMA journal_mode = WAL")
+        connection.execute("PRAGMA synchronous = FULL")
+        connection.execute("PRAGMA busy_timeout = 15000")
+        return connection
+
+    def issue(
+        self,
+        *,
+        ticket: DispatchTicket,
+        approved_action_digest: str,
+        now_unix: int | None = None,
+        ttl_seconds: int = 60,
+    ) -> str:
+        now = int(time.time()) if now_unix is None else now_unix
+        if not isinstance(ticket, DispatchTicket) or type(now) is not int or now < 1:
+            raise GitHubObserverAttestationError("trusted ticket and clock required")
+        if type(ttl_seconds) is not int or not 1 <= ttl_seconds <= 3600:
+            raise GitHubObserverAttestationError("invalid challenge lifetime")
+        if not isinstance(approved_action_digest, str) or re.fullmatch(
+            r"sha256:[0-9a-f]{64}", approved_action_digest
+        ) is None:
+            raise GitHubObserverAttestationError("trusted action digest malformed")
+        challenge = new_observation_challenge()
+        with self._connect() as connection:
+            connection.execute(
+                "INSERT INTO challenges(challenge, ticket_digest, action_digest,"
+                " issued_at, expires_at) VALUES (?, ?, ?, ?, ?)",
+                (challenge, digest(ticket.as_dict()), approved_action_digest, now, now + ttl_seconds),
+            )
+        return challenge
+
+    def consume(
+        self,
+        *,
+        challenge: str,
+        ticket: DispatchTicket,
+        approved_action_digest: str,
+        now_unix: int,
+    ) -> None:
+        _challenge(challenge)
+        if type(now_unix) is not int or now_unix < 1:
+            raise GitHubObserverAttestationError("invalid verifier time")
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                affected = connection.execute(
+                    "UPDATE challenges SET consumed = 1 WHERE challenge = ? "
+                    "AND ticket_digest = ? AND action_digest = ? AND consumed = 0 "
+                    "AND expires_at >= ? AND issued_at <= ?",
+                    (challenge, digest(ticket.as_dict()), approved_action_digest,
+                     now_unix, now_unix + 5),
+                ).rowcount
+                if affected != 1:
+                    raise GitHubObserverAttestationError(
+                        "challenge absent, expired, replayed or incorrectly bound"
+                    )
+                connection.execute("COMMIT")
+            except BaseException:
+                connection.execute("ROLLBACK")
+                raise
 
 def new_observation_challenge() -> str:
     """Mint the challenge only in the trusted verifier, never the agent."""
@@ -115,6 +200,7 @@ def verify_github_observer_attestation(
     ticket: DispatchTicket,
     challenge: str,
     observer_public_key: PublicKey,
+    challenge_store: GitHubVerifierChallengeStore,
     now_unix: int | None = None,
     max_age_seconds: int = 60,
     max_future_skew_seconds: int = 5,
@@ -127,8 +213,9 @@ def verify_github_observer_attestation(
     _challenge(challenge)
     if not isinstance(attestation, Mapping) or set(attestation) != _FIELDS:
         raise GitHubObserverAttestationError("observer receipt fields invalid")
-    if not isinstance(ticket, DispatchTicket) or not isinstance(observer_public_key, PublicKey):
-        raise GitHubObserverAttestationError("trusted ticket and pinned public key required")
+    if (not isinstance(ticket, DispatchTicket) or not isinstance(observer_public_key, PublicKey)
+            or not isinstance(challenge_store, GitHubVerifierChallengeStore)):
+        raise GitHubObserverAttestationError("trusted ticket, pinned key and challenge store required")
     if type(max_age_seconds) is not int or not 1 <= max_age_seconds <= 3600:
         raise GitHubObserverAttestationError("invalid maximum observation age")
     if type(max_future_skew_seconds) is not int or not 0 <= max_future_skew_seconds <= 60:
@@ -159,7 +246,9 @@ def verify_github_observer_attestation(
     if not isinstance(result, dict) or set(result) != _RESULT_FIELDS:
         raise GitHubObserverAttestationError("observation result shape invalid")
     outcome = result.get("outcome")
-    if outcome not in _REASONS or result.get("reason") not in _REASONS[outcome]:
+    if (not isinstance(outcome, str) or outcome not in _REASONS
+            or not isinstance(result.get("reason"), str)
+            or result["reason"] not in _REASONS[outcome]):
         raise GitHubObserverAttestationError("observation status invalid")
     if (
         result.get("expected_action_digest") != expected_digest
@@ -183,4 +272,10 @@ def verify_github_observer_attestation(
             raise GitHubObserverAttestationError("divergence lacks independent effect")
     elif provider_id is not None:
         raise GitHubObserverAttestationError("unknown result must not assert confirmed provider identity")
+    # Replay consumption is a durable atomic write: two verifier workers cannot
+    # both accept the same signed receipt/challenge, even concurrently.
+    challenge_store.consume(
+        challenge=challenge, ticket=ticket, approved_action_digest=expected_digest,
+        now_unix=now,
+    )
     return dict(result)

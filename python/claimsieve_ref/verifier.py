@@ -336,6 +336,8 @@ def verify_bundle(bundle: dict[str, Any], trust_root: dict[str, Any] | None = No
                     errors.append("conflicting v2 receipt claimed a terminal outcome")
                 if observer_receipt.get("provider_record_digest") is None and observer_receipt.get("reconciliation") != "OUTCOME_UNKNOWN":
                     errors.append("v2 observer lacks independent provider evidence")
+                if observer_receipt.get("provider_record_digest") is None and observer_receipt.get("reconciliation") in {"CONFIRMED_SUCCESS", "CONFIRMED_FAILURE", "DIVERGENT_EFFECT"}:
+                    errors.append("confirmed observer outcome requires provider record digest")
             observed = observer_receipts[0].get("observed_action_digest")
             reconciliation = observer_receipts[0].get("reconciliation")
             exact = digest(proposal.get("action"))

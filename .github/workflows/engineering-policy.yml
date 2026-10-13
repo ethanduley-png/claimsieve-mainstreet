@@ -1,0 +1,21 @@
+name: Engineering policy gate
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: engineering-policy-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  policy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python -m unittest discover -s python/tests -p 'test_engineering_policy_gate.py' -v
+      - run: python scripts/engineering_policy_gate.py

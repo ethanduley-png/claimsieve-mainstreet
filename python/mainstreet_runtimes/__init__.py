@@ -18,6 +18,18 @@ from .openhands_adapter import (
     OpenHandsProposalAdapter,
     OpenHandsRuntimeContext,
 )
+from .operational_state import (
+    DEFAULT_OPERATIONAL_STATE_BOUNDS,
+    OperationalState,
+    OperationalStateBounds,
+    OperationalStateBoundsError,
+    OperationalStateError,
+    OperationalStatePatch,
+    OperationalStateTransition,
+    ProtectedOperationalStateError,
+    StaleOperationalStateError,
+    apply_operational_state_patch,
+)
 
 __all__ = [
     "ClaimSieveIntakeError",
@@ -26,8 +38,18 @@ __all__ = [
     "DeepAgentsAdapterError",
     "DeepAgentsFounderIntake",
     "DeepAgentsProposalAdapter",
+    "DEFAULT_OPERATIONAL_STATE_BOUNDS",
     "OpenHandsAdapterError",
     "OpenHandsConsequentialIntent",
     "OpenHandsProposalAdapter",
     "OpenHandsRuntimeContext",
+    "OperationalState",
+    "OperationalStateBounds",
+    "OperationalStateBoundsError",
+    "OperationalStateError",
+    "OperationalStatePatch",
+    "OperationalStateTransition",
+    "ProtectedOperationalStateError",
+    "StaleOperationalStateError",
+    "apply_operational_state_patch",
 ]

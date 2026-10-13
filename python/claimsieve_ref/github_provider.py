@@ -19,8 +19,10 @@ DEFAULT_API_VERSION = "2026-03-10"
 _MAX_RESPONSE_BYTES = 4 * 1024 * 1024
 _REPOSITORY_RE = re.compile(r"^[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}$")
 _MARKER_PREFIX = "<!-- claimsieve-v1:"
+# GitHub's web editor can rewrite line endings to CRLF and append trailing
+# whitespace. Those edits must not hide an existing marker from observation.
 _MARKER_RE = re.compile(
-    r"\n\n<!-- claimsieve-v1:([0-9a-f]{64}):([A-Za-z0-9_-]+) -->\Z"
+    r"(?:\r?\n){2}<!-- claimsieve-v1:([0-9a-f]{64}):([A-Za-z0-9_-]+) -->\s*\Z"
 )
 
 
@@ -321,6 +323,7 @@ class GitHubIssueProvider:
         fingerprint = _marker_fingerprint(idempotency_key)
         matches: list[dict[str, Any]] = []
         malformed_match = False
+        window_exhausted = False
         for repository in sorted(self.allowed_repositories):
             for page in range(1, self._max_observation_pages + 1):
                 query = urllib.parse.urlencode(
@@ -362,6 +365,10 @@ class GitHubIssueProvider:
                         malformed_match = True
                         continue
                     if decoded is None:
+                        # The fingerprint is present but the marker is not in its
+                        # exact trailing position. Treating that as "no match"
+                        # would let a duplicate write pass the preflight.
+                        malformed_match = True
                         continue
                     base_body, metadata = decoded
                     try:
@@ -372,6 +379,9 @@ class GitHubIssueProvider:
                         malformed_match = True
                 if len(response.body) < 100:
                     break
+            else:
+                # Every page in the window was full; older issues were not read.
+                window_exhausted = True
         if malformed_match or len(matches) > 1:
             effect = matches[0]["effect"] if matches else {"invalid_github_marker": True}
             return {
@@ -388,6 +398,16 @@ class GitHubIssueProvider:
                     "reason": "duplicate_or_invalid_claimsieve_marker",
                 },
             }
+        if window_exhausted:
+            # A bounded scan can establish neither absence nor uniqueness when
+            # every page in the observation window was full. Even one visible
+            # valid marker is insufficient because an older duplicate or
+            # malformed marker may exist beyond the scanned window.
+            if strict:
+                raise GitHubProviderError(
+                    "GitHub observation window exhausted before uniqueness could be established"
+                )
+            return None
         return matches[0] if matches else None
 
     def _provider_record(

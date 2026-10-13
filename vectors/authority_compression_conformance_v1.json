@@ -129,7 +129,7 @@
       "id": "SHADOW_CURRENT_FACTS_NEED_TRUSTED_SOURCE",
       "severity": "safety",
       "status": "open",
-      "shadow_tokens": ["separately trusted state services", "derive them from trusted policy, identity, containment, and reservation services"],
+      "shadow_tokens": ["separately trusted state services", "derive them from trusted policy, identity, containment, and reservation"],
       "target": "current authority facts must be obtained from independently authenticated state services rather than caller-controlled booleans"
     },
     {

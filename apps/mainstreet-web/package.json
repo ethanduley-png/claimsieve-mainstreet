@@ -1,0 +1,13 @@
+{
+  "name": "@mainstreet/customer-web-shell",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "check": "node --check public/app.js && node --check public/sw.js"
+  }
+}

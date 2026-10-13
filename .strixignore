@@ -1,0 +1,8 @@
+# Keep the autonomous adversary focused on executable assurance surfaces.
+# Tests, deploy configuration, schemas, policies, trust roots, and source remain in scope.
+evidence/
+docs/
+research/
+*.zip
+*.pdf
+MANIFEST.sha256

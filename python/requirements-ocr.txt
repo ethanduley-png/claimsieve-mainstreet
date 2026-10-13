@@ -1,0 +1,4 @@
+# Optional note/document OCR adapter. Keep out of the baseline assurance runtime.
+# Production deployments must additionally pin the platform-appropriate
+# PaddlePaddle runtime and freeze the complete transitive dependency graph.
+paddleocr==3.7.0

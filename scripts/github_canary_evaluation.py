@@ -25,7 +25,7 @@ def main() -> int:
         "errors": len(result.errors),
         "skipped": len(result.skipped),
         "passing": result.testsRun - len(result.failures) - len(result.errors) - len(result.skipped),
-        "passed": result.wasSuccessful() and result.testsRun >= 16,
+        "passed": result.wasSuccessful() and result.testsRun >= 18,
         "live_provider_independence_proven": False,
         "live_github_write_attempts": 0,
     }

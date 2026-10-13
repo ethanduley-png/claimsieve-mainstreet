@@ -35,6 +35,7 @@ jobs:
               rocq compile -Q . ClaimSieve Check.v
               rocq compile -Q . ClaimSieve CheckDurableState.v
               rocq compile -Q . ClaimSieve CheckExecutionAssurance.v
+              rocq compile -Q . ClaimSieve ExtractRefinement.v
               rocq compile -Q . ClaimSieve CheckAuthorityCompression.v
               rocq compile -Q . ClaimSieve CheckAuthorityCompressionNecessity.v
               rocq compile -Q . ClaimSieve CheckAuthorityCompressionAuthenticity.v

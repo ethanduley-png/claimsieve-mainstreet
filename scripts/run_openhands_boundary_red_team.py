@@ -187,7 +187,20 @@ def main() -> int:
             lambda: authenticated_route.route_intent(changed),
         )
 
-        duplicate = adapter.build_intent(event("call-duplicate")).to_dict()
+        # The baseline already advanced this campaign to sequence 60.
+        # Replay detection must be tested with a valid successor proposal,
+        # not a stale sequence rejected by the policy before replay handling.
+        successor_context = OpenHandsRuntimeContext(
+            trace_id=context.trace_id,
+            campaign_id=context.campaign_id,
+            session_id=context.session_id,
+            work_item_id=context.work_item_id,
+            requested_at_seq=context.requested_at_seq + 1,
+        )
+        successor_adapter = OpenHandsProposalAdapter(
+            successor_context, authenticated_route.route_intent
+        )
+        duplicate = successor_adapter.build_intent(event("call-duplicate")).to_dict()
         authenticated_route.route_intent(copy.deepcopy(duplicate))
         expect_block(
             results,

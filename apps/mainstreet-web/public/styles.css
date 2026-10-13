@@ -1,0 +1,76 @@
+:root {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #111827;
+  background: #f4f5f7;
+  font-synthesis: none;
+}
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; background: #f4f5f7; }
+button, select, textarea { font: inherit; }
+a { color: inherit; }
+.app-shell { min-height: 100vh; }
+.topbar {
+  min-height: 64px;
+  padding: 12px max(18px, env(safe-area-inset-left));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+.brand { font-size: 20px; font-weight: 800; text-decoration: none; letter-spacing: -0.03em; }
+.topbar-actions { display: flex; align-items: center; gap: 14px; }
+.business-picker { display: flex; gap: 8px; align-items: center; font-size: 13px; color: #6b7280; }
+.business-picker select { max-width: 190px; padding: 7px 28px 7px 9px; border: 1px solid #d1d5db; border-radius: 10px; background: #fff; color: #111827; }
+.quiet-link { font-size: 14px; color: #4b5563; }
+.center-card { max-width: 620px; margin: 12vh auto; padding: 36px; background: #fff; border-radius: 24px; box-shadow: 0 10px 35px rgba(17, 24, 39, .08); }
+.center-card h1, .page-heading h1 { margin: 4px 0 10px; font-size: clamp(30px, 5vw, 46px); letter-spacing: -0.045em; line-height: 1.02; }
+.center-card p { color: #4b5563; line-height: 1.6; }
+.eyebrow { margin: 0; text-transform: uppercase; letter-spacing: .12em; font-size: 11px; font-weight: 800; color: #6b7280; }
+.primary-button { display: inline-flex; border: 0; border-radius: 12px; padding: 12px 17px; background: #111827; color: white; text-decoration: none; font-weight: 750; cursor: pointer; }
+.fine-print { font-size: 12px; color: #6b7280 !important; }
+.primary-nav {
+  display: flex;
+  gap: 6px;
+  padding: 12px max(18px, env(safe-area-inset-left));
+  overflow-x: auto;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+}
+.nav-item { border: 0; background: transparent; padding: 9px 12px; border-radius: 10px; color: #6b7280; cursor: pointer; white-space: nowrap; }
+.nav-item.active { background: #111827; color: #fff; }
+.content { max-width: 980px; margin: 0 auto; padding: 34px 20px calc(50px + env(safe-area-inset-bottom)); }
+.page-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+.badge { margin-top: 10px; padding: 6px 10px; border-radius: 999px; background: #e5e7eb; color: #374151; font-size: 12px; text-transform: capitalize; }
+.card-list { display: grid; gap: 12px; margin-top: 20px; }
+.work-card, .assistant-card, .result-card, .placeholder {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow: 0 4px 18px rgba(17, 24, 39, .04);
+}
+.work-card h2 { margin: 0 0 6px; font-size: 18px; }
+.work-card p { margin: 0; color: #6b7280; }
+.work-card.calm { border-style: dashed; }
+.assistant-card { display: grid; gap: 12px; margin-top: 20px; }
+.assistant-card label { font-weight: 750; }
+.assistant-card textarea { width: 100%; resize: vertical; padding: 14px; border: 1px solid #d1d5db; border-radius: 12px; min-height: 130px; }
+.assistant-card .primary-button { justify-self: start; }
+.result-card { margin-top: 12px; }
+.placeholder h1 { margin-top: 0; }
+.placeholder p { color: #6b7280; }
+[hidden] { display: none !important; }
+
+@media (max-width: 640px) {
+  .topbar { align-items: flex-start; }
+  .topbar-actions { align-items: flex-end; flex-direction: column; gap: 6px; }
+  .business-picker span { display: none; }
+  .center-card { margin: 7vh 14px; padding: 28px 22px; border-radius: 20px; }
+  .content { padding-top: 24px; }
+  .page-heading h1 { font-size: 36px; }
+}

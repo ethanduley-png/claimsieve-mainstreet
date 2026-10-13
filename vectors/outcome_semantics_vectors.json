@@ -57,6 +57,27 @@
       "observed_action_digest": null,
       "expected_reconciliation": "OUTCOME_UNKNOWN",
       "expected_conflict": false
+    },
+    {
+      "id": "malformed-provider-status-and-effect",
+      "response_status": "granted",
+      "observed_action_digest": "sha256:exact",
+      "expected_reconciliation": "OUTCOME_UNKNOWN",
+      "expected_conflict": true
+    },
+    {
+      "id": "malformed-provider-status-no-effect",
+      "response_status": "unexpected",
+      "observed_action_digest": null,
+      "expected_reconciliation": "OUTCOME_UNKNOWN",
+      "expected_conflict": true
+    },
+    {
+      "id": "missing-status-with-effect",
+      "response_status": null,
+      "observed_action_digest": "sha256:exact",
+      "expected_reconciliation": "OUTCOME_UNKNOWN",
+      "expected_conflict": true
     }
   ]
 }

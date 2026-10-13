@@ -1,0 +1,210 @@
+{
+  "schema_version": "claimsieve.observer_wire_vectors.v1",
+  "vectors": [
+    {
+      "id": "valid-success",
+      "receipt": {
+        "schema_version": "claimsieve.observer_receipt.v2",
+        "reservation_id": "reservation-1",
+        "permit_id": "permit-1",
+        "campaign_id": "campaign-1",
+        "provider_record_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "observed_action_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "reconciliation": "CONFIRMED_SUCCESS",
+        "receipt_conflict": false,
+        "observed_at_seq": 8,
+        "observer_key_id": "observer-1",
+        "signature": "ed25519:fixture"
+      },
+      "expected_accept": true
+    },
+    {
+      "id": "valid-unknown",
+      "receipt": {
+        "schema_version": "claimsieve.observer_receipt.v2",
+        "reservation_id": "reservation-1",
+        "permit_id": "permit-1",
+        "campaign_id": "campaign-1",
+        "provider_record_digest": null,
+        "observed_action_digest": null,
+        "reconciliation": "OUTCOME_UNKNOWN",
+        "receipt_conflict": false,
+        "observed_at_seq": 8,
+        "observer_key_id": "observer-1",
+        "signature": "ed25519:fixture"
+      },
+      "expected_accept": true
+    },
+    {
+      "id": "missing-reservation",
+      "receipt": {
+        "schema_version": "claimsieve.observer_receipt.v2",
+        "permit_id": "permit-1",
+        "campaign_id": "campaign-1",
+        "provider_record_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "observed_action_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "reconciliation": "CONFIRMED_SUCCESS",
+        "receipt_conflict": false,
+        "observed_at_seq": 8,
+        "observer_key_id": "observer-1",
+        "signature": "ed25519:fixture"
+      },
+      "expected_accept": false
+    },
+    {
+      "id": "wrong-version",
+      "receipt": {
+        "schema_version": "claimsieve.observer_receipt.v1",
+        "reservation_id": "reservation-1",
+        "permit_id": "permit-1",
+        "campaign_id": "campaign-1",
+        "provider_record_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "observed_action_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "reconciliation": "CONFIRMED_SUCCESS",
+        "receipt_conflict": false,
+        "observed_at_seq": 8,
+        "observer_key_id": "observer-1",
+        "signature": "ed25519:fixture"
+      },
+      "expected_accept": false
+    },
+    {
+      "id": "unknown-field",
+      "receipt": {
+        "schema_version": "claimsieve.observer_receipt.v2",
+        "reservation_id": "reservation-1",
+        "permit_id": "permit-1",
+        "campaign_id": "campaign-1",
+        "provider_record_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "observed_action_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "reconciliation": "CONFIRMED_SUCCESS",
+        "receipt_conflict": false,
+        "observed_at_seq": 8,
+        "observer_key_id": "observer-1",
+        "signature": "ed25519:fixture",
+        "untrusted_extra": "yes"
+      },
+      "expected_accept": false
+    },
+    {
+      "id": "conflict-wrong-type",
+      "receipt": {
+        "schema_version": "claimsieve.observer_receipt.v2",
+        "reservation_id": "reservation-1",
+        "permit_id": "permit-1",
+        "campaign_id": "campaign-1",
+        "provider_record_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "observed_action_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "reconciliation": "CONFIRMED_SUCCESS",
+        "receipt_conflict": "false",
+        "observed_at_seq": 8,
+        "observer_key_id": "observer-1",
+        "signature": "ed25519:fixture"
+      },
+      "expected_accept": false
+    },
+    {
+      "id": "unknown-outcome-enum",
+      "receipt": {
+        "schema_version": "claimsieve.observer_receipt.v2",
+        "reservation_id": "reservation-1",
+        "permit_id": "permit-1",
+        "campaign_id": "campaign-1",
+        "provider_record_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "observed_action_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "reconciliation": "PROVIDER_SAYS_OK",
+        "receipt_conflict": false,
+        "observed_at_seq": 8,
+        "observer_key_id": "observer-1",
+        "signature": "ed25519:fixture"
+      },
+      "expected_accept": false
+    },
+    {
+      "id": "negative-observed-sequence",
+      "receipt": {
+        "schema_version": "claimsieve.observer_receipt.v2",
+        "reservation_id": "reservation-1",
+        "permit_id": "permit-1",
+        "campaign_id": "campaign-1",
+        "provider_record_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "observed_action_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "reconciliation": "CONFIRMED_SUCCESS",
+        "receipt_conflict": false,
+        "observed_at_seq": -1,
+        "observer_key_id": "observer-1",
+        "signature": "ed25519:fixture"
+      },
+      "expected_accept": false
+    },
+    {
+      "id": "string-observed-sequence",
+      "receipt": {
+        "schema_version": "claimsieve.observer_receipt.v2",
+        "reservation_id": "reservation-1",
+        "permit_id": "permit-1",
+        "campaign_id": "campaign-1",
+        "provider_record_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "observed_action_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "reconciliation": "CONFIRMED_SUCCESS",
+        "receipt_conflict": false,
+        "observed_at_seq": "8.5",
+        "observer_key_id": "observer-1",
+        "signature": "ed25519:fixture"
+      },
+      "expected_accept": false
+    },
+    {
+      "id": "missing-signature",
+      "receipt": {
+        "schema_version": "claimsieve.observer_receipt.v2",
+        "reservation_id": "reservation-1",
+        "permit_id": "permit-1",
+        "campaign_id": "campaign-1",
+        "provider_record_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "observed_action_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "reconciliation": "CONFIRMED_SUCCESS",
+        "receipt_conflict": false,
+        "observed_at_seq": 8,
+        "observer_key_id": "observer-1"
+      },
+      "expected_accept": false
+    },
+    {
+      "id": "null-observer-key",
+      "receipt": {
+        "schema_version": "claimsieve.observer_receipt.v2",
+        "reservation_id": "reservation-1",
+        "permit_id": "permit-1",
+        "campaign_id": "campaign-1",
+        "provider_record_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "observed_action_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "reconciliation": "CONFIRMED_SUCCESS",
+        "receipt_conflict": false,
+        "observed_at_seq": 8,
+        "observer_key_id": null,
+        "signature": "ed25519:fixture"
+      },
+      "expected_accept": false
+    },
+    {
+      "id": "non-string-digest",
+      "receipt": {
+        "schema_version": "claimsieve.observer_receipt.v2",
+        "reservation_id": "reservation-1",
+        "permit_id": "permit-1",
+        "campaign_id": "campaign-1",
+        "provider_record_digest": {
+          "hash": "abc"
+        },
+        "observed_action_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "reconciliation": "CONFIRMED_SUCCESS",
+        "receipt_conflict": false,
+        "observed_at_seq": 8,
+        "observer_key_id": "observer-1",
+        "signature": "ed25519:fixture"
+      },
+      "expected_accept": false
+    }
+  ]
+}

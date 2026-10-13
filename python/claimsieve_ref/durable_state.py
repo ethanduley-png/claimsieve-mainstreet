@@ -1433,8 +1433,13 @@ def classify_provider_evidence(
     evidence remains unknown rather than being coerced into success or failure.
     """
 
+    # Malformed provider statuses cannot certify either successful execution
+    # or failure, even if an observed digest happens to match the proposal.
+    if response_status not in {None, "accepted", "rejected", "timeout_unknown"}:
+        return "OUTCOME_UNKNOWN", True
     conflict = (
-        (response_status == "rejected" and observed_action_digest is not None)
+        (response_status is None and observed_action_digest is not None)
+        or (response_status == "rejected" and observed_action_digest is not None)
         or (response_status == "accepted" and observed_action_digest is None)
     )
     if conflict:

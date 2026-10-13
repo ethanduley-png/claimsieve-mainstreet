@@ -45,8 +45,22 @@ checksum = "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801"
 name = "claimsieve-cli"
 version = "0.33.0"
 dependencies = [
+ "claimsieve-protocol",
+ "claimsieve-runtime",
  "claimsieve-verifier",
  "serde_json",
+]
+
+[[package]]
+name = "claimsieve-compact-admission"
+version = "0.33.0"
+dependencies = [
+ "base64",
+ "claimsieve-protocol",
+ "claimsieve-runtime",
+ "ed25519-dalek",
+ "serde",
+ "thiserror",
 ]
 
 [[package]]
@@ -54,6 +68,14 @@ name = "claimsieve-durable-state"
 version = "0.33.0"
 dependencies = [
  "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "claimsieve-execution-authority-reconstruction"
+version = "0.33.0"
+dependencies = [
+ "claimsieve-compact-admission",
  "thiserror",
 ]
 

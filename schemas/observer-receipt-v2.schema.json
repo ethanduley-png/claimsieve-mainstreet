@@ -18,7 +18,7 @@
     "observed_action_digest": {"type": ["string", "null"]},
     "reconciliation": {"enum": ["CONFIRMED_SUCCESS", "CONFIRMED_FAILURE", "DIVERGENT_EFFECT", "OUTCOME_UNKNOWN"]},
     "receipt_conflict": {"type": "boolean"},
-    "observed_at_seq": {"type": "integer", "minimum": 0},
+    "observed_at_seq": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
     "observer_key_id": {"type": "string"},
     "signature": {"type": "string"}
   }

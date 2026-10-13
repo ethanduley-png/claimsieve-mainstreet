@@ -454,6 +454,7 @@ class GitHubIssueProvider:
         }
         return {
             "idempotency_key": metadata["idempotency_key"],
+            "action_digest": metadata["action_digest"],
             "request_digest": metadata["request_digest"],
             "resource_key": metadata["resource_key"],
             "fencing_token": fencing_token,

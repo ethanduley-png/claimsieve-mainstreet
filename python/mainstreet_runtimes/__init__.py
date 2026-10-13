@@ -12,6 +12,12 @@ from .deepagents_adapter import (
     DeepAgentsAdapterError,
     DeepAgentsProposalAdapter,
 )
+from .openhands_adapter import (
+    OpenHandsAdapterError,
+    OpenHandsConsequentialIntent,
+    OpenHandsProposalAdapter,
+    OpenHandsRuntimeContext,
+)
 from .operational_state import (
     DEFAULT_OPERATIONAL_STATE_BOUNDS,
     OperationalState,
@@ -33,6 +39,10 @@ __all__ = [
     "DeepAgentsFounderIntake",
     "DeepAgentsProposalAdapter",
     "DEFAULT_OPERATIONAL_STATE_BOUNDS",
+    "OpenHandsAdapterError",
+    "OpenHandsConsequentialIntent",
+    "OpenHandsProposalAdapter",
+    "OpenHandsRuntimeContext",
     "OperationalState",
     "OperationalStateBounds",
     "OperationalStateBoundsError",

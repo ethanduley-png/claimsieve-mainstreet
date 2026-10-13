@@ -2,16 +2,19 @@
 from __future__ import annotations
 
 import copy
+import tempfile
 import unittest
+from pathlib import Path
 
 from claimsieve_ref.canonical import digest
-from claimsieve_ref.durable_state import DispatchTicket
+from claimsieve_ref.durable_state import DispatchTicket, DurableStateError
 from claimsieve_ref.github_adversarial_canary import (
     CanaryConfigurationError,
     GitHubAdversarialCanary,
 )
 from claimsieve_ref.github_provider import GitHubIssueProvider
 from test_github_provider import FakeGitHubTransport
+from founder_os import FounderOSReferenceWorkflow, GitHubIssueRequest
 
 
 class GitHubAdversarialCanaryTests(unittest.TestCase):
@@ -166,6 +169,60 @@ class GitHubAdversarialCanaryTests(unittest.TestCase):
             ticket=self.ticket, observer=short_reader,
         )
         self.assertEqual(canary.observe().outcome, "OUTCOME_UNKNOWN")
+
+
+    def test_17_durable_executor_rejects_mutated_title_without_post(self) -> None:
+        request = GitHubIssueRequest(
+            proposal_id="founder-proposal-canary-017",
+            trace_id="founder-trace-canary-017",
+            campaign_id="founder-campaign-canary-017",
+            session_id="founder-session-canary-017",
+            work_item_id="work-canary-017",
+            repository=self.repo,
+            title="Authorized",
+            body="Exact authorized request",
+            requested_at_seq=10,
+        )
+        with tempfile.TemporaryDirectory() as root:
+            workflow = FounderOSReferenceWorkflow(
+                Path(root), allowed_repositories={self.repo}, provider=self.writer
+            )
+            prepared = workflow.prepare_issue(request)
+            mutated = copy.deepcopy(prepared.proposal)
+            mutated["action"]["parameters"]["title"] = "Action B"
+            with self.assertRaisesRegex(DurableStateError, "binding mismatch"):
+                workflow._executor.execute(
+                    prepared.permit, mutated, prepared.signed_policy,
+                    prepared.evidence, prepared.decision, 11,
+                )
+        self.assertEqual(sum(x[0] == "POST" for x in self.transport.requests), 0)
+
+    def test_18_durable_executor_rejects_destination_swap_without_post(self) -> None:
+        request = GitHubIssueRequest(
+            proposal_id="founder-proposal-canary-018",
+            trace_id="founder-trace-canary-018",
+            campaign_id="founder-campaign-canary-018",
+            session_id="founder-session-canary-018",
+            work_item_id="work-canary-018",
+            repository=self.repo,
+            title="Authorized",
+            body="Exact authorized request",
+            requested_at_seq=10,
+        )
+        with tempfile.TemporaryDirectory() as root:
+            workflow = FounderOSReferenceWorkflow(
+                Path(root), allowed_repositories={self.repo}, provider=self.writer
+            )
+            prepared = workflow.prepare_issue(request)
+            mutated = copy.deepcopy(prepared.proposal)
+            mutated["action"]["destination"]["authority"] = "attacker/other"
+            with self.assertRaisesRegex(DurableStateError, "binding mismatch"):
+                workflow._executor.execute(
+                    prepared.permit, mutated, prepared.signed_policy,
+                    prepared.evidence, prepared.decision, 11,
+                )
+        self.assertEqual(sum(x[0] == "POST" for x in self.transport.requests), 0)
+
 
 
 if __name__ == "__main__":

@@ -8,18 +8,18 @@ jobs:
   full:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: '3.12'
       - name: Build deterministic payload twice and compare
         run: python scripts/verify_reproducible_payload.py --output ../claimsieve-mainstreet-payload.zip
       - name: Validate deterministic payload
         run: python scripts/validate_release_archive.py ../claimsieve-mainstreet-payload.zip
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: '24'
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable
         with:
           toolchain: 1.90.0
           components: rustfmt, clippy
@@ -43,12 +43,13 @@ jobs:
               rocq compile -Q . ClaimSieve CheckDurableState.v
               rocq compile -Q . ClaimSieve CheckExecutionAssurance.v
             ' 2>&1 | tee evidence/ci-rocq/ROCQ_OUTPUT.txt
+      - run: python scripts/package_release.py
+      - run: python scripts/validate_release_archive.py ../claimsieve-mainstreet.zip
       - name: Prove tests did not mutate deterministic payload
         run: |
           set -euo pipefail
           python scripts/package_release.py --output ../claimsieve-mainstreet-posttest-payload.zip
           cmp ../claimsieve-mainstreet-payload.zip ../claimsieve-mainstreet-posttest-payload.zip
-          echo "POST-TEST PAYLOAD IDENTITY: PASS"
           sha256sum ../claimsieve-mainstreet-payload.zip
       - name: Package run-specific assurance evidence
         run: |
@@ -57,16 +58,18 @@ jobs:
             --output ../claimsieve-mainstreet-assurance-evidence.zip
       - name: Validate assurance evidence archive
         run: python scripts/validate_release_archive.py ../claimsieve-mainstreet-assurance-evidence.zip
-      - name: Stage validated release artifacts
+      - name: Stage release artifacts
+        shell: bash
         run: |
           set -euo pipefail
-          mkdir -p release
-          cp ../claimsieve-mainstreet-payload.zip release/claimsieve-mainstreet-payload.zip
-          cp ../claimsieve-mainstreet-payload.zip.sha256 release/claimsieve-mainstreet-payload.zip.sha256
-          cp ../claimsieve-mainstreet-assurance-evidence.zip release/claimsieve-mainstreet-assurance-evidence.zip
-          cp ../claimsieve-mainstreet-assurance-evidence.zip.sha256 release/claimsieve-mainstreet-assurance-evidence.zip.sha256
-      - uses: actions/upload-artifact@v4
+          mkdir -p evidence/release
+          cp ../claimsieve-mainstreet.zip evidence/release/
+          cp ../claimsieve-mainstreet.zip.sha256 evidence/release/
+          cp ../claimsieve-mainstreet-payload.zip evidence/release/
+          cp ../claimsieve-mainstreet-payload.zip.sha256 evidence/release/
+          cp ../claimsieve-mainstreet-assurance-evidence.zip evidence/release/
+          cp ../claimsieve-mainstreet-assurance-evidence.zip.sha256 evidence/release/
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: claimsieve-mainstreet-v0.34-full-assurance-candidate
-          path: release/
-          if-no-files-found: error
+          path: evidence/

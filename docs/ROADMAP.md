@@ -55,3 +55,13 @@ Success criterion: one campaign successor and one dispatch reservation survive r
 Build the no-send tax-notice workspace and test it with consented users. Measure whether they can understand uncertainty, prepare evidence-linked packets, obtain professional escalation, and distinguish draft, submission, acknowledgment, and resolution.
 
 Success criterion: product usefulness advances alongside the kernel.
+
+## Candidate engineering increment (PR #32, pending merge)
+
+- Native Rust observer v2 receipt construction and strict Python/Rust wire acceptance tests.
+- Executable provider outcome parity with adversarial malformed-status vectors.
+- Signed independent audit checkpoints with required out-of-band pins; operational key isolation and external publishing still required.
+- A second `DurableProvider` action surface (SMS sandbox) and MainStreet proposal-only builder; no live send, independent hosted observer or customer consent system.
+- Distributed consensus deliberately remains deferred. See `docs/INDEPENDENT_AUDIT_CHECKPOINTS.md` and `docs/SMS_SANDBOX_ADAPTER.md`.
+
+Outstanding blockers: native executor-v2 parity, full canonical-signature/refinement proof, production key custody and immutable external anchoring, independent infrastructure, and a reviewed consent-based live SMS connector.

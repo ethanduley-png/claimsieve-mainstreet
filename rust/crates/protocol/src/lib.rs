@@ -391,25 +391,25 @@ pub enum Reconciliation {
     DivergentEffect,
 }
 
-/// Observer receipt v2.
+/// Strict v2 observer receipt: independently read provider record and reservation bound.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct ObserverReceipt {
-    /// Protocol version.
+    /// Protocol version (claimsieve.observer_receipt.v2).
     pub schema_version: String,
-    /// Reservation identifier observed after dispatch commitment.
+    /// Exact durable reservation.
     pub reservation_id: String,
     /// Permit identifier.
     pub permit_id: String,
-    /// Campaign identifier.
+    /// Bound campaign.
     pub campaign_id: String,
-    /// Digest of the independently read provider record, when one exists.
+    /// Digest of the independently read provider record, when available.
     pub provider_record_digest: Option<String>,
     /// Digest of observed action, when observable.
     pub observed_action_digest: Option<String>,
     /// Reconciliation result.
     pub reconciliation: Reconciliation,
-    /// Whether independently read provider evidence is contradictory or conflicts with executor audit evidence.
+    /// Evidence contradicted its own claimed status.
     pub receipt_conflict: bool,
     /// Logical observation sequence.
     pub observed_at_seq: u64,

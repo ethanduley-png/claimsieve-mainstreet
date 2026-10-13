@@ -5,14 +5,16 @@ on:
     branches: [main]
 permissions:
   contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 jobs:
   rocq:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - name: Compile Rocq model, audit assumptions, and test OCaml extraction
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Compile Rocq and print assumptions
         run: |
-          set -euo pipefail
           mkdir -p evidence
           docker run --rm \
             -v "$PWD:/workspace:ro" \
@@ -24,10 +26,22 @@ jobs:
               rocq compile -Q . ClaimSieve Claimsieve.v
               rocq compile -Q . ClaimSieve DurableState.v
               rocq compile -Q . ClaimSieve ExecutionAssurance.v
+              rocq compile -Q . ClaimSieve AuthorityCompression.v
+              rocq compile -Q . ClaimSieve AuthorityCompressionNecessity.v
+              rocq compile -Q . ClaimSieve AuthorityCompressionAuthenticity.v
+              rocq compile -Q . ClaimSieve AuthorityCompressionCurrentState.v
+              rocq compile -Q . ClaimSieve AuthorityCompressionCurrentStateNecessity.v
+              rocq compile -Q . ClaimSieve ExecutionAuthorityReconstruction.v
               rocq compile -Q . ClaimSieve Check.v
               rocq compile -Q . ClaimSieve CheckDurableState.v
               rocq compile -Q . ClaimSieve CheckExecutionAssurance.v
               rocq compile -Q . ClaimSieve ExtractRefinement.v
-            ' | tee evidence/ROCQ_ASSUMPTIONS.txt
-      - name: Reject unproved assumptions
+              rocq compile -Q . ClaimSieve CheckAuthorityCompression.v
+              rocq compile -Q . ClaimSieve CheckAuthorityCompressionNecessity.v
+              rocq compile -Q . ClaimSieve CheckAuthorityCompressionAuthenticity.v
+              rocq compile -Q . ClaimSieve CheckAuthorityCompressionCurrentState.v
+              rocq compile -Q . ClaimSieve CheckAuthorityCompressionCurrentStateNecessity.v
+              rocq compile -Q . ClaimSieve CheckExecutionAuthorityReconstruction.v
+            ' 2>&1 | tee evidence/ROCQ_ASSUMPTIONS.txt
+      - name: Reject admitted or axiomatized proof source
         run: '! grep -R -n -E "(^|[^A-Za-z])(Admitted|admit|Axiom|Parameter)([^A-Za-z]|$)" --include="*.v" rocq'

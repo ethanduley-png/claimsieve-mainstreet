@@ -35,6 +35,14 @@ PYTHONPATH=python python3 python/verify_bundle.py \
 node --test mainstreet/test/*.test.js 2>&1 | tee evidence/NODE_TEST_OUTPUT.txt
 node --check mainstreet/src/index.js
 node --check mainstreet/src/founder-os.js
+node --test apps/mainstreet-api/test/*.test.js 2>&1 | tee evidence/MAINSTREET_API_TEST_OUTPUT.txt
+node --check apps/mainstreet-api/src/authz.js
+node --check apps/mainstreet-api/src/tenant-store.js
+node --check apps/mainstreet-api/src/service.js
+node --check apps/mainstreet-api/src/api.js
+node --test apps/mainstreet-web/test/*.test.js 2>&1 | tee evidence/MAINSTREET_WEB_TEST_OUTPUT.txt
+node --check apps/mainstreet-web/public/app.js
+node --check apps/mainstreet-web/public/sw.js
 PYTHONPATH=python python3 python/founder_os_demo.py | tee evidence/FOUNDER_OS_DEMO_OUTPUT.txt
 PYTHONPATH=python python3 scripts/run_founder_os_red_team.py | tee evidence/FOUNDER_OS_RED_TEAM_REPORT.json
 python3 scripts/source_gate.py | tee evidence/SOURCE_GATE.txt
@@ -57,12 +65,12 @@ if command -v cargo >/dev/null 2>&1; then
   rust_fmt="PASS"
   (
     cd rust
-    cargo clippy --workspace --all-targets --all-features -- -D warnings
+    cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
   ) 2>&1 | tee evidence/RUST_CLIPPY_OUTPUT.txt
   rust_clippy="PASS"
   (
     cd rust
-    cargo test --workspace --all-features
+    cargo test --locked --workspace --all-features
   ) 2>&1 | tee evidence/RUST_TEST_OUTPUT.txt
   rust_test="PASS"
 else

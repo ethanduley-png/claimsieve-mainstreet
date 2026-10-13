@@ -390,6 +390,72 @@ def evaluate(
         if epoch["content"].get("runtime_manifest_digest") != deployment["content"].get("runtime_manifest_digest"):
             evidence_failures.append("GOVERNANCE_EPOCH_RUNTIME_MISMATCH")
 
+    # New runtime-neutral proposals may carry an exact runtime identity binding.
+    # When present, it must match the proposal principal, signed deployment
+    # certificate, and signed governance epoch. Legacy proposals without this
+    # field preserve their existing v1 behavior.
+    runtime_identity = proposal.get("runtime_identity")
+    if runtime_identity is not None:
+        required_runtime_fields = {
+            "runtime_name",
+            "runtime_version",
+            "principal",
+            "runtime_manifest_digest",
+            "skills_manifest_digest",
+            "network_profile_digest",
+        }
+        if (
+            not isinstance(runtime_identity, dict)
+            or set(runtime_identity) != required_runtime_fields
+            or any(
+                not isinstance(runtime_identity.get(field_name), str)
+                or not runtime_identity[field_name]
+                for field_name in required_runtime_fields
+            )
+            or any(
+                not runtime_identity[field_name].startswith("sha256:")
+                for field_name in (
+                    "runtime_manifest_digest",
+                    "skills_manifest_digest",
+                    "network_profile_digest",
+                )
+            )
+        ):
+            evidence_failures.append("RUNTIME_IDENTITY_STRUCTURE_INVALID")
+        else:
+            if runtime_identity["principal"] != principal:
+                evidence_failures.append("RUNTIME_PRINCIPAL_BINDING_MISMATCH")
+            runtime_identity_digest = digest(runtime_identity)
+            if len(active_deployments) == 1:
+                deployment_content = active_deployments[0].get("content", {})
+                expected_deployment_binding = {
+                    "runtime_name": runtime_identity["runtime_name"],
+                    "runtime_version": runtime_identity["runtime_version"],
+                    "runtime_principal": runtime_identity["principal"],
+                    "runtime_manifest_digest": runtime_identity["runtime_manifest_digest"],
+                    "skills_manifest_digest": runtime_identity["skills_manifest_digest"],
+                    "network_profile_digest": runtime_identity["network_profile_digest"],
+                    "runtime_identity_digest": runtime_identity_digest,
+                }
+                if any(
+                    deployment_content.get(field_name) != expected_value
+                    for field_name, expected_value in expected_deployment_binding.items()
+                ):
+                    evidence_failures.append("RUNTIME_DEPLOYMENT_BINDING_MISMATCH")
+            if len(active_epochs) == 1:
+                epoch_content = active_epochs[0].get("content", {})
+                expected_epoch_binding = {
+                    "runtime_name": runtime_identity["runtime_name"],
+                    "runtime_principal": runtime_identity["principal"],
+                    "runtime_manifest_digest": runtime_identity["runtime_manifest_digest"],
+                    "runtime_identity_digest": runtime_identity_digest,
+                }
+                if any(
+                    epoch_content.get(field_name) != expected_value
+                    for field_name, expected_value in expected_epoch_binding.items()
+                ):
+                    evidence_failures.append("RUNTIME_EPOCH_BINDING_MISMATCH")
+
     referenced_raw = proposal.get("evidence_refs")
     available_list = [digest(item) for item in evidence]
     available = set(available_list)

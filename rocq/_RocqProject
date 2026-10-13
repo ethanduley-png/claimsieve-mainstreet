@@ -1,5 +1,17 @@
 -Q . ClaimSieve
 Claimsieve.v
 DurableState.v
+AuthorityCompression.v
+AuthorityCompressionNecessity.v
+AuthorityCompressionAuthenticity.v
+AuthorityCompressionCurrentState.v
+AuthorityCompressionCurrentStateNecessity.v
+ExecutionAuthorityReconstruction.v
 Check.v
 CheckDurableState.v
+CheckAuthorityCompression.v
+CheckAuthorityCompressionNecessity.v
+CheckAuthorityCompressionAuthenticity.v
+CheckAuthorityCompressionCurrentState.v
+CheckAuthorityCompressionCurrentStateNecessity.v
+CheckExecutionAuthorityReconstruction.v

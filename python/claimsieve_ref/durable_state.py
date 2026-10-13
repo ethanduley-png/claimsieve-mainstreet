@@ -922,15 +922,6 @@ class DurableStateService:
         *,
         containment_reason: str | None = None,
     ) -> dict[str, Any]:
-        """Record independent reconciliation and required containment atomically.
-
-        Divergent effects always require containment. The trusted independent
-        observer may additionally identify internally contradictory provider
-        evidence and request `PROVIDER_EVIDENCE_CONFLICT` containment. Merely
-        setting `receipt_conflict` is not enough because that flag can also mean
-        the untrusted executor disagreed with otherwise coherent provider state.
-        """
-
         unsigned_observation = self._verify_role_artifact(
             observation,
             domain="observer-receipt-v2",
@@ -954,7 +945,6 @@ class DurableStateService:
             and unsigned_observation.get("receipt_conflict") is True
         ):
             raise DurableStateError("provider-evidence containment binding mismatch")
-
         effective_containment_reason = (
             "DIVERGENT_EFFECT"
             if reconciliation == "DIVERGENT_EFFECT"
@@ -982,13 +972,9 @@ class DurableStateService:
                     raise DurableStateError("terminal outcome cannot be rewritten")
                 if effective_containment_reason is not None:
                     self._contain_campaign_in_transaction(
-                        connection,
-                        str(row["campaign_id"]),
-                        effective_containment_reason,
-                        seq,
+                        connection, str(row["campaign_id"]), effective_containment_reason, seq
                     )
                 return self._reservation_row(connection, reservation_id)
-
             next_status = "RECONCILED" if reconciliation != "OUTCOME_UNKNOWN" else "OUTCOME_UNKNOWN"
             connection.execute(
                 "UPDATE reservations SET status = ?, outcome = ?, observation_digest = ?, "
@@ -1007,10 +993,7 @@ class DurableStateService:
             )
             if effective_containment_reason is not None:
                 self._contain_campaign_in_transaction(
-                    connection,
-                    str(row["campaign_id"]),
-                    effective_containment_reason,
-                    seq,
+                    connection, str(row["campaign_id"]), effective_containment_reason, seq
                 )
             return self._reservation_row(connection, reservation_id)
 
@@ -1518,8 +1501,13 @@ def classify_provider_evidence(
     evidence remains unknown rather than being coerced into success or failure.
     """
 
+    # Malformed provider statuses cannot certify either successful execution
+    # or failure, even if an observed digest happens to match the proposal.
+    if response_status not in {None, "accepted", "rejected", "timeout_unknown"}:
+        return "OUTCOME_UNKNOWN", True
     conflict = (
-        (response_status == "rejected" and observed_action_digest is not None)
+        (response_status is None and observed_action_digest is not None)
+        or (response_status == "rejected" and observed_action_digest is not None)
         or (response_status == "accepted" and observed_action_digest is None)
     )
     if conflict:
@@ -1596,16 +1584,13 @@ class IndependentObserver:
             **unsigned,
             "signature": self.observer_key.sign("observer-receipt-v2", unsigned),
         }
-        containment_reason = (
-            "PROVIDER_EVIDENCE_CONFLICT"
-            if provider_evidence_conflict
-            else None
-        )
         self.state.record_observation(
             reservation_id,
             observation,
             seq,
-            containment_reason=containment_reason,
+            containment_reason=(
+                "PROVIDER_EVIDENCE_CONFLICT" if provider_evidence_conflict else None
+            ),
         )
         return observation
 

@@ -676,6 +676,7 @@ impl ContainmentController {
 
 /// Provider response made available by a provider adapter.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
 pub struct ConnectorResponse {
     /// `accepted`, `rejected`, or `timeout_unknown`.
     pub status: String,

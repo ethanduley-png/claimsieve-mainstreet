@@ -433,26 +433,72 @@ class DurableStateService:
         finally:
             connection.close()
 
+    def _contain_campaign_in_transaction(
+        self,
+        connection: sqlite3.Connection,
+        campaign_id: str,
+        reason: str,
+        seq: int,
+    ) -> dict[str, Any]:
+        """Suspend one campaign exactly once inside the caller's transaction.
+
+        The first containment advances the global containment epoch and campaign
+        fencing token. Replaying the same or another containment signal against
+        an already-suspended campaign is idempotent: it does not allocate a new
+        fence, advance the epoch, or append a duplicate suspension event.
+        """
+
+        current = self._ensure_campaign(connection, campaign_id)
+        containment = connection.execute(
+            "SELECT epoch FROM containment WHERE singleton = 1"
+        ).fetchone()
+        if containment is None:
+            raise DurableStateError("containment state missing")
+        current_epoch = int(containment["epoch"])
+        if str(current["status"]) == "SUSPENDED":
+            return {
+                "event_type": "CAMPAIGN_ALREADY_SUSPENDED",
+                "object_id": campaign_id,
+                "payload": {
+                    "reason": current["suspension_reason"],
+                    "sequence": seq,
+                    "fencing_token": int(current["fencing_token"]),
+                    "containment_epoch": current_epoch,
+                },
+            }
+
+        epoch = current_epoch + 1
+        connection.execute(
+            "UPDATE containment SET epoch = ? WHERE singleton = 1",
+            (epoch,),
+        )
+        state = _state_from_dict(_parse_json(str(current["state_json"])))
+        state.status = "SUSPENDED"
+        state.suspension_reason = reason
+        raw = state.as_canonical()
+        fence = self._next_counter(connection, "next_fencing_token")
+        connection.execute(
+            "UPDATE campaigns SET state_json = ?, state_digest = ?, status = 'SUSPENDED', "
+            "suspension_reason = ?, fencing_token = ? WHERE campaign_id = ?",
+            (_json(raw), digest(raw), reason, fence, campaign_id),
+        )
+        return self._append_event(
+            connection,
+            "CAMPAIGN_SUSPENDED",
+            campaign_id,
+            {
+                "reason": reason,
+                "sequence": seq,
+                "fencing_token": fence,
+                "containment_epoch": epoch,
+            },
+        )
+
     def suspend_campaign(self, campaign_id: str, reason: str, seq: int) -> dict[str, Any]:
         with self._transaction() as connection:
-            current = self._ensure_campaign(connection, campaign_id)
-            state = _state_from_dict(_parse_json(str(current["state_json"])))
-            state.status = "SUSPENDED"
-            state.suspension_reason = reason
-            raw = state.as_canonical()
-            fence = self._next_counter(connection, "next_fencing_token")
-            connection.execute(
-                "UPDATE campaigns SET state_json = ?, state_digest = ?, status = 'SUSPENDED', "
-                "suspension_reason = ?, fencing_token = ? WHERE campaign_id = ?",
-                (_json(raw), digest(raw), reason, fence, campaign_id),
+            return self._contain_campaign_in_transaction(
+                connection, campaign_id, reason, seq
             )
-            event = self._append_event(
-                connection,
-                "CAMPAIGN_SUSPENDED",
-                campaign_id,
-                {"reason": reason, "sequence": seq, "fencing_token": fence},
-            )
-            return event
 
     def revoke_permit(self, permit_id: str, reason: str, seq: int) -> dict[str, Any]:
         with self._transaction() as connection:
@@ -873,6 +919,8 @@ class DurableStateService:
         reservation_id: str,
         observation: dict[str, Any],
         seq: int,
+        *,
+        containment_reason: str | None = None,
     ) -> dict[str, Any]:
         unsigned_observation = self._verify_role_artifact(
             observation,
@@ -890,6 +938,18 @@ class DurableStateService:
         }
         if reconciliation not in allowed:
             raise DurableStateError("invalid reconciliation state")
+        if containment_reason not in {None, "PROVIDER_EVIDENCE_CONFLICT"}:
+            raise DurableStateError("invalid observation containment reason")
+        if containment_reason == "PROVIDER_EVIDENCE_CONFLICT" and not (
+            reconciliation == "OUTCOME_UNKNOWN"
+            and unsigned_observation.get("receipt_conflict") is True
+        ):
+            raise DurableStateError("provider-evidence containment binding mismatch")
+        effective_containment_reason = (
+            "DIVERGENT_EFFECT"
+            if reconciliation == "DIVERGENT_EFFECT"
+            else containment_reason
+        )
         with self._transaction() as connection:
             row = connection.execute(
                 "SELECT * FROM reservations WHERE reservation_id = ?", (reservation_id,)
@@ -910,6 +970,10 @@ class DurableStateService:
             if current_outcome in {"CONFIRMED_SUCCESS", "CONFIRMED_FAILURE", "DIVERGENT_EFFECT"}:
                 if current_outcome != reconciliation:
                     raise DurableStateError("terminal outcome cannot be rewritten")
+                if effective_containment_reason is not None:
+                    self._contain_campaign_in_transaction(
+                        connection, str(row["campaign_id"]), effective_containment_reason, seq
+                    )
                 return self._reservation_row(connection, reservation_id)
             next_status = "RECONCILED" if reconciliation != "OUTCOME_UNKNOWN" else "OUTCOME_UNKNOWN"
             connection.execute(
@@ -927,6 +991,10 @@ class DurableStateService:
                     "sequence": seq,
                 },
             )
+            if effective_containment_reason is not None:
+                self._contain_campaign_in_transaction(
+                    connection, str(row["campaign_id"]), effective_containment_reason, seq
+                )
             return self._reservation_row(connection, reservation_id)
 
     def _reservation_row(
@@ -1516,11 +1584,14 @@ class IndependentObserver:
             **unsigned,
             "signature": self.observer_key.sign("observer-receipt-v2", unsigned),
         }
-        self.state.record_observation(reservation_id, observation, seq)
-        if provider_evidence_conflict:
-            self.state.suspend_campaign(
-                str(reservation["campaign_id"]), "PROVIDER_EVIDENCE_CONFLICT", seq
-            )
+        self.state.record_observation(
+            reservation_id,
+            observation,
+            seq,
+            containment_reason=(
+                "PROVIDER_EVIDENCE_CONFLICT" if provider_evidence_conflict else None
+            ),
+        )
         return observation
 
 

@@ -25,6 +25,7 @@ jobs:
               cd /tmp/claimsieve-rocq
               rocq compile -Q . ClaimSieve Claimsieve.v
               rocq compile -Q . ClaimSieve DurableState.v
+              rocq compile -Q . ClaimSieve ExecutionAssurance.v
               rocq compile -Q . ClaimSieve AuthorityCompression.v
               rocq compile -Q . ClaimSieve AuthorityCompressionNecessity.v
               rocq compile -Q . ClaimSieve AuthorityCompressionAuthenticity.v
@@ -33,6 +34,7 @@ jobs:
               rocq compile -Q . ClaimSieve ExecutionAuthorityReconstruction.v
               rocq compile -Q . ClaimSieve Check.v
               rocq compile -Q . ClaimSieve CheckDurableState.v
+              rocq compile -Q . ClaimSieve CheckExecutionAssurance.v
               rocq compile -Q . ClaimSieve CheckAuthorityCompression.v
               rocq compile -Q . ClaimSieve CheckAuthorityCompressionNecessity.v
               rocq compile -Q . ClaimSieve CheckAuthorityCompressionAuthenticity.v

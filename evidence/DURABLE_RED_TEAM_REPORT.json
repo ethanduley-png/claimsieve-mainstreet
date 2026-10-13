@@ -1,7 +1,7 @@
 {
-  "blocked_or_detected": 25,
+  "blocked_or_detected": 26,
   "bypasses": 0,
-  "limitations": 4,
+  "limitations": 3,
   "release": "0.34.0",
   "results": [
     {
@@ -807,6 +807,44 @@
       "status": "BLOCKED"
     },
     {
+      "actual_result": "receipts=1, exact_fields=True, verifier_errors=[]",
+      "attack": "OBSERVER_RECEIPT_V2_WIRE_DIVERGENCE",
+      "control": "Authoritative v2 schema plus one shared signed vector; the strict Rust workflow consumes the same vector.",
+      "coverage": "EXECUTED",
+      "expected_result": "shared v2 vector exactly matches the authoritative schema and portable verifier semantics",
+      "impact_if_unblocked": "Cross-implementation receipt consumers can disagree",
+      "reproducible_trace": {
+        "receipt_fields": [
+          "campaign_id",
+          "observed_action_digest",
+          "observed_at_seq",
+          "observer_key_id",
+          "permit_id",
+          "provider_record_digest",
+          "receipt_conflict",
+          "reconciliation",
+          "reservation_id",
+          "schema_version",
+          "signature"
+        ],
+        "schema_required": [
+          "campaign_id",
+          "observed_action_digest",
+          "observed_at_seq",
+          "observer_key_id",
+          "permit_id",
+          "provider_record_digest",
+          "receipt_conflict",
+          "reconciliation",
+          "reservation_id",
+          "schema_version",
+          "signature"
+        ],
+        "verifier_errors": []
+      },
+      "status": "BLOCKED"
+    },
+    {
       "actual_result": "No networked Raft or equivalent production consensus service is implemented; partition behavior is a deterministic safety model.",
       "attack": "MULTI_NODE_CONSENSUS_IMPLEMENTATION",
       "control": "Required before live consequential execution.",
@@ -839,18 +877,6 @@
       "impact_if_unblocked": "Infrastructure-specific failure remains untested",
       "reproducible_trace": {
         "detail": "Provider and observer use a separate SQLite database but run on the same test host and process family."
-      },
-      "status": "LIMITATION"
-    },
-    {
-      "actual_result": "Rust observer receipts remain v1-shaped while the executed Python durable boundary and schema use v2; native Rust and Rocq gates do not remove this wire-format divergence.",
-      "attack": "RUST_OBSERVER_RECEIPT_WIRE_PARITY",
-      "control": "Upgrade the Rust observer receipt and add schema/differential fixtures.",
-      "coverage": "INFRASTRUCTURE_REQUIRED",
-      "expected_result": "observer receipt v2 validates and matches Python semantics",
-      "impact_if_unblocked": "Cross-implementation receipt consumers can disagree",
-      "reproducible_trace": {
-        "detail": "Rust observer receipts remain v1-shaped while the executed Python durable boundary and schema use v2; native Rust and Rocq gates do not remove this wire-format divergence."
       },
       "status": "LIMITATION"
     }

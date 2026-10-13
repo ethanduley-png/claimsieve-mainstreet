@@ -23,7 +23,9 @@ from claimsieve_ref.verifier import verify_bundle
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def build_bundle() -> dict:
+def build_bundle(observer_version: str = "v1") -> dict:
+    if observer_version not in {"v1", "v2"}:
+        raise ValueError("observer_version must be v1 or v2")
     keys = keypairs()
     ev = evidence(10)
     signed_pol = signed_policy()
@@ -73,19 +75,44 @@ def build_bundle() -> dict:
     execution = executor.execute(
         permit, prop, signed_pol, ev, decision.document, committed_state, 11
     )
-    observer = Observer(
-        keys["observer"],
-        {keys["executor"].key_id: keys["executor"].public},
-        system,
-    )
-    observation = observer.observe(
-        permit, prop, execution["executor_receipt"], 12
-    )
-    containment_receipt = containment.apply_observation(
-        observation,
-        {keys["observer"].key_id: keys["observer"].public},
-        12,
-    )
+    if observer_version == "v1":
+        observer = Observer(
+            keys["observer"],
+            {keys["executor"].key_id: keys["executor"].public},
+            system,
+        )
+        observation = observer.observe(
+            permit, prop, execution["executor_receipt"], 12
+        )
+        containment_receipt = containment.apply_observation(
+            observation,
+            {keys["observer"].key_id: keys["observer"].public},
+            12,
+        )
+    else:
+        observed = system.observe(str(permit["permit_id"]))
+        provider_record = {
+            "status": execution["executor_receipt"]["provider_status"],
+            "provider_id": execution["executor_receipt"]["provider_id"],
+            "observed_action": observed,
+        }
+        unsigned_observation = {
+            "schema_version": "claimsieve.observer_receipt.v2",
+            "reservation_id": execution["reservation"]["reservation_id"],
+            "permit_id": permit["permit_id"],
+            "campaign_id": permit["campaign_id"],
+            "provider_record_digest": digest(provider_record),
+            "observed_action_digest": digest(observed) if observed is not None else None,
+            "reconciliation": "CONFIRMED_SUCCESS",
+            "receipt_conflict": False,
+            "observed_at_seq": 12,
+            "observer_key_id": keys["observer"].key_id,
+        }
+        observation = {
+            **unsigned_observation,
+            "signature": keys["observer"].sign("observer-receipt-v2", unsigned_observation),
+        }
+        containment_receipt = None
 
     ledgers["execution"].append(prop["trace_id"], "PERMIT_RESERVED", execution["reservation"])
     ledgers["execution"].append(prop["trace_id"], "EXECUTOR_RECEIPT", execution["executor_receipt"])
@@ -131,19 +158,24 @@ def build_bundle() -> dict:
 
 
 def main() -> None:
-    bundle = build_bundle()
     root = trust_root()
-    errors = verify_bundle(bundle, root)
-    if errors:
-        raise SystemExit("bundle verification failed: " + "; ".join(errors))
-    vector_path = ROOT / "vectors" / "valid_evidence_bundle.json"
+    bundles = {
+        ROOT / "vectors" / "valid_evidence_bundle.json": build_bundle("v1"),
+        ROOT / "vectors" / "valid_evidence_bundle_observer_v2.json": build_bundle("v2"),
+    }
+    for vector_path, bundle in bundles.items():
+        errors = verify_bundle(bundle, root)
+        if errors:
+            raise SystemExit(f"bundle verification failed for {vector_path.name}: " + "; ".join(errors))
+        vector_path.write_text(
+            json.dumps(bundle, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
+        print(vector_path)
+        print(digest(bundle))
     trust_path = ROOT / "trust" / "fixture-trust-root.json"
     trust_path.parent.mkdir(parents=True, exist_ok=True)
-    vector_path.write_text(json.dumps(bundle, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     trust_path.write_text(json.dumps(root, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    print(vector_path)
     print(trust_path)
-    print(digest(bundle))
 
 
 if __name__ == "__main__":

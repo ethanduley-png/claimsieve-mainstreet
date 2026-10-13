@@ -336,6 +336,8 @@ def verify_bundle(bundle: dict[str, Any], trust_root: dict[str, Any] | None = No
                     errors.append("conflicting v2 receipt claimed a terminal outcome")
                 if observer_receipt.get("provider_record_digest") is None and observer_receipt.get("reconciliation") != "OUTCOME_UNKNOWN":
                     errors.append("v2 observer lacks independent provider evidence")
+                if observer_receipt.get("provider_record_digest") is None and observer_receipt.get("reconciliation") in {"CONFIRMED_SUCCESS", "CONFIRMED_FAILURE", "DIVERGENT_EFFECT"}:
+                    errors.append("confirmed observer outcome requires provider record digest")
             observed = observer_receipts[0].get("observed_action_digest")
             reconciliation = observer_receipts[0].get("reconciliation")
             exact = digest(proposal.get("action"))
@@ -343,8 +345,11 @@ def verify_bundle(bundle: dict[str, Any], trust_root: dict[str, Any] | None = No
                 errors.append("successful observation does not match authorized action")
             if reconciliation == "DIVERGENT_EFFECT" and observed in {None, exact}:
                 errors.append("divergent observation lacks a divergent action digest")
-            if reconciliation in {"CONFIRMED_FAILURE", "OUTCOME_UNKNOWN"} and observed is not None:
-                errors.append("non-observed outcome unexpectedly contains an action digest")
+            if reconciliation == "CONFIRMED_FAILURE" and observed is not None:
+                errors.append("failed observation unexpectedly contains an action digest")
+            if reconciliation == "OUTCOME_UNKNOWN" and observed is not None:
+                if observer_receipt.get("schema_version") != "claimsieve.observer_receipt.v2" or observer_receipt.get("receipt_conflict") is not True:
+                    errors.append("unknown observation contains an action digest without conflict evidence")
 
     unsigned_manifest = {key: value for key, value in manifest.items() if key != "bundle_digest"}
     if manifest.get("bundle_digest") != digest(unsigned_manifest):

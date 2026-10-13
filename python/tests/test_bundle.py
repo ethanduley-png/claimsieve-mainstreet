@@ -155,6 +155,40 @@ class BundleTests(unittest.TestCase):
         errors = self.verify(changed)
         self.assertTrue(any("proposal is not recorded" in error for error in errors))
 
+    def test_observer_v2_bundle_verifies(self) -> None:
+        bundle = build_bundle("v2")
+        self.assertEqual(verify_bundle(bundle, self.root), [])
+
+    def test_observer_v2_reservation_binding_is_enforced(self) -> None:
+        bundle = build_bundle("v2")
+        observer = next(r for r in bundle["receipts"] if r["schema_version"] == "claimsieve.observer_receipt.v2")
+        observer["reservation_id"] = "reservation:forged"
+        errors = verify_bundle(bundle, self.root)
+        self.assertIn("v2 observer reservation mismatch", errors)
+
+    def test_observer_v2_campaign_binding_is_enforced(self) -> None:
+        bundle = build_bundle("v2")
+        observer = next(r for r in bundle["receipts"] if r["schema_version"] == "claimsieve.observer_receipt.v2")
+        observer["campaign_id"] = "campaign:forged"
+        errors = verify_bundle(bundle, self.root)
+        self.assertIn("v2 observer campaign mismatch", errors)
+
+    def test_observer_v2_unknown_without_provider_record_is_fail_closed(self) -> None:
+        bundle = build_bundle("v2")
+        observer = next(r for r in bundle["receipts"] if r["schema_version"] == "claimsieve.observer_receipt.v2")
+        observer["provider_record_digest"] = None
+        observer["reconciliation"] = "CONFIRMED_SUCCESS"
+        errors = verify_bundle(bundle, self.root)
+        self.assertIn("v2 observer lacks independent provider evidence", errors)
+        self.assertIn("confirmed observer outcome requires provider record digest", errors)
+
+    def test_observer_v2_rejects_unknown_fields(self) -> None:
+        bundle = build_bundle("v2")
+        observer = next(r for r in bundle["receipts"] if r["schema_version"] == "claimsieve.observer_receipt.v2")
+        observer["trace_id"] = bundle["trace_id"]
+        errors = verify_bundle(bundle, self.root)
+        self.assertIn("v2 observer receipt fields mismatch", errors)
+
 
 if __name__ == "__main__":
     unittest.main()

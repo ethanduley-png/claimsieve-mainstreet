@@ -15,3 +15,8 @@ From ClaimSieve Require Import DurableState.
 Extraction Language OCaml.
 
 Extraction TestCompile reconcile_from_independent_provider.
+
+(** Step 2 emits the same checked function as a concrete OCaml module so a
+    separate conformance runner can compare its behavior with the isolated Rust
+    refinement candidate over one shared exhaustive finite fixture. *)
+Extraction "RefinementCore.ml" reconcile_from_independent_provider.

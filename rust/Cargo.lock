@@ -72,6 +72,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "claimsieve-execution-authority-reconstruction"
+version = "0.33.0"
+dependencies = [
+ "claimsieve-compact-admission",
+ "thiserror",
+]
+
+[[package]]
 name = "claimsieve-kernel"
 version = "0.33.0"
 dependencies = [

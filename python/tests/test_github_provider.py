@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import tempfile
 import unittest
+import urllib.parse
 from pathlib import Path
 from typing import Any
 
@@ -53,16 +54,23 @@ class FakeGitHubTransport:
                 },
             )
         if method == "GET" and path.startswith(root + "/issues?"):
-            issues = copy.deepcopy(self.issues)
+            parsed = urllib.parse.urlsplit(path)
+            query = urllib.parse.parse_qs(parsed.query)
+            page = int(query.get("page", ["1"])[0])
+            per_page = int(query.get("per_page", ["30"])[0])
+            issues = list(reversed(copy.deepcopy(self.issues)))
             if self.duplicate_on_read and issues:
                 duplicate = copy.deepcopy(issues[0])
                 duplicate["number"] = 999
                 duplicate["html_url"] = f"https://github.com/{self.repository}/issues/999"
-                issues.append(duplicate)
+                issues.insert(0, duplicate)
+            start = (page - 1) * per_page
+            end = start + per_page
+            page_issues = issues[start:end]
             return GitHubHttpResponse(
                 self.get_issues_status,
                 {},
-                issues if self.get_issues_status == 200 else {"message": "denied"},
+                page_issues if self.get_issues_status == 200 else {"message": "denied"},
             )
         if method == "POST" and path == root + "/issues":
             if self.raise_on_post:
@@ -153,6 +161,83 @@ class GitHubIssueProviderTests(unittest.TestCase):
         assert record is not None
         self.assertEqual(record["status"], "conflict")
         self.assertEqual(record["response"]["status"], "rejected")
+
+    def _post_count(self) -> int:
+        return sum(1 for method, _, _, _ in self.transport.requests if method == "POST")
+
+    def test_marker_survives_trailing_whitespace_edit(self) -> None:
+        self.provider.invoke(self.action, self.ticket)
+        self.transport.issues[0]["body"] += "\n"
+        record = self.provider.query(self.ticket.idempotency_key)
+        assert record is not None
+        self.assertEqual(record["status"], "accepted")
+        self.assertEqual(digest(record["effect"]), digest(self.action))
+
+    def test_marker_survives_crlf_line_ending_edit(self) -> None:
+        self.provider.invoke(self.action, self.ticket)
+        body = self.transport.issues[0]["body"]
+        self.transport.issues[0]["body"] = body.replace("\n\n<!--", "\r\n\r\n<!--") + "\r\n"
+        record = self.provider.query(self.ticket.idempotency_key)
+        assert record is not None
+        self.assertEqual(record["status"], "accepted")
+        self.assertEqual(digest(record["effect"]), digest(self.action))
+
+    def test_mangled_marker_is_conflict_and_blocks_second_write(self) -> None:
+        self.provider.invoke(self.action, self.ticket)
+        self.assertEqual(self._post_count(), 1)
+        self.transport.issues[0]["body"] += " appended after the marker"
+        record = self.provider.query(self.ticket.idempotency_key)
+        assert record is not None
+        self.assertEqual(record["status"], "conflict")
+        with self.assertRaises(GitHubProviderError):
+            self.provider.invoke(self.action, self.ticket)
+        self.assertEqual(self._post_count(), 1)
+
+    def test_exhausted_observation_window_blocks_write_and_is_unknown_on_read(self) -> None:
+        provider = GitHubIssueProvider(
+            {self.repository},
+            read_token="read-token-fixture",
+            write_token="write-token-fixture",
+            transport=self.transport,
+            max_observation_pages=2,
+        )
+        self.transport.issues = [
+            {
+                "number": number,
+                "title": f"unrelated {number}",
+                "body": "no marker here",
+                "html_url": f"https://github.com/{self.repository}/issues/{number}",
+            }
+            for number in range(1, 201)
+        ]
+        with self.assertRaisesRegex(GitHubProviderError, "window exhausted"):
+            provider.invoke(self.action, self.ticket)
+        self.assertEqual(self._post_count(), 0)
+        self.assertIsNone(provider.query(self.ticket.idempotency_key))
+
+    def test_exhausted_window_with_visible_match_does_not_confirm_uniqueness(self) -> None:
+        self.provider.invoke(self.action, self.ticket)
+        self.assertEqual(self._post_count(), 1)
+        self.transport.issues.extend(
+            {
+                "number": number,
+                "title": f"unrelated {number}",
+                "body": "no marker here",
+                "html_url": f"https://github.com/{self.repository}/issues/{number}",
+            }
+            for number in range(2, 201)
+        )
+        provider = GitHubIssueProvider(
+            {self.repository},
+            read_token="read-token-fixture",
+            write_token="write-token-fixture",
+            transport=self.transport,
+            max_observation_pages=2,
+        )
+        self.assertIsNone(provider.query(self.ticket.idempotency_key))
+        with self.assertRaisesRegex(GitHubProviderError, "uniqueness"):
+            provider.invoke(self.action, self.ticket)
+        self.assertEqual(self._post_count(), 1)
 
     def test_ambiguous_post_is_not_retried(self) -> None:
         self.transport.raise_on_post = True

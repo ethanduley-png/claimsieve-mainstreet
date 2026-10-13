@@ -1,0 +1,146 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { ProposalOnlyBridge } from "../src/index.js";
+import {
+  ErgonomicsBoundaryError,
+  createUnreviewedMemory,
+  ergonomicsCapabilityManifest,
+  normalizeAgentManifest,
+  normalizeSkillManifest
+} from "../src/ergonomics.js";
+import { founderGitHubIssueSkill } from "../ergonomics/skills/founder-github-issue.js";
+import { FounderGitHubIssueSkill } from "../ergonomics/skills/founder-github-issue-runtime.js";
+import { founderOperatorAgent } from "../ergonomics/agents/founder-operator.js";
+
+const identity = {
+  tenant_id: "tenant-demo",
+  principal: "spiffe://mainstreet.local/tenant-demo/agent/openclaw"
+};
+
+function bridge() {
+  return new ProposalOnlyBridge({ identity });
+}
+
+function skill() {
+  return new FounderGitHubIssueSkill({ bridge: bridge(), tenantId: "tenant-demo" });
+}
+
+function prepareInput() {
+  return {
+    proposalId: "proposal-ergonomics-1",
+    traceId: "trace-ergonomics-1",
+    campaignId: "campaign-1",
+    sessionId: "session-1",
+    bindings: { repository: "ethanduley-png/claimsieve-mainstreet" },
+    parameters: {
+      title: "Implement governed skill catalog",
+      body: "Track the first ECC-inspired Main Street ergonomics slice.",
+      work_item_id: "work-1"
+    },
+    evidenceRefs: ["sha256:evidence"],
+    requestedAtSeq: 42,
+    riskTags: []
+  };
+}
+
+test("normalizes an ECC-inspired skill but preserves ClaimSieve authority", () => {
+  const manifest = normalizeSkillManifest(founderGitHubIssueSkill);
+  assert.equal(manifest.authority.mode, "proposal_only");
+  assert.equal(manifest.authority.adjudicator, "claimsieve");
+  assert.equal(manifest.authority.direct_execution, false);
+  assert.ok(Object.isFrozen(manifest));
+});
+
+test("builder-backed skill prepares a proposal and exposes no execution method", () => {
+  const selected = skill();
+  const proposal = selected.prepare(prepareInput());
+  assert.equal(proposal.action.destination.authority, "ethanduley-png/claimsieve-mainstreet");
+  assert.equal(proposal.action.destination.resource, "issues");
+  assert.equal(proposal.action.method, "CREATE");
+  assert.equal(proposal.action.parameters.correlation_marker, "claimsieve:proposal-ergonomics-1");
+  assert.equal(proposal.approval, null);
+  assert.equal(typeof selected.execute, "undefined");
+});
+
+test("builder-backed skill rejects undeclared parameters including caller correlation marker", () => {
+  const selected = skill();
+  const input = prepareInput();
+  input.parameters.correlation_marker = "attacker-controlled";
+  assert.throws(() => selected.prepare(input), (error) =>
+    error instanceof ErgonomicsBoundaryError && error.code === "BUILDER_INPUT_MISMATCH");
+});
+
+test("builder-backed skill rejects undeclared destination bindings", () => {
+  const selected = skill();
+  const input = prepareInput();
+  input.bindings.owner_token = "secret";
+  assert.throws(() => selected.prepare(input), (error) =>
+    error instanceof ErgonomicsBoundaryError && error.code === "BUILDER_INPUT_MISMATCH");
+});
+
+test("builder-backed skill rejects accessor and symbol input properties", () => {
+  const selected = skill();
+
+  const accessorInput = prepareInput();
+  let accessed = false;
+  Object.defineProperty(accessorInput.parameters, "title", {
+    enumerable: true,
+    get() {
+      accessed = true;
+      return "side effect";
+    }
+  });
+  assert.throws(() => selected.prepare(accessorInput), (error) =>
+    error instanceof ErgonomicsBoundaryError && error.code === "NON_DATA_ERGONOMIC_PROPERTY");
+  assert.equal(accessed, false);
+
+  const symbolInput = prepareInput();
+  symbolInput.bindings[Symbol("hidden")] = "secret";
+  assert.throws(() => selected.prepare(symbolInput), (error) =>
+    error instanceof ErgonomicsBoundaryError && error.code === "BUILDER_INPUT_MISMATCH");
+});
+
+test("builder-backed skill preserves Founder OS repository validation", () => {
+  const selected = skill();
+  const input = prepareInput();
+  input.bindings.repository = "https://github.com/ethanduley-png/claimsieve-mainstreet";
+  assert.throws(() => selected.prepare(input), /owner\/name/);
+});
+
+test("skill rejects direct execution authority", () => {
+  const unsafe = structuredClone(founderGitHubIssueSkill);
+  unsafe.authority.direct_execution = true;
+  assert.throws(() => normalizeSkillManifest(unsafe), (error) =>
+    error instanceof ErgonomicsBoundaryError && error.code === "AUTHORITY_ESCALATION");
+});
+
+test("agent roles are ergonomics only and cannot acquire execute capability", () => {
+  const agent = normalizeAgentManifest(founderOperatorAgent);
+  assert.equal(agent.authority.adjudicator, "claimsieve");
+  const unsafe = structuredClone(founderOperatorAgent);
+  unsafe.capabilities.push("execute_provider_action");
+  assert.throws(() => normalizeAgentManifest(unsafe), (error) =>
+    error instanceof ErgonomicsBoundaryError && error.code === "AGENT_CAPABILITY_ESCALATION");
+});
+
+test("new memory is context with unreviewed trust, never policy", () => {
+  const memory = createUnreviewedMemory({
+    id: "lead.followup.preference",
+    created_at_seq: 77,
+    source: "conversation-observation",
+    scope: "tenant-demo",
+    content: "The customer asked to be contacted in the afternoon.",
+    evidence_refs: ["sha256:conversation"]
+  });
+  assert.equal(memory.trust, "unreviewed");
+  assert.equal(memory.status, "active");
+  assert.equal(Object.hasOwn(memory, "policy"), false);
+  assert.equal(Object.hasOwn(memory, "approval"), false);
+});
+
+test("ergonomics capability manifest explicitly forbids authority and execution", () => {
+  assert.ok(ergonomicsCapabilityManifest.allowed.includes("prepare_claimsieve_proposal"));
+  assert.ok(ergonomicsCapabilityManifest.forbidden.includes("provider_execution"));
+  assert.ok(ergonomicsCapabilityManifest.forbidden.includes("permit_signing"));
+  assert.ok(ergonomicsCapabilityManifest.forbidden.includes("memory_to_policy_promotion"));
+});

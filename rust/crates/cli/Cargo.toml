@@ -11,6 +11,8 @@ path = "src/main.rs"
 
 [dependencies]
 claimsieve-verifier = { path = "../verifier" }
+claimsieve-runtime = { path = "../runtime" }
+claimsieve-protocol = { path = "../protocol" }
 serde_json.workspace = true
 
 [lints]

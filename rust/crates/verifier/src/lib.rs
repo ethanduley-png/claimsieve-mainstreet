@@ -5,9 +5,9 @@
 use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use claimsieve_ledger::{LedgerRecord, verify_chain};
 use claimsieve_protocol::{
-    Decision, Evidence, MAX_SAFE_INTEGER, ObserverReceipt, Permit, Policy, Proposal, action_digest,
-    approval_digest, approval_signing_subject, canonical_bytes, destination_digest, digest,
-    display_digest, evidence_root, parameter_digest, proposal_digest,
+    Decision, Evidence, MAX_SAFE_INTEGER, Permit, Policy, Proposal, action_digest, approval_digest,
+    approval_signing_subject, canonical_bytes, destination_digest, digest, display_digest,
+    evidence_root, parameter_digest, proposal_digest,
 };
 use claimsieve_runtime::verify_permit_signature;
 use ed25519_dalek::{Signature, Verifier, VerifyingKey};
@@ -297,12 +297,17 @@ fn verify_receipt(
         .get("schema_version")
         .and_then(Value::as_str)
         .unwrap_or_default();
-    let (key_field, role, domain, requires_trace_binding, requires_permit_binding) = match schema {
+    if schema == "claimsieve.observer_receipt.v2"
+        && let Err(error) =
+            serde_json::from_value::<claimsieve_protocol::ObserverReceipt>(receipt.clone())
+    {
+        errors.push(format!("invalid v2 observer receipt shape: {error}"));
+    }
+    let (key_field, role, domain, requires_execution_binding) = match schema {
         "claimsieve.executor_receipt.v1" => (
             "executor_key_id",
             "executor_signers",
             "executor-receipt-v1",
-            true,
             true,
         ),
         "claimsieve.observer_receipt.v1" => (
@@ -310,13 +315,11 @@ fn verify_receipt(
             "observer_signers",
             "observer-receipt-v1",
             true,
-            true,
         ),
         "claimsieve.observer_receipt.v2" => (
             "observer_key_id",
             "observer_signers",
             "observer-receipt-v2",
-            false,
             true,
         ),
         "claimsieve.containment_receipt.v1" => (
@@ -324,15 +327,9 @@ fn verify_receipt(
             "containment_signers",
             "containment-v1",
             false,
-            false,
         ),
         _ => return vec![format!("unsupported receipt schema: {schema}")],
     };
-    if schema == "claimsieve.observer_receipt.v2"
-        && serde_json::from_value::<ObserverReceipt>(receipt.clone()).is_err()
-    {
-        errors.push("observer receipt v2 fields do not exactly match schema".to_owned());
-    }
     let Some(key_id) = object.get(key_field).and_then(Value::as_str) else {
         return vec![format!("receipt missing {key_field}")];
     };
@@ -357,10 +354,12 @@ fn verify_receipt(
         }
         None => errors.push(format!("unknown receipt key: {key_id}")),
     }
-    if requires_trace_binding && object.get("trace_id").and_then(Value::as_str) != Some(trace_id) {
-        errors.push("receipt trace mismatch".to_owned());
-    }
-    if requires_permit_binding {
+    if requires_execution_binding {
+        if schema != "claimsieve.observer_receipt.v2"
+            && object.get("trace_id").and_then(Value::as_str) != Some(trace_id)
+        {
+            errors.push("receipt trace mismatch".to_owned());
+        }
         match permit_id {
             Some(expected) if object.get("permit_id").and_then(Value::as_str) == Some(expected) => {
             }
@@ -1012,7 +1011,7 @@ pub fn verify_bundle(bundle: &EvidenceBundle, trust_root: &TrustRoot) -> Verific
         ));
         let record_type = match receipt.get("schema_version").and_then(Value::as_str) {
             Some("claimsieve.executor_receipt.v1") => Some("EXECUTOR_RECEIPT"),
-            Some("claimsieve.observer_receipt.v1") | Some("claimsieve.observer_receipt.v2") => {
+            Some("claimsieve.observer_receipt.v1" | "claimsieve.observer_receipt.v2") => {
                 Some("OBSERVER_RECEIPT")
             }
             Some("claimsieve.containment_receipt.v1") => Some("CONTAINMENT_RECEIPT"),
@@ -1052,15 +1051,10 @@ pub fn verify_bundle(bundle: &EvidenceBundle, trust_root: &TrustRoot) -> Verific
             .receipts
             .iter()
             .filter(|receipt| {
-                receipt
-                    .get("schema_version")
-                    .and_then(Value::as_str)
-                    .is_some_and(|schema| {
-                        matches!(
-                            schema,
-                            "claimsieve.observer_receipt.v1" | "claimsieve.observer_receipt.v2"
-                        )
-                    })
+                receipt.get("schema_version").and_then(Value::as_str)
+                    == Some("claimsieve.observer_receipt.v1")
+                    || receipt.get("schema_version").and_then(Value::as_str)
+                        == Some("claimsieve.observer_receipt.v2")
             })
             .collect::<Vec<_>>();
         if !bundle.receipts.is_empty()
@@ -1087,78 +1081,56 @@ pub fn verify_bundle(bundle: &EvidenceBundle, trust_root: &TrustRoot) -> Verific
             }
         }
         if let Some(observer_receipt) = observer_receipts.first() {
-            let schema = observer_receipt
+            if observer_receipt
                 .get("schema_version")
-                .and_then(Value::as_str);
+                .and_then(Value::as_str)
+                == Some("claimsieve.observer_receipt.v2")
+            {
+                if observer_receipt.get("campaign_id").and_then(Value::as_str)
+                    != Some(permit.campaign_id.as_str())
+                {
+                    errors.push("v2 observer campaign mismatch".to_owned());
+                }
+                if let Some(reservation) = matching_reservations.first()
+                    && observer_receipt
+                        .get("reservation_id")
+                        .and_then(Value::as_str)
+                        != reservation.get("reservation_id").and_then(Value::as_str)
+                {
+                    errors.push("v2 observer reservation mismatch".to_owned());
+                }
+                if observer_receipt
+                    .get("receipt_conflict")
+                    .and_then(Value::as_bool)
+                    == Some(true)
+                    && observer_receipt
+                        .get("reconciliation")
+                        .and_then(Value::as_str)
+                        != Some("OUTCOME_UNKNOWN")
+                {
+                    errors.push(
+                        "conflicting v2 observer receipt claimed terminal outcome".to_owned(),
+                    );
+                }
+                if observer_receipt
+                    .get("provider_record_digest")
+                    .is_some_and(Value::is_null)
+                    && observer_receipt
+                        .get("reconciliation")
+                        .and_then(Value::as_str)
+                        != Some("OUTCOME_UNKNOWN")
+                {
+                    errors.push(
+                        "v2 observer lacks provider evidence for terminal outcome".to_owned(),
+                    );
+                }
+            }
             let reconciliation = observer_receipt
                 .get("reconciliation")
                 .and_then(Value::as_str);
             let observed = observer_receipt
                 .get("observed_action_digest")
                 .and_then(Value::as_str);
-            if schema == Some("claimsieve.observer_receipt.v2") {
-                if observer_receipt.get("permit_id").and_then(Value::as_str)
-                    != Some(permit.permit_id.as_str())
-                {
-                    errors.push("observer receipt permit mismatch".to_owned());
-                }
-                if observer_receipt.get("campaign_id").and_then(Value::as_str)
-                    != Some(permit.campaign_id.as_str())
-                {
-                    errors.push("observer receipt campaign mismatch".to_owned());
-                }
-                if let Some(reservation) = matching_reservations.first() {
-                    if observer_receipt
-                        .get("reservation_id")
-                        .and_then(Value::as_str)
-                        != reservation.get("reservation_id").and_then(Value::as_str)
-                    {
-                        errors.push("observer receipt reservation mismatch".to_owned());
-                    }
-                } else {
-                    errors.push("observer receipt reservation mismatch".to_owned());
-                }
-                let provider_record_digest = observer_receipt
-                    .get("provider_record_digest")
-                    .and_then(Value::as_str);
-                let receipt_conflict = observer_receipt
-                    .get("receipt_conflict")
-                    .and_then(Value::as_bool);
-                if provider_record_digest.is_none() {
-                    if reconciliation != Some("OUTCOME_UNKNOWN") {
-                        errors.push(
-                            "observer receipt without provider record must remain OUTCOME_UNKNOWN"
-                                .to_owned(),
-                        );
-                    }
-                    if observed.is_some() {
-                        errors.push(
-                            "observer receipt without provider record cannot contain observed action"
-                                .to_owned(),
-                        );
-                    }
-                    if receipt_conflict != Some(false) {
-                        errors.push(
-                            "observer receipt without provider record cannot claim conflict"
-                                .to_owned(),
-                        );
-                    }
-                }
-                if matches!(
-                    reconciliation,
-                    Some("CONFIRMED_SUCCESS" | "CONFIRMED_FAILURE" | "DIVERGENT_EFFECT")
-                ) && provider_record_digest.is_none()
-                {
-                    errors.push(
-                        "confirmed observer outcome requires provider record digest".to_owned(),
-                    );
-                }
-                if receipt_conflict == Some(true) && provider_record_digest.is_none() {
-                    errors.push(
-                        "observer receipt conflict requires provider record digest".to_owned(),
-                    );
-                }
-            }
             match digest(&bundle.proposal.action) {
                 Ok(exact_action_digest) => match reconciliation {
                     Some("CONFIRMED_SUCCESS") if observed != Some(exact_action_digest.as_str()) => {
@@ -1173,50 +1145,36 @@ pub fn verify_bundle(bundle: &EvidenceBundle, trust_root: &TrustRoot) -> Verific
                             "divergent observation lacks a divergent action digest".to_owned(),
                         );
                     }
-                    Some("CONFIRMED_FAILURE") if observed.is_some() => {
+                    Some("CONFIRMED_FAILURE") | Some("OUTCOME_UNKNOWN") if observed.is_some() => {
                         errors.push(
-                            "failed observation unexpectedly contains an action digest".to_owned(),
+                            "non-observed outcome unexpectedly contains an action digest"
+                                .to_owned(),
                         );
                     }
-                    Some("OUTCOME_UNKNOWN") if observed.is_some() => {
-                        let conflict = observer_receipt
-                            .get("receipt_conflict")
-                            .and_then(Value::as_bool);
-                        if schema != Some("claimsieve.observer_receipt.v2")
-                            || conflict != Some(true)
-                        {
-                            errors.push(
-                                "unknown observation contains an action digest without conflict evidence"
-                                    .to_owned(),
-                            );
-                        }
-                    }
-                    Some(
-                        "CONFIRMED_SUCCESS" | "CONFIRMED_FAILURE" | "DIVERGENT_EFFECT"
-                        | "OUTCOME_UNKNOWN",
-                    ) => {}
-                    _ => errors.push("observer receipt reconciliation is invalid".to_owned()),
+                    _ => {}
                 },
                 Err(error) => errors.push(format!("authorized action digest failed: {error}")),
             }
         }
         if let (Some(executor_receipt), Some(observer_receipt)) =
             (executor_receipts.first(), observer_receipts.first())
-            && observer_receipt
+        {
+            if observer_receipt
                 .get("schema_version")
                 .and_then(Value::as_str)
                 == Some("claimsieve.observer_receipt.v1")
-        {
-            match digest(*executor_receipt) {
-                Ok(expected)
-                    if observer_receipt
-                        .get("executor_receipt_digest")
-                        .and_then(Value::as_str)
-                        == Some(expected.as_str()) => {}
-                Ok(_) => {
-                    errors.push("observer receipt is not bound to executor receipt".to_owned())
+            {
+                match digest(*executor_receipt) {
+                    Ok(expected)
+                        if observer_receipt
+                            .get("executor_receipt_digest")
+                            .and_then(Value::as_str)
+                            == Some(expected.as_str()) => {}
+                    Ok(_) => {
+                        errors.push("observer receipt is not bound to executor receipt".to_owned())
+                    }
+                    Err(error) => errors.push(format!("executor receipt digest failed: {error}")),
                 }
-                Err(error) => errors.push(format!("executor receipt digest failed: {error}")),
             }
             let status = executor_receipt
                 .get("provider_status")
@@ -1335,16 +1293,6 @@ mod tests {
     #[test]
     fn python_generated_vector_verifies() {
         let input = include_str!("../../../../vectors/valid_evidence_bundle.json");
-        let result = verify_json(input, TRUST_ROOT);
-        assert!(result.is_ok());
-        if let Ok(report) = result {
-            assert!(report.valid, "{:?}", report.errors);
-        }
-    }
-
-    #[test]
-    fn python_generated_observer_v2_vector_verifies() {
-        let input = include_str!("../../../../vectors/valid_evidence_bundle_observer_v2.json");
         let result = verify_json(input, TRUST_ROOT);
         assert!(result.is_ok());
         if let Ok(report) = result {

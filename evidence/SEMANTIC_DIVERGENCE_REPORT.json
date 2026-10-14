@@ -3,16 +3,15 @@
   "gate_passed": true,
   "native_toolchains": {
     "rocq": {
-      "available": true,
-      "path": "C:\\Users\\Ethan\\Rocq-Platform9.0.2025.08\\bin\\rocq.exe",
-      "returncode": 0,
-      "version": "The Rocq Prover, version 9.0.1"
+      "available": false,
+      "path": null,
+      "version": null
     },
     "rust": {
       "available": true,
-      "path": "C:\\Users\\Ethan\\.cargo\\bin\\cargo.exe",
+      "path": "/workspace/scratch/ad3bcad6adbf/cargo/bin/cargo",
       "returncode": 0,
-      "version": "cargo 1.97.1 (c980f4866 2026-06-30)"
+      "version": "cargo 1.90.0 (840b83a10 2025-07-30)"
     }
   },
   "python_outcome_vectors": [
@@ -63,19 +62,37 @@
       "actual_reconciliation": "OUTCOME_UNKNOWN",
       "id": "transport-timeout-no-readback",
       "passed": true
+    },
+    {
+      "actual_conflict": true,
+      "actual_reconciliation": "OUTCOME_UNKNOWN",
+      "id": "malformed-provider-status-and-effect",
+      "passed": true
+    },
+    {
+      "actual_conflict": true,
+      "actual_reconciliation": "OUTCOME_UNKNOWN",
+      "id": "malformed-provider-status-no-effect",
+      "passed": true
+    },
+    {
+      "actual_conflict": true,
+      "actual_reconciliation": "OUTCOME_UNKNOWN",
+      "id": "missing-status-with-effect",
+      "passed": true
     }
   ],
   "release": "0.34.0",
   "remaining_semantic_divergences": [
     {
-      "description": "Rust observer receipt protocol remains v1-shaped while the executed Python durable boundary and JSON schema use observer receipt v2 with reservation, campaign, provider-record, and conflict bindings.",
-      "id": "REM-DIV-001",
-      "impact": "Rust cannot yet claim wire-format parity or portable verifier parity."
-    },
-    {
       "description": "Rocq abstracts independent provider evidence into constructors and does not model parsing, signatures, databases, transport, or provider read APIs.",
       "id": "REM-DIV-002",
       "impact": "Theorems cannot establish implementation-level observer independence or provider-contract compliance."
+    },
+    {
+      "description": "A complete passing Rocq compilation and assumption-audit transcript is not available in this environment.",
+      "id": "REM-DIV-004",
+      "impact": "Proof source inspection and toolchain availability are not accepted proof evidence."
     }
   ],
   "resolved_semantic_divergences": [
@@ -103,11 +120,6 @@
       "description": "Rust native compilation and execution status was previously unknown.",
       "id": "DIV-005",
       "resolution": "Formatting, warning-denied Clippy, 28 tests, documentation tests, and v0.34 bundle verification pass under the project-pinned toolchain."
-    },
-    {
-      "description": "Rocq compiler acceptance and assumption status were previously unknown.",
-      "id": "DIV-006",
-      "resolution": "All four Rocq files compile and both assumption-audit files report their theorems closed under the global context."
     }
   ],
   "schema_version": "claimsieve.semantic_divergence_report.v1",

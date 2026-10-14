@@ -46,7 +46,7 @@ node --check apps/mainstreet-web/public/sw.js
 PYTHONPATH=python python3 python/founder_os_demo.py | tee evidence/FOUNDER_OS_DEMO_OUTPUT.txt
 PYTHONPATH=python python3 scripts/run_founder_os_red_team.py | tee evidence/FOUNDER_OS_RED_TEAM_REPORT.json
 python3 scripts/source_gate.py | tee evidence/SOURCE_GATE.txt
-PYTHONPATH=python python3 evidence/V033_PATCHED_TRACE_PROBE.py | tee evidence/V033_PATCHED_TRACE.json
+PYTHONPATH=python python3 scripts/v033_patched_trace_probe.py | tee evidence/V033_PATCHED_TRACE.json
 PYTHONPATH=python python3 scripts/provider_contract_gate.py | tee evidence/PROVIDER_CONTRACT_GATE_OUTPUT.txt
 PYTHONPATH=python python3 scripts/semantic_divergence_gate.py | tee evidence/SEMANTIC_DIVERGENCE_GATE_OUTPUT.txt
 PYTHONPATH=python python3 scripts/run_red_team.py | tee evidence/RED_TEAM_OUTPUT.txt

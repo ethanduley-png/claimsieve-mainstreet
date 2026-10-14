@@ -1,0 +1,3 @@
+    Checking claimsieve-kernel v0.33.0 (/workspace/scratch/ad3bcad6adbf/claimsieve-mainstreet/rust/crates/kernel)
+    Checking claimsieve-verifier v0.33.0 (/workspace/scratch/ad3bcad6adbf/claimsieve-mainstreet/rust/crates/verifier)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.27s

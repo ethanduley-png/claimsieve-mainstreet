@@ -1,0 +1,43 @@
+✔ health endpoint does not require authentication (2.380549ms)
+✔ customer routes require authenticated identity (0.453862ms)
+✔ authenticated user must select a business (0.541063ms)
+✔ caller-selected tenant is not authority without active membership (0.290336ms)
+✔ active membership resolves tenant context and returns only that business data (0.57197ms)
+✔ assistant endpoint remains proposal-only after authentication and tenancy resolution (0.380081ms)
+✔ viewer membership cannot use assistant (0.473332ms)
+✔ membership resolver cannot substitute a different user (0.277267ms)
+✔ authenticated user can list only validated active business memberships (9.790396ms)
+✔ pre-tenant business listing rejects adapter leakage from another user (0.594464ms)
+✔ pre-tenant business listing rejects duplicate tenant memberships (0.444268ms)
+✔ identity schema defines tenant, user, membership, session, and audit tables (1.053373ms)
+✔ customer tenant tables force row-level security (0.162474ms)
+✔ tenant policies bind to transaction-local tenant context (0.15951ms)
+✔ session policy binds both tenant and authenticated user (0.263245ms)
+✔ membership role set matches application role set (0.111668ms)
+✔ opaque session secrets are random, hashable, and never stored as plaintext (2.011023ms)
+✔ session cookies are host-only secure HttpOnly cookies (0.547073ms)
+✔ aal2 requires the provider to explicitly assert MFA (1.279003ms)
+✔ recent step-up accepts fresh aal2 and rejects weak or stale authentication (0.367923ms)
+✔ cookie policy refuses non __Host names and excessive lifetimes (0.31273ms)
+✔ expired authentication assertion is rejected (1.637241ms)
+✔ future authentication assertion is rejected (0.184828ms)
+✔ membership must belong to authenticated user (0.30573ms)
+✔ inactive membership is rejected (0.164817ms)
+✔ staff cannot manage business profile (0.295834ms)
+✔ owner can review approvals but viewer cannot (0.190096ms)
+✔ resource tenant mismatch fails closed (0.209696ms)
+✔ repository read is scoped only by resolved tenant context (0.380682ms)
+✔ ordinary repository exposes no caller-selected tenant lookup (0.202194ms)
+✔ tenant identifier cannot be changed through business update (0.418569ms)
+✔ staff cannot update business even inside own tenant (0.236135ms)
+✔ dashboard cannot leak items from another tenant (0.920613ms)
+✔ assistant request remains proposal-only and tenant-bound (0.248403ms)
+✔ viewer cannot invoke assistant (0.184116ms)
+ℹ tests 35
+ℹ suites 0
+ℹ pass 35
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 132.596996

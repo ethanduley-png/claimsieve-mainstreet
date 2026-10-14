@@ -1,15 +1,15 @@
 {
   "rocq": {
-    "assumption_audit": "PASS_CLOSED_UNDER_GLOBAL_CONTEXT",
-    "available": true,
-    "claim_scope": "compiled and assumptions printed",
-    "compile": "PASS"
+    "assumption_audit": "NOT_EXECUTED",
+    "available": false,
+    "claim_scope": "formally modeled source present but not compiled or accepted in this environment",
+    "compile": "NOT_EXECUTED"
   },
   "rust": {
     "available": true,
-    "claim_scope": "compiled, linted, and executed",
+    "claim_scope": "compiled and executed",
     "clippy": "PASS",
     "fmt": "PASS",
-    "tests": "PASS_28"
+    "tests": "PASS"
   }
 }

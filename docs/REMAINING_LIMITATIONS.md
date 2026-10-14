@@ -47,3 +47,16 @@ The proposal boundary exists, but the complete owner-facing tax-notice workspace
 ## 12. GitHub lacks native ClaimSieve idempotency
 
 The issue adapter uses one-shot dispatch plus a hidden correlation marker and bounded read-back. A delayed or removed marker can leave the outcome unknown, and unknown never authorizes an automatic retry.
+
+## Controlled GitHub candidate: production blocked
+
+See [release assessment](CONTROLLED_GITHUB_RELEASE.md) and
+[operator runbook](CONTROLLED_GITHUB_RUNBOOK.md). This candidate closes reproduced
+recovery and observation substitution defects, but does not provide independently
+deployed authority/executor/observer roles, production key provisioning, trusted
+wall-clock expiry, durable complete four-ledger export, signed release provenance
+or independently reviewed deployment evidence. Fixture composition rejects
+`CLAIMSIEVE_MODE=production`. Default reference mode is still a reference, not a
+production permission. Legacy database reservations without immutable snapshots
+fail closed on recovery; stale backup restoration cannot safely re-enable writes.
+Rocq acceptance for this revision remains a required external build gate.

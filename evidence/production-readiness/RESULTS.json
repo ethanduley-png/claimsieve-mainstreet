@@ -1,0 +1,39 @@
+{
+  "starting_commit": "fa858f56a9d459d7dcb4b1651dd77f8d93ce1157",
+  "payload_sha256": "8322c23f90d020edc5d82a7deae9dfb49586683bd5c3f6978c3970a840ac8c3a",
+  "decision": "BLOCKED_FOR_PRODUCTION",
+  "validated_scope": "single-node offline reference workflow with fake providers",
+  "python": {
+    "discovered": 521,
+    "passed": 508,
+    "skipped": 13,
+    "failed": 0,
+    "skip_reason": "optional DeepAgents dependency absent; outside selected production path"
+  },
+  "node": {
+    "passed": 88,
+    "failed": 0
+  },
+  "rust": {
+    "toolchain": "1.90.0",
+    "passed": 48,
+    "fmt": "PASS",
+    "clippy": "PASS"
+  },
+  "differential": {
+    "outcome_vectors": 11,
+    "observer_wire_vectors": 12,
+    "status": "PASS"
+  },
+  "rocq": {
+    "version_required": "9.2",
+    "status": "NOT RUN",
+    "reason": "rocq, coqc, Docker and opam unavailable"
+  },
+  "live_provider": "NOT RUN; not authorized",
+  "fresh_extraction": "PASS; full available gates in newly installed Python virtual environment",
+  "artifact_reproducibility": "PASS; two serializations same SHA-256",
+  "blocked_gate_owner": "release maintainer",
+  "exception_expiry": "before any production deployment; no gate waiver authorized",
+  "next_action": "provide reviewed isolated production target and Rocq 9.2 runner; implement role composition and validate before requesting live canary authority"
+}

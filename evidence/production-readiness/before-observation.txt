@@ -1,0 +1,25 @@
+test_stale_observer_sequence_rejected (test_release_bindings.ReleaseBindingTests.test_stale_observer_sequence_rejected) ... FAIL
+test_durable_success_requires_exact_observed_effect (test_release_bindings.ReleaseBindingTests.test_durable_success_requires_exact_observed_effect) ... FAIL
+
+======================================================================
+FAIL: test_stale_observer_sequence_rejected (test_release_bindings.ReleaseBindingTests.test_stale_observer_sequence_rejected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/ad3bcad6adbf/claimsieve-mainstreet/python/tests/test_release_bindings.py", line 112, in test_stale_observer_sequence_rejected
+    with self.assertRaises(DurableStateError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: DurableStateError not raised
+
+======================================================================
+FAIL: test_durable_success_requires_exact_observed_effect (test_release_bindings.ReleaseBindingTests.test_durable_success_requires_exact_observed_effect)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/ad3bcad6adbf/claimsieve-mainstreet/python/tests/test_release_bindings.py", line 125, in test_durable_success_requires_exact_observed_effect
+    with self.assertRaises(DurableStateError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: DurableStateError not raised
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.059s
+
+FAILED (failures=2)

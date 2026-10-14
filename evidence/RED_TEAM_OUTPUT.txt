@@ -663,14 +663,14 @@
       "status": "BLOCKED"
     },
     {
-      "actual_result": "non-observed outcome unexpectedly contains an action digest; observer receipt is not recorded in the execution ledger; observer receipt signature invalid",
+      "actual_result": "failed observation unexpectedly contains an action digest; observer receipt is not recorded in the execution ledger; observer receipt signature invalid",
       "attack": "CONFLICTING_RECEIPTS",
       "coverage": "EXECUTED",
       "expected_result": "detect",
       "fix_or_control": "Signed receipt binding and semantic reconciliation.",
       "impact_if_unblocked": "False outcome narrative",
       "reproducible_trace": [
-        "non-observed outcome unexpectedly contains an action digest",
+        "failed observation unexpectedly contains an action digest",
         "observer receipt is not recorded in the execution ledger",
         "observer receipt signature invalid"
       ],
@@ -845,7 +845,7 @@
       "expected_result": "Node dangerous-key tests pass",
       "fix_or_control": "Reject __proto__, prototype, and constructor recursively.",
       "impact_if_unblocked": "Prototype chain manipulation",
-      "reproducible_trace": "pe: 'test'\\u000a  ...\\u000a# Subtest: rejects floating point authority data\\u000aok 6 - rejects floating point authority data\\u000a  ---\\u000a  duration_ms: 0.24279\\u000a  type: 'test'\\u000a  ...\\u000a# Subtest: rejects unsafe integers\\u000aok 7 - rejects unsafe integers\\u000a  ---\\u000a  duration_ms: 0.203722\\u000a  type: 'test'\\u000a  ...\\u000a# Subtest: rejects non-NFC strings\\u000aok 8 - rejects non-NFC strings\\u000a  ---\\u000a  duration_ms: 1.028063\\u000a  type: 'test'\\u000a  ...\\u000a# Subtest: rejects sparse arrays\\u000aok 9 - rejects sparse arrays\\u000a  ---\\u000a  duration_ms: 0.393664\\u000a  type: 'test'\\u000a  ...\\u000a# Subtest: rejects accessor properties without invoking them\\u000aok 10 - rejects accessor properties without invoking them\\u000a  ---\\u000a  duration_ms: 0.420303\\u000a  type: 'test'\\u000a  ...\\u000a# Subtest: rejects duplicate evidence references\\u000aok 11 - rejects duplicate evidence references\\u000a  ---\\u000a  duration_ms: 0.238374\\u000a  type: 'test'\\u000a  ...\\u000a# Subtest: rejects cyclic graphs\\u000aok 12 - rejects cyclic graphs\\u000a  ---\\u000a  duration_ms: 0.197573\\u000a  type: 'test'\\u000a  ...\\u000a# Subtest: rejects shared object references\\u000aok 13 - rejects shared object references\\u000a  ---\\u000a  duration_ms: 0.181348\\u000a  type: 'test'\\u000a  ...\\u000a# Subtest: rejects __proto__ as an own property\\u000aok 14 - rejects __proto__ as an own property\\u000a  ---\\u000a  duration_ms: 0.180848\\u000a  type: 'test'\\u000a  ...\\u000a# Subtest: rejects constructor and prototype keys at any depth\\u000aok 15 - rejects constructor and prototype keys at any depth\\u000a  ---\\u000a  duration_ms: 0.278654\\u000a  type: 'test'\\u000a  ...\\u000a# Subtest: rejects unpaired Unicode surrogates\\u000aok 16 - rejects unpaired Unicode surrogates\\u000a  ---\\u000a  duration_ms: 0.170042\\u000a  type: 'test'\\u000a  ...\\u000a# Subtest: acknowledgement must bind proposal and trace\\u000aok 17 - acknowledgement must bind proposal and trace\\u000a  ---\\u000a  duration_ms: 0.27667\\u000a  type: 'test'\\u000a  ...\\u000a# Subtest: capability manifest contains no transport or execution capability\\u000aok 18 - capability manifest contains no transport or execution capability\\u000a  ---\\u000a  duration_ms: 0.12127\\u000a  type: 'test'\\u000a  ...\\u000a1..18\\u000a# tests 18\\u000a# suites 0\\u000a# pass 18\\u000a# fail 0\\u000a# cancelled 0\\u000a# skipped 0\\u000a# todo 0\\u000a# duration_ms 55.908302\\u000a",
+      "reproducible_trace": "\u2714 prepares a frozen proposal without any transport (2.072255ms)\\u000a\u2714 validates only a non-authoritative acknowledgement (0.382465ms)\\u000a\u2714 rejects acknowledgement authority claims (0.572029ms)\\u000a\u2714 rejects caller supplied authority fields (0.167041ms)\\u000a\u2714 rejects cross-tenant proposals (0.23277ms)\\u000a\u2714 rejects floating point authority data (0.238689ms)\\u000a\u2714 rejects unsafe integers (0.277197ms)\\u000a\u2714 rejects non-NFC strings (0.301833ms)\\u000a\u2714 rejects sparse arrays (0.289706ms)\\u000a\u2714 rejects accessor properties without invoking them (1.632518ms)\\u000a\u2714 rejects duplicate evidence references (0.21971ms)\\u000a\u2714 rejects cyclic graphs (0.218559ms)\\u000a\u2714 rejects shared object references (0.18648ms)\\u000a\u2714 rejects __proto__ as an own property (0.355184ms)\\u000a\u2714 rejects constructor and prototype keys at any depth (0.528655ms)\\u000a\u2714 rejects unpaired Unicode surrogates (0.425008ms)\\u000a\u2714 acknowledgement must bind proposal and trace (0.340241ms)\\u000a\u2714 capability manifest contains no transport or execution capability (0.306611ms)\\u000a\u2139 tests 18\\u000a\u2139 suites 0\\u000a\u2139 pass 18\\u000a\u2139 fail 0\\u000a\u2139 cancelled 0\\u000a\u2139 skipped 0\\u000a\u2139 todo 0\\u000a\u2139 duration_ms 119.000513\\u000a",
       "status": "BLOCKED"
     },
     {

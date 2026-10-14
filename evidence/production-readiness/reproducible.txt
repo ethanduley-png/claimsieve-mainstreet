@@ -1,0 +1,20 @@
+{
+  "evidence_in_payload": false,
+  "files": 389,
+  "kind": "deterministic-release-payload",
+  "profile": "claimsieve.release-payload.v1",
+  "sha256": "8322c23f90d020edc5d82a7deae9dfb49586683bd5c3f6978c3970a840ac8c3a",
+  "zip": "/tmp/claimsieve-repro-gq037ipe/payload-a.zip"
+}
+{
+  "evidence_in_payload": false,
+  "files": 389,
+  "kind": "deterministic-release-payload",
+  "profile": "claimsieve.release-payload.v1",
+  "sha256": "8322c23f90d020edc5d82a7deae9dfb49586683bd5c3f6978c3970a840ac8c3a",
+  "zip": "/tmp/claimsieve-repro-gq037ipe/payload-b.zip"
+}
+REPRODUCIBLE PAYLOAD: PASS
+SHA-256: 8322c23f90d020edc5d82a7deae9dfb49586683bd5c3f6978c3970a840ac8c3a
+Archive: /workspace/scratch/ad3bcad6adbf/reproducible-candidate.zip
+Independent serializations compared: 2

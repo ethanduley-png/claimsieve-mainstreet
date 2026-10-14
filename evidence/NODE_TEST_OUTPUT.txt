@@ -1,148 +1,54 @@
-TAP version 13
-# Subtest: Founder OS reuses the proposal-only boundary
-ok 1 - Founder OS reuses the proposal-only boundary
-  ---
-  duration_ms: 1.539642
-  type: 'test'
-  ...
-# Subtest: Founder OS rejects a non owner/name repository
-ok 2 - Founder OS rejects a non owner/name repository
-  ---
-  duration_ms: 0.372973
-  type: 'test'
-  ...
-# Subtest: Founder OS rejects empty issue content
-ok 3 - Founder OS rejects empty issue content
-  ---
-  duration_ms: 0.158044
-  type: 'test'
-  ...
-# Subtest: Founder OS cannot inject approval or authority fields
-ok 4 - Founder OS cannot inject approval or authority fields
-  ---
-  duration_ms: 0.563946
-  type: 'test'
-  ...
-# Subtest: Founder OS manifest exposes no execution capability
-ok 5 - Founder OS manifest exposes no execution capability
-  ---
-  duration_ms: 0.78264
-  type: 'test'
-  ...
-# Subtest: prepares a frozen proposal without any transport
-ok 6 - prepares a frozen proposal without any transport
-  ---
-  duration_ms: 1.738938
-  type: 'test'
-  ...
-# Subtest: validates only a non-authoritative acknowledgement
-ok 7 - validates only a non-authoritative acknowledgement
-  ---
-  duration_ms: 0.362157
-  type: 'test'
-  ...
-# Subtest: rejects acknowledgement authority claims
-ok 8 - rejects acknowledgement authority claims
-  ---
-  duration_ms: 0.552369
-  type: 'test'
-  ...
-# Subtest: rejects caller supplied authority fields
-ok 9 - rejects caller supplied authority fields
-  ---
-  duration_ms: 0.16154
-  type: 'test'
-  ...
-# Subtest: rejects cross-tenant proposals
-ok 10 - rejects cross-tenant proposals
-  ---
-  duration_ms: 0.416548
-  type: 'test'
-  ...
-# Subtest: rejects floating point authority data
-ok 11 - rejects floating point authority data
-  ---
-  duration_ms: 0.234478
-  type: 'test'
-  ...
-# Subtest: rejects unsafe integers
-ok 12 - rejects unsafe integers
-  ---
-  duration_ms: 0.219936
-  type: 'test'
-  ...
-# Subtest: rejects non-NFC strings
-ok 13 - rejects non-NFC strings
-  ---
-  duration_ms: 0.888016
-  type: 'test'
-  ...
-# Subtest: rejects sparse arrays
-ok 14 - rejects sparse arrays
-  ---
-  duration_ms: 0.390399
-  type: 'test'
-  ...
-# Subtest: rejects accessor properties without invoking them
-ok 15 - rejects accessor properties without invoking them
-  ---
-  duration_ms: 0.474373
-  type: 'test'
-  ...
-# Subtest: rejects duplicate evidence references
-ok 16 - rejects duplicate evidence references
-  ---
-  duration_ms: 0.252925
-  type: 'test'
-  ...
-# Subtest: rejects cyclic graphs
-ok 17 - rejects cyclic graphs
-  ---
-  duration_ms: 0.289599
-  type: 'test'
-  ...
-# Subtest: rejects shared object references
-ok 18 - rejects shared object references
-  ---
-  duration_ms: 0.224593
-  type: 'test'
-  ...
-# Subtest: rejects __proto__ as an own property
-ok 19 - rejects __proto__ as an own property
-  ---
-  duration_ms: 0.243091
-  type: 'test'
-  ...
-# Subtest: rejects constructor and prototype keys at any depth
-ok 20 - rejects constructor and prototype keys at any depth
-  ---
-  duration_ms: 0.422567
-  type: 'test'
-  ...
-# Subtest: rejects unpaired Unicode surrogates
-ok 21 - rejects unpaired Unicode surrogates
-  ---
-  duration_ms: 0.177624
-  type: 'test'
-  ...
-# Subtest: acknowledgement must bind proposal and trace
-ok 22 - acknowledgement must bind proposal and trace
-  ---
-  duration_ms: 0.227407
-  type: 'test'
-  ...
-# Subtest: capability manifest contains no transport or execution capability
-ok 23 - capability manifest contains no transport or execution capability
-  ---
-  duration_ms: 0.129683
-  type: 'test'
-  ...
-1..23
-# tests 23
-# suites 0
-# pass 23
-# fail 0
-# cancelled 0
-# skipped 0
-# todo 0
-# duration_ms 55.710213
+✔ prepares only an exact allowlisted read request (2.558265ms)
+✔ maps every read to a ClaimSieve network-boundary action (1.786836ms)
+✔ rejects mutation-like capabilities (0.641474ms)
+✔ rejects credentials, arbitrary commands, and option injection (0.622396ms)
+✔ accepts prompt injection only as permit-bound tainted data (1.376709ms)
+✔ rejects observation authority escalation (0.469186ms)
+✔ rejects wrong permit binding (0.382114ms)
+✔ rejects content tampering after digest creation (0.509266ms)
+✔ rejects cross-request replay (0.476256ms)
+✔ capability manifest requires ClaimSieve before network egress (0.296005ms)
+✔ normalizes an ECC-inspired skill but preserves ClaimSieve authority (2.400157ms)
+✔ builder-backed skill prepares a proposal and exposes no execution method (2.164864ms)
+✔ builder-backed skill rejects undeclared parameters including caller correlation marker (0.756337ms)
+✔ builder-backed skill rejects undeclared destination bindings (0.407343ms)
+✔ builder-backed skill rejects accessor and symbol input properties (0.556827ms)
+✔ builder-backed skill preserves Founder OS repository validation (0.427132ms)
+✔ skill rejects direct execution authority (0.451138ms)
+✔ agent roles are ergonomics only and cannot acquire execute capability (0.575185ms)
+✔ new memory is context with unreviewed trust, never policy (2.287949ms)
+✔ ergonomics capability manifest explicitly forbids authority and execution (0.304928ms)
+✔ Founder OS reuses the proposal-only boundary (3.480812ms)
+✔ Founder OS rejects a non owner/name repository (0.670608ms)
+✔ Founder OS rejects empty issue content (0.260321ms)
+✔ Founder OS cannot inject approval or authority fields (0.501454ms)
+✔ Founder OS manifest exposes no execution capability (1.719264ms)
+✔ prepares a frozen proposal without any transport (10.162375ms)
+✔ validates only a non-authoritative acknowledgement (0.440963ms)
+✔ rejects acknowledgement authority claims (0.675996ms)
+✔ rejects caller supplied authority fields (0.187572ms)
+✔ rejects cross-tenant proposals (0.348534ms)
+✔ rejects floating point authority data (0.495194ms)
+✔ rejects unsafe integers (0.269415ms)
+✔ rejects non-NFC strings (0.32632ms)
+✔ rejects sparse arrays (0.288033ms)
+✔ rejects accessor properties without invoking them (1.20443ms)
+✔ rejects duplicate evidence references (0.220602ms)
+✔ rejects cyclic graphs (0.214652ms)
+✔ rejects shared object references (0.214343ms)
+✔ rejects __proto__ as an own property (0.923178ms)
+✔ rejects constructor and prototype keys at any depth (0.309455ms)
+✔ rejects unpaired Unicode surrogates (0.318448ms)
+✔ acknowledgement must bind proposal and trace (1.567787ms)
+✔ capability manifest contains no transport or execution capability (0.163716ms)
+✔ SMS only prepares a bound, frozen proposal (2.546108ms)
+✔ SMS rejects bad recipients and empty bodies (0.789407ms)
+✔ SMS capability does not carry execution authority (0.885772ms)
+ℹ tests 46
+ℹ suites 0
+ℹ pass 46
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 208.605299

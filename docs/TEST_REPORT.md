@@ -56,3 +56,11 @@ Would fail if changed reservation, key, request, endpoint, account, authority, p
 ## Interpretation rule
 
 A test count is not a security claim. It is evidence that specific paths behaved as expected under specific fixtures. Infrastructure limitations, common-mode implementation assumptions, and untested live-provider behavior remain material.
+
+## Controlled GitHub candidate verification
+
+See `evidence/production-readiness/` for original failing regression transcripts,
+final targeted execution, exact installed dependencies, cross-language execution
+and packaged-artifact verification. See `CONTROLLED_GITHUB_RELEASE.md` for the
+scope and remaining blocked gates. Historical results above do not certify this
+candidate; final evidence is bound by the payload manifest and evidence archive.

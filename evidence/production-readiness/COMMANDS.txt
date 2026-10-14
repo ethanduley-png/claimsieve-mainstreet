@@ -1,0 +1,26 @@
+Baseline: git clone https://github.com/ethanduley-png/claimsieve-mainstreet.git
+Starting revision: git rev-parse HEAD => fa858f56a9d459d7dcb4b1651dd77f8d93ce1157
+Starting git status --short: empty
+Python 3.12.14; Node 24.19.0; Rust/Cargo 1.90.0; Rocq absent
+
+python3 -m venv ../venv
+../venv/bin/pip install -r python/requirements-executed.lock.txt
+PYTHONPATH=python:python/tests ../venv/bin/python -m unittest test_release_bindings.ReleaseBindingTests test_durable_state -v
+PATH=../venv/bin:$PATH bash scripts/test_all.sh
+python scripts/engineering_policy_gate.py
+PYTHONPATH=python python scripts/cross_language_outcome_gate.py
+python scripts/package_release.py --output ../claimsieve-mainstreet-candidate.zip
+python3 -m venv ../clean-venv
+../clean-venv/bin/pip install -r python/requirements-executed.lock.txt
+../clean-venv/bin/python -m pip check
+PATH=../clean-venv/bin:$PATH python scripts/validate_release_archive.py ../claimsieve-mainstreet-candidate.zip --run-tests
+python scripts/verify_reproducible_payload.py --output ../reproducible-candidate.zip
+
+Native runs used absolute PATH to ../cargo/bin and RUSTUP_HOME=../rustup,
+CARGO_HOME=../cargo (all resolved absolute paths). Rustup installed 1.90.0
+with minimal profile; repository toolchain requested rustfmt/clippy. Nothing was
+installed into a production target. Exact native command transcripts are in
+full-final.txt. DeepAgents optional tests retain their original skips.
+Before-*.txt are expected failing regressions, not final failing gates.
+archive-before.txt preserves the missing packaged executable probe failure.
+Final payload digest and results: RESULTS.json and fresh-extraction.txt.

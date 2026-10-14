@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+
 import copy
 import re
 from dataclasses import dataclass
@@ -503,6 +505,11 @@ class FounderOSReferenceWorkflow:
         runtime_name: str = "openclaw",
         runtime_version: str | None = None,
     ) -> None:
+        mode = os.environ.get("CLAIMSIEVE_MODE", "reference")
+        if mode != "reference":
+            raise FounderOSInputError(
+                "fixture workflow is reference-only; production authority and isolation are not implemented"
+            )
         self.workspace = Path(workspace)
         self.workspace.mkdir(parents=True, exist_ok=True)
         self.allowed_repositories = frozenset(allowed_repositories)

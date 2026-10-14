@@ -1,0 +1,31 @@
+test_observer_rejects_replacement (test_release_bindings.ReleaseBindingTests.test_observer_rejects_replacement) ... ok
+test_observer_rejects_wrong_request_correlation (test_release_bindings.ReleaseBindingTests.test_observer_rejects_wrong_request_correlation) ... FAIL
+test_production_rejects_fixture_composition (test_release_bindings.ReleaseBindingTests.test_production_rejects_fixture_composition) ... FAIL
+test_recovery_rejects_principal_substitution (test_release_bindings.ReleaseBindingTests.test_recovery_rejects_principal_substitution) ... ok
+test_recovery_rejects_replacement_before_dispatch (test_release_bindings.ReleaseBindingTests.test_recovery_rejects_replacement_before_dispatch) ... ok
+test_reservation_rejects_principal_substitution (test_release_bindings.ReleaseBindingTests.test_reservation_rejects_principal_substitution) ... ok
+
+======================================================================
+FAIL: test_observer_rejects_wrong_request_correlation (test_release_bindings.ReleaseBindingTests.test_observer_rejects_wrong_request_correlation)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/ad3bcad6adbf/claimsieve-mainstreet/python/tests/test_release_bindings.py", line 50, in test_observer_rejects_wrong_request_correlation
+    self.assertEqual(observed['reconciliation'], 'OUTCOME_UNKNOWN')
+AssertionError: 'CONFIRMED_SUCCESS' != 'OUTCOME_UNKNOWN'
+- CONFIRMED_SUCCESS
++ OUTCOME_UNKNOWN
+
+
+======================================================================
+FAIL: test_production_rejects_fixture_composition (test_release_bindings.ReleaseBindingTests.test_production_rejects_fixture_composition)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/ad3bcad6adbf/claimsieve-mainstreet/python/tests/test_release_bindings.py", line 57, in test_production_rejects_fixture_composition
+    with self.assertRaises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.153s
+
+FAILED (failures=2)

@@ -1,0 +1,15 @@
+✔ web shell delegates sign-in rather than collecting passwords (0.932522ms)
+✔ browser never stores or handles bearer tokens (0.200802ms)
+✔ web shell discovers memberships before selecting a tenant (0.261993ms)
+✔ assistant surface explicitly consumes proposal-only response (0.165218ms)
+✔ PWA service worker never caches API or auth routes (0.36578ms)
+✔ manifest is installable standalone shell (0.167793ms)
+✔ phone navigation includes launch surfaces (0.257968ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 127.132556

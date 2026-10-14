@@ -663,14 +663,14 @@
       "status": "BLOCKED"
     },
     {
-      "actual_result": "non-observed outcome unexpectedly contains an action digest; observer receipt is not recorded in the execution ledger; observer receipt signature invalid",
+      "actual_result": "failed observation unexpectedly contains an action digest; observer receipt is not recorded in the execution ledger; observer receipt signature invalid",
       "attack": "CONFLICTING_RECEIPTS",
       "coverage": "EXECUTED",
       "expected_result": "detect",
       "fix_or_control": "Signed receipt binding and semantic reconciliation.",
       "impact_if_unblocked": "False outcome narrative",
       "reproducible_trace": [
-        "non-observed outcome unexpectedly contains an action digest",
+        "failed observation unexpectedly contains an action digest",
         "observer receipt is not recorded in the execution ledger",
         "observer receipt signature invalid"
       ],
@@ -845,7 +845,7 @@
       "expected_result": "Node dangerous-key tests pass",
       "fix_or_control": "Reject __proto__, prototype, and constructor recursively.",
       "impact_if_unblocked": "Prototype chain manipulation",
-      "reproducible_trace": "\u00e2\u0153\u201d prepares a frozen proposal without any transport (2.6518ms)\\u000a\u00e2\u0153\u201d validates only a non-authoritative acknowledgement (0.3759ms)\\u000a\u00e2\u0153\u201d rejects acknowledgement authority claims (0.629ms)\\u000a\u00e2\u0153\u201d rejects caller supplied authority fields (0.2366ms)\\u000a\u00e2\u0153\u201d rejects cross-tenant proposals (0.2692ms)\\u000a\u00e2\u0153\u201d rejects floating point authority data (0.2878ms)\\u000a\u00e2\u0153\u201d rejects unsafe integers (0.2786ms)\\u000a\u00e2\u0153\u201d rejects non-NFC strings (1.2198ms)\\u000a\u00e2\u0153\u201d rejects sparse arrays (0.3384ms)\\u000a\u00e2\u0153\u201d rejects accessor properties without invoking them (0.3414ms)\\u000a\u00e2\u0153\u201d rejects duplicate evidence references (0.2347ms)\\u000a\u00e2\u0153\u201d rejects cyclic graphs (0.2371ms)\\u000a\u00e2\u0153\u201d rejects shared object references (0.2076ms)\\u000a\u00e2\u0153\u201d rejects __proto__ as an own property (0.1842ms)\\u000a\u00e2\u0153\u201d rejects constructor and prototype keys at any depth (0.4296ms)\\u000a\u00e2\u0153\u201d rejects unpaired Unicode surrogates (0.2482ms)\\u000a\u00e2\u0153\u201d acknowledgement must bind proposal and trace (0.3492ms)\\u000a\u00e2\u0153\u201d capability manifest contains no transport or execution capability (0.2104ms)\\u000a\u00e2\u201e\u00b9 tests 18\\u000a\u00e2\u201e\u00b9 suites 0\\u000a\u00e2\u201e\u00b9 pass 18\\u000a\u00e2\u201e\u00b9 fail 0\\u000a\u00e2\u201e\u00b9 cancelled 0\\u000a\u00e2\u201e\u00b9 skipped 0\\u000a\u00e2\u201e\u00b9 todo 0\\u000a\u00e2\u201e\u00b9 duration_ms 131.3288\\u000a",
+      "reproducible_trace": "\u2714 prepares a frozen proposal without any transport (2.072255ms)\\u000a\u2714 validates only a non-authoritative acknowledgement (0.382465ms)\\u000a\u2714 rejects acknowledgement authority claims (0.572029ms)\\u000a\u2714 rejects caller supplied authority fields (0.167041ms)\\u000a\u2714 rejects cross-tenant proposals (0.23277ms)\\u000a\u2714 rejects floating point authority data (0.238689ms)\\u000a\u2714 rejects unsafe integers (0.277197ms)\\u000a\u2714 rejects non-NFC strings (0.301833ms)\\u000a\u2714 rejects sparse arrays (0.289706ms)\\u000a\u2714 rejects accessor properties without invoking them (1.632518ms)\\u000a\u2714 rejects duplicate evidence references (0.21971ms)\\u000a\u2714 rejects cyclic graphs (0.218559ms)\\u000a\u2714 rejects shared object references (0.18648ms)\\u000a\u2714 rejects __proto__ as an own property (0.355184ms)\\u000a\u2714 rejects constructor and prototype keys at any depth (0.528655ms)\\u000a\u2714 rejects unpaired Unicode surrogates (0.425008ms)\\u000a\u2714 acknowledgement must bind proposal and trace (0.340241ms)\\u000a\u2714 capability manifest contains no transport or execution capability (0.306611ms)\\u000a\u2139 tests 18\\u000a\u2139 suites 0\\u000a\u2139 pass 18\\u000a\u2139 fail 0\\u000a\u2139 cancelled 0\\u000a\u2139 skipped 0\\u000a\u2139 todo 0\\u000a\u2139 duration_ms 119.000513\\u000a",
       "status": "BLOCKED"
     },
     {

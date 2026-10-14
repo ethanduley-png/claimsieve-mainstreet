@@ -1,0 +1,20 @@
+test_caller_mutation_after_reservation_cannot_change_dispatched_payload (test_release_bindings.ReleaseBindingTests.test_caller_mutation_after_reservation_cannot_change_dispatched_payload) ... ERROR
+
+======================================================================
+ERROR: test_caller_mutation_after_reservation_cannot_change_dispatched_payload (test_release_bindings.ReleaseBindingTests.test_caller_mutation_after_reservation_cannot_change_dispatched_payload)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/ad3bcad6adbf/claimsieve-mainstreet/python/tests/test_release_bindings.py", line 132, in test_caller_mutation_after_reservation_cannot_change_dispatched_payload
+    result = self.executor.execute(self.permit, self.prop, self.signed, self.ev,
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/ad3bcad6adbf/claimsieve-mainstreet/python/claimsieve_ref/durable_state.py", line 1502, in execute
+    persisted = self.state.persist_provider_attempt(
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/ad3bcad6adbf/claimsieve-mainstreet/python/claimsieve_ref/durable_state.py", line 915, in persist_provider_attempt
+    raise DurableStateError(f"executor receipt binding mismatch: {field}")
+claimsieve_ref.durable_state.DurableStateError: executor receipt binding mismatch: action_digest
+
+----------------------------------------------------------------------
+Ran 1 test in 0.034s
+
+FAILED (errors=1)

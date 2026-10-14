@@ -63,3 +63,14 @@ Higher-numbered items cannot substitute for missing lower-numbered evidence when
 ## Prohibited inference
 
 Do not infer that a property is implemented in Rust because it is proved in Rocq, or proved in Rocq because a similarly named Python test passes. Each bridge requires separate refinement or differential evidence.
+
+## Controlled GitHub release candidate assessment
+
+The current local readiness decision and requirement-level evidence are in
+[CONTROLLED_GITHUB_RELEASE.md](CONTROLLED_GITHUB_RELEASE.md). Production remains
+BLOCKED. Immutable reservation snapshots, recovery validation, dispatch-copy
+isolation, exact observation correlation, stale-observation rejection and durable
+terminal-effect checks are covered by `python/tests/test_release_bindings.py`.
+Before-fix failures and after-fix transcripts are retained under
+`evidence/production-readiness/`. Passing these tests is not a deployment or
+implementation-refinement claim.

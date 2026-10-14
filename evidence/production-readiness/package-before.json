@@ -1,0 +1,8 @@
+{
+  "evidence_in_payload": false,
+  "files": 385,
+  "kind": "deterministic-release-payload",
+  "profile": "claimsieve.release-payload.v1",
+  "sha256": "49efccfe55b2ae78a4f6bdd47357b74e21013099fb350bdb576ac18ff05b06b7",
+  "zip": "/workspace/scratch/ad3bcad6adbf/candidate-before.zip"
+}

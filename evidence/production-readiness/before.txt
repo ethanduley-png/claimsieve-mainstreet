@@ -1,0 +1,36 @@
+test_observer_rejects_replacement (test_release_bindings.ReleaseBindingTests.test_observer_rejects_replacement) ... FAIL
+test_recovery_rejects_principal_substitution (test_release_bindings.ReleaseBindingTests.test_recovery_rejects_principal_substitution) ... FAIL
+test_recovery_rejects_replacement_before_dispatch (test_release_bindings.ReleaseBindingTests.test_recovery_rejects_replacement_before_dispatch) ... FAIL
+test_reservation_rejects_principal_substitution (test_release_bindings.ReleaseBindingTests.test_reservation_rejects_principal_substitution) ... ok
+
+======================================================================
+FAIL: test_observer_rejects_replacement (test_release_bindings.ReleaseBindingTests.test_observer_rejects_replacement)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/ad3bcad6adbf/claimsieve-mainstreet/python/tests/test_release_bindings.py", line 32, in test_observer_rejects_replacement
+    with self.assertRaises(DurableStateError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: DurableStateError not raised
+
+======================================================================
+FAIL: test_recovery_rejects_principal_substitution (test_release_bindings.ReleaseBindingTests.test_recovery_rejects_principal_substitution)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/ad3bcad6adbf/claimsieve-mainstreet/python/tests/test_release_bindings.py", line 24, in test_recovery_rejects_principal_substitution
+    with self.assertRaises(DurableStateError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: DurableStateError not raised
+
+======================================================================
+FAIL: test_recovery_rejects_replacement_before_dispatch (test_release_bindings.ReleaseBindingTests.test_recovery_rejects_replacement_before_dispatch)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/ad3bcad6adbf/claimsieve-mainstreet/python/tests/test_release_bindings.py", line 15, in test_recovery_rejects_replacement_before_dispatch
+    with self.assertRaises(DurableStateError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: DurableStateError not raised
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.089s
+
+FAILED (failures=3)

@@ -1,9 +1,9 @@
 SEMANTIC DIVERGENCE GATE: PASS
-Python vectors: 8/8
+Python vectors: 11/11
 Stripe contract-derived trace: PASS
-Resolved divergences: 6
+Resolved divergences: 5
 Remaining divergences: 2
 Rust toolchain: AVAILABLE
-Rocq toolchain: AVAILABLE
-- REM-DIV-001: Rust observer receipt protocol remains v1-shaped while the executed Python durable boundary and JSON schema use observer receipt v2 with reservation, campaign, provider-record, and conflict bindings.
+Rocq toolchain: NOT_AVAILABLE
 - REM-DIV-002: Rocq abstracts independent provider evidence into constructors and does not model parsing, signatures, databases, transport, or provider read APIs.
+- REM-DIV-004: A complete passing Rocq compilation and assumption-audit transcript is not available in this environment.

@@ -1,0 +1,6 @@
+ALL AVAILABLE EXECUTABLE GATES PASSED
+ARCHIVE VALIDATION: PASS
+Archive: /workspace/scratch/ad3bcad6adbf/claimsieve-mainstreet-candidate.zip
+SHA-256: 8322c23f90d020edc5d82a7deae9dfb49586683bd5c3f6978c3970a840ac8c3a
+Single root: claimsieve-mainstreet
+Tests executed: YES

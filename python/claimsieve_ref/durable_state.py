@@ -157,8 +157,12 @@ class DurableStateService:
     def _initialize(self) -> None:
         connection = self._connect()
         try:
+            version = connection.execute("PRAGMA user_version").fetchone()[0]
+            if version not in {0, 1}:
+                raise DurableStateError("unsupported durable state schema version")
             connection.executescript(
                 """
+                BEGIN IMMEDIATE;
                 CREATE TABLE IF NOT EXISTS metadata (
                     key TEXT PRIMARY KEY,
                     value INTEGER NOT NULL
@@ -227,6 +231,21 @@ class DurableStateService:
                     FOREIGN KEY(campaign_id) REFERENCES campaigns(campaign_id)
                 );
 
+                CREATE TABLE IF NOT EXISTS reservation_proposals (
+                    reservation_id TEXT PRIMARY KEY REFERENCES reservations(reservation_id),
+                    proposal_json TEXT NOT NULL,
+                    proposal_digest TEXT NOT NULL
+                );
+                CREATE TRIGGER IF NOT EXISTS immutable_reservation_proposals_update
+                BEFORE UPDATE ON reservation_proposals BEGIN
+                    SELECT RAISE(ABORT, 'immutable reservation proposal');
+                END;
+                CREATE TRIGGER IF NOT EXISTS immutable_reservation_proposals_delete
+                BEFORE DELETE ON reservation_proposals BEGIN
+                    SELECT RAISE(ABORT, 'immutable reservation proposal');
+                END;
+                PRAGMA user_version = 1;
+
                 CREATE TABLE IF NOT EXISTS journal (
                     event_sequence INTEGER PRIMARY KEY,
                     event_type TEXT NOT NULL,
@@ -235,6 +254,7 @@ class DurableStateService:
                     previous_hash TEXT NOT NULL,
                     event_hash TEXT NOT NULL UNIQUE
                 );
+                COMMIT;
                 """
             )
         finally:
@@ -657,6 +677,9 @@ class DurableStateService:
         proposal: dict[str, Any],
         seq: int,
     ) -> dict[str, Any] | None:
+        if (permit.get("proposal_digest") != proposal_digest(proposal)
+                or permit.get("approval_digest") != approval_digest(proposal)):
+            raise DurableStateError("reservation proposal or approval binding mismatch")
         permit_id = str(permit["permit_id"])
         campaign_id = str(permit["campaign_id"])
         action_digest_value = action_digest(proposal)
@@ -719,6 +742,10 @@ class DurableStateService:
                     epoch,
                     seq,
                 ),
+            )
+            connection.execute(
+                "INSERT INTO reservation_proposals VALUES (?, ?, ?)",
+                (reservation_id, _json(proposal), digest(proposal)),
             )
             self._append_event(
                 connection,
@@ -966,6 +993,28 @@ class DurableStateService:
             for field, value in observation_bindings.items():
                 if unsigned_observation.get(field) != value:
                     raise DurableStateError(f"observer receipt binding mismatch: {field}")
+            if (row["outcome"] in {"CONFIRMED_SUCCESS", "CONFIRMED_FAILURE", "DIVERGENT_EFFECT"}
+                    and row["outcome"] != reconciliation):
+                raise DurableStateError("terminal outcome cannot be rewritten")
+            if type(seq) is not int or seq < int(row["updated_sequence"]):
+                raise DurableStateError("stale observer sequence")
+            if reconciliation != "OUTCOME_UNKNOWN":
+                snapshot = connection.execute(
+                    "SELECT proposal_json FROM reservation_proposals WHERE reservation_id = ?",
+                    (reservation_id,),
+                ).fetchone()
+                if snapshot is None:
+                    raise DurableStateError("terminal observation requires immutable reserved proposal")
+                expected_effect = digest(_parse_json(snapshot["proposal_json"])["action"])
+                observed_effect = unsigned_observation.get("observed_action_digest")
+                if not unsigned_observation.get("provider_record_digest"):
+                    raise DurableStateError("terminal observation requires provider evidence")
+                if reconciliation == "CONFIRMED_SUCCESS" and observed_effect != expected_effect:
+                    raise DurableStateError("success effect does not match reserved action")
+                if reconciliation == "CONFIRMED_FAILURE" and observed_effect is not None:
+                    raise DurableStateError("failure contradicts observed effect")
+                if reconciliation == "DIVERGENT_EFFECT" and observed_effect in {None, expected_effect}:
+                    raise DurableStateError("divergence requires a different observed effect")
             current_outcome = row["outcome"]
             if current_outcome in {"CONFIRMED_SUCCESS", "CONFIRMED_FAILURE", "DIVERGENT_EFFECT"}:
                 if current_outcome != reconciliation:
@@ -1016,6 +1065,26 @@ class DurableStateService:
         connection = self._connect()
         try:
             return self._reservation_row(connection, reservation_id)
+        finally:
+            connection.close()
+
+    def reserved_proposal(self, reservation_id: str, supplied: dict[str, Any]) -> dict[str, Any]:
+        """Recover exact immutable input; legacy rows fail closed, never backfill from callers."""
+        connection = self._connect()
+        try:
+            row = connection.execute(
+                "SELECT p.* FROM reservation_proposals p WHERE reservation_id = ?",
+                (reservation_id,),
+            ).fetchone()
+            if row is None:
+                raise DurableStateError("reservation lacks immutable proposal; manual legacy reconciliation required")
+            proposal = _parse_json(row["proposal_json"])
+            if digest(proposal) != row["proposal_digest"] or digest(supplied) != row["proposal_digest"]:
+                raise DurableStateError("reserved proposal binding mismatch")
+            reservation = self._reservation_row(connection, reservation_id)
+            if action_digest(proposal) != reservation["action_digest"]:
+                raise DurableStateError("reserved action binding mismatch")
+            return proposal
         finally:
             connection.close()
 
@@ -1394,6 +1463,7 @@ class DurableExecutor:
             raise InjectedCrash(failpoint)
 
         reservation_id = str(reservation["reservation_id"])
+        proposal = self.state.reserved_proposal(reservation_id, proposal)
         reservation = self.state.begin_execution(
             reservation_id,
             self.executor_id,
@@ -1450,6 +1520,7 @@ class DurableExecutor:
         seq: int,
         failpoint: str | None = None,
     ) -> dict[str, Any]:
+        proposal = self.state.reserved_proposal(reservation_id, proposal)
         row = self.state.get_reservation(reservation_id)
         if row["status"] == "RESERVED":
             self.state.begin_execution(
@@ -1541,6 +1612,7 @@ class IndependentObserver:
         statement; it cannot turn absence of provider evidence into a confirmed
         success or failure.
         """
+        proposal = self.state.reserved_proposal(reservation_id, proposal)
         reservation = self.state.get_reservation(reservation_id)
         provider_record = self.provider.query(str(reservation["idempotency_key"]))
         provider_status = reservation.get("provider_status")
@@ -1562,6 +1634,14 @@ class IndependentObserver:
                 observed_action_digest,
                 digest(proposal["action"]),
             )
+            # A matching effect is insufficient if it belongs to another dispatch.
+            if any(type(provider_record.get(field)) is not type(reservation[field])
+                   or provider_record.get(field) != reservation[field]
+                   for field in ("idempotency_key", "request_digest", "resource_key", "fencing_token")):
+                reconciliation, provider_evidence_conflict = "OUTCOME_UNKNOWN", True
+            if ("action_digest" in provider_record
+                    and provider_record["action_digest"] != reservation["action_digest"]):
+                reconciliation, provider_evidence_conflict = "OUTCOME_UNKNOWN", True
             # Executor/provider disagreement remains visible as audit evidence,
             # but it never controls the terminal outcome classification.
             receipt_conflict = (

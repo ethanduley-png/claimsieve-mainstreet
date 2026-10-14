@@ -1,7 +1,7 @@
 {
   "blocked_or_detected": 8,
   "limitations": [
-    "The GitHub provider is deterministic and local; no live GitHub API call was made.",
+    "This red-team run uses the deterministic local provider and does not make a live GitHub API call.",
     "Complete mediation still depends on deployment and credential isolation.",
     "Fixture keys are deterministic test material and are not production credentials."
   ],

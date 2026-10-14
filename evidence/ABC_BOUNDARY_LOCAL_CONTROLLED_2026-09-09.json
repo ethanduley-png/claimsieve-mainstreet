@@ -1,0 +1,102 @@
+{
+  "architectures": {
+    "A": "strict issuer assumed; one authority-signed compact permit and minimal command at execution",
+    "B": "current-style full-artifact executor; permit + proposal + signed policy + evidence + decision + state",
+    "C": "compact permit + one independently keyed witness attestation over upstream commitments + minimal command"
+  },
+  "authority_key_compromise_probe": {
+    "A": "accepted",
+    "B": "accepted when supplied matching tampered full evidence; current-style executor re-hashes but does not independently re-verify evidence signatures",
+    "C": "blocked because independent witness commitment remained pinned to the original evidence root",
+    "scenario": "authority key can re-sign a permit whose evidence root matches tampered evidence; witness key remains honest"
+  },
+  "boundary_payload_bytes": {
+    "A": 2357,
+    "B": 7059,
+    "C": 3474
+  },
+  "date": "2026-09-09",
+  "environment": {
+    "machine": "x86_64",
+    "platform": "Linux-6.18.35-x86_64-with-glibc2.41",
+    "processor": "",
+    "python": "3.13.5"
+  },
+  "environmental_measurement": {
+    "carbon": "not measured",
+    "energy": "not measured; cpu_us_per_op is only a compute-time proxy",
+    "water": "not measured"
+  },
+  "full_artifact_hot_path_availability": {
+    "A": true,
+    "B": false,
+    "C": true
+  },
+  "median_of_5_repeats": {
+    "A": {
+      "cpu_us_per_op": 351.087,
+      "mean_us": 350.733,
+      "ops_per_second": 2848.8,
+      "p50_us": 328.104,
+      "p95_us": 442.474,
+      "p99_us": 629.5
+    },
+    "B": {
+      "cpu_us_per_op": 696.026,
+      "mean_us": 695.575,
+      "ops_per_second": 1436.9,
+      "p50_us": 658.773,
+      "p95_us": 856.114,
+      "p99_us": 1081.017
+    },
+    "C": {
+      "cpu_us_per_op": 499.695,
+      "mean_us": 499.302,
+      "ops_per_second": 2001.5,
+      "p50_us": 471.056,
+      "p95_us": 604.874,
+      "p99_us": 789.236
+    }
+  },
+  "method": {
+    "database_io": false,
+    "important_limit": "This is not a GitHub-run import of the repository. GitHub Actions jobs for PR #22 failed before executing any steps, so the repository benchmark remains pending.",
+    "measured_operations_per_repeat": 1500,
+    "network_io": false,
+    "repeats": 5,
+    "source": "controlled local reproduction of ClaimSieve v0.34 hot-path canonical hashing, Ed25519 signature verification/signing, binding checks, replay reservation, simulated provider dispatch, and executor receipt signing",
+    "warmup_operations_per_repeat": 150
+  },
+  "ordinary_execution_attacks": {
+    "destination_mutation": {
+      "A": "blocked",
+      "B": "blocked",
+      "C": "blocked"
+    },
+    "expired_permit": {
+      "A": "blocked",
+      "B": "blocked",
+      "C": "blocked"
+    },
+    "parameter_mutation": {
+      "A": "blocked",
+      "B": "blocked",
+      "C": "blocked"
+    },
+    "replay": {
+      "A": "blocked",
+      "B": "blocked",
+      "C": "blocked"
+    }
+  },
+  "relative_results": {
+    "C_p50_vs_A_percent": 43.6,
+    "C_p50_vs_B_percent": -28.5,
+    "C_p95_vs_B_percent": -29.3,
+    "C_p99_vs_B_percent": -27.0,
+    "C_payload_vs_A_percent": 47.4,
+    "C_payload_vs_B_percent": -50.8,
+    "C_throughput_vs_B_percent": 39.3
+  },
+  "schema_version": "claimsieve.abc_boundary_local_controlled.v1"
+}

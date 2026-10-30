@@ -1,0 +1,168 @@
+f7251b004b854f7746bb29aaec59452375b2ee9f
+cargo 1.90.0 (840b83a10 2025-07-30)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 8.48s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.52s
+     Running unittests src\main.rs (target\debug\deps\claimsieve-642607e1366fc5da.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\claimsieve_compact_admission-8a7902715661193c.exe)
+
+running 6 tests
+test tests::shadow_compact_preflight_rejects_bad_signature ... ok
+test tests::test_module_imports_remain_used ... ok
+test tests::shadow_compact_preflight_rejects_mutated_action ... ok
+test tests::current_policy_digest_is_a_compact_runtime_guard ... ok
+test tests::valid_shadow_compact_preflight_accepts_without_full_evidence ... ok
+test tests::shadow_compact_preflight_fails_closed_on_current_state ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+
+     Running unittests src\lib.rs (target\debug\deps\claimsieve_durable_state-5ebc3bfa390a1e11.exe)
+
+running 11 tests
+test tests::expired_permit_is_rejected_at_reservation ... ok
+test tests::revocation_blocks_dispatch_before_commit_point ... ok
+test tests::repeated_divergence_is_idempotent_for_containment_epoch ... ok
+test tests::divergent_effect_suspends_campaign_and_blocks_new_reservation ... ok
+test tests::unauthenticated_executor_is_rejected ... ok
+test tests::unauthenticated_observer_is_rejected ... ok
+test tests::divergent_effect_blocks_preexisting_executing_reservation ... ok
+test tests::non_divergent_outcome_does_not_suspend_campaign ... ok
+test tests::terminal_outcome_is_immutable ... ok
+test tests::second_reservation_is_rejected ... ok
+test tests::expiry_is_rechecked_at_dispatch ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\claimsieve_execution_authority_reconstruction-d96f19a27576adb8.exe)
+
+running 7 tests
+test tests::matching_index_is_reconstructable_linkage ... ok
+test tests::policy_mutation_breaks_reconstruction_linkage ... ok
+test tests::action_mutation_breaks_reconstruction_linkage ... ok
+test tests::decision_mutation_breaks_reconstruction_linkage ... ok
+test tests::trace_mutation_breaks_reconstruction_linkage ... ok
+test tests::validity_mutation_breaks_reconstruction_linkage ... ok
+test tests::evidence_mutation_breaks_reconstruction_linkage ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\claimsieve_kernel-014c175a3a742b3a.exe)
+
+running 1 test
+test tests::new_campaign_is_active ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\conformance_vector.rs (target\debug\deps\conformance_vector-751cf4966099e519.exe)
+
+running 2 tests
+test rust_kernel_matches_python_vector ... ok
+test revoked_deployment_fails_closed ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running unittests src\lib.rs (target\debug\deps\claimsieve_ledger-da8895f195f0601b.exe)
+
+running 1 test
+test tests::valid_chain_verifies ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running unittests src\lib.rs (target\debug\deps\claimsieve_protocol-c4a76f619e0afc7f.exe)
+
+running 6 tests
+test tests::floating_point_is_rejected ... ok
+test tests::control_character_is_rejected ... ok
+test tests::non_nfc_string_is_rejected ... ok
+test tests::unsafe_integer_is_rejected ... ok
+test tests::safe_integer_boundary_is_accepted ... ok
+test tests::canonical_key_order_is_stable ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\intoto_conformance.rs (target\debug\deps\intoto_conformance-4d9844e1223f0a30.exe)
+
+running 3 tests
+test tests::in_toto_vector_preserves_authorization_execution_and_observation_boundaries ... ok
+test tests::in_toto_vector_has_only_supported_statement_and_predicate_versions ... ok
+test tests::in_toto_action_subjects_match_predicate_bindings ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\claimsieve_runtime-2aa4398d873da224.exe)
+
+running 5 tests
+test tests::exact_same_dispatch_transport_replay_is_narrowly_allowed ... ok
+test tests::no_outcome_authorizes_automatic_retry ... ok
+test tests::signed_or_reported_rejection_with_observed_effect_is_not_failure ... ok
+test tests::timeout_with_independent_exact_effect_resolves_success ... ok
+test tests::reservation_is_one_use ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\claimsieve_verifier-f3ce787d3c83e110.exe)
+
+running 6 tests
+test tests::unsafe_integer_json_is_rejected ... ok
+test tests::floating_point_json_is_rejected ... ok
+test tests::duplicate_json_keys_are_rejected ... ok
+test tests::tampered_vector_is_rejected ... ok
+test tests::forged_human_approval_is_rejected ... ok
+test tests::python_generated_vector_verifies ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.31s
+
+   Doc-tests claimsieve_compact_admission
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests claimsieve_durable_state
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests claimsieve_execution_authority_reconstruction
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests claimsieve_kernel
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests claimsieve_ledger
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests claimsieve_protocol
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests claimsieve_runtime
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests claimsieve_verifier
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+OBSERVER_RECEIPT_V2_WIRE_CONFORMANCE: PASS (12 executed vectors)
+CROSS_LANGUAGE_OUTCOME_CONFORMANCE: PASS (11 executed vectors)

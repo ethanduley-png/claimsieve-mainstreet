@@ -1,4 +1,6 @@
-# Build and Test Report — v0.34.0
+# Build and Test Report â€” v0.34.0
+
+> Review update (2026-10-30): see [review fixes and exact-revision validation](REVIEW_FIXES_2026_10_30.md). Historical release results below retain their original scope.
 
 ## Environment
 

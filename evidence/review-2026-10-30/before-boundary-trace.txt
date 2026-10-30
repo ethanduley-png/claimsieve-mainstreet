@@ -1,0 +1,2 @@
+{"test": "resume mutated action", "provider_received_mutation": true, "differs_from_approved": true, "status": "PROVIDER_ACKNOWLEDGED"}
+{"test": "observer compares mutable input", "outcome": "CONFIRMED_SUCCESS", "observed_digest": "sha256:551f42dbc9b7e74d3f8a8eac7fd1e58e768984a5399e4eac19da98230e1e9fad", "original_effect_digest": "sha256:d1cafdbf2c1662f0a09343bc91b6bf8bc2fe9dd34104bb338cc529eadc48e7ca"}

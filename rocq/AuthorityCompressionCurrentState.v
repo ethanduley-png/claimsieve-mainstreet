@@ -152,6 +152,8 @@ Proof.
   unfold executable_now, current_state_allows.
   apply Nat.eqb_neq in Hneq.
   rewrite Hneq.
+  repeat rewrite Bool.andb_false_l.
+  repeat rewrite Bool.andb_false_r.
   destruct (verify_authenticated_compact envelope candidate); reflexivity.
 Qed.
 
@@ -165,6 +167,8 @@ Proof.
   unfold executable_now, current_state_allows.
   apply Nat.eqb_neq in Hneq.
   rewrite Hneq.
+  repeat rewrite Bool.andb_false_l.
+  repeat rewrite Bool.andb_false_r.
   destruct (verify_authenticated_compact envelope candidate); reflexivity.
 Qed.
 

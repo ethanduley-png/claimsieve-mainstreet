@@ -1450,7 +1450,10 @@ class DurableExecutor:
         seq: int,
         failpoint: str | None = None,
     ) -> dict[str, Any]:
+        proposal = copy.deepcopy(proposal)
         row = self.state.get_reservation(reservation_id)
+        if action_digest(proposal) != row["action_digest"]:
+            raise DurableStateError("recovery proposal does not match reserved action")
         if row["status"] == "RESERVED":
             self.state.begin_execution(
                 reservation_id,
@@ -1541,7 +1544,10 @@ class IndependentObserver:
         statement; it cannot turn absence of provider evidence into a confirmed
         success or failure.
         """
+        proposal = copy.deepcopy(proposal)
         reservation = self.state.get_reservation(reservation_id)
+        if action_digest(proposal) != reservation["action_digest"]:
+            raise DurableStateError("observation proposal does not match reserved action")
         provider_record = self.provider.query(str(reservation["idempotency_key"]))
         provider_status = reservation.get("provider_status")
         provider_evidence_conflict = False

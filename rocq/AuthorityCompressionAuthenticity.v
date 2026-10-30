@@ -1,5 +1,5 @@
 From Stdlib Require Import Bool.
-From ClaimSieve Require Import AuthorityCompression AuthorityCompressionNecessity.
+From ClaimSieve Require Import Claimsieve AuthorityCompression AuthorityCompressionNecessity.
 
 (** Authentication wrapper for compact authority certificates.
 
@@ -61,7 +61,7 @@ Theorem authenticated_compressed_execution_implies_original_decision_allow :
       (archive_campaign archive) = Allow.
 Proof.
   intros archive candidate valid_from expires_at Hverify.
-  apply execution_implies_original_decision_allow.
+  apply (execution_implies_original_decision_allow archive candidate valid_from expires_at).
   unfold verify_authenticated_compact in Hverify.
   simpl in Hverify.
   exact Hverify.
@@ -81,7 +81,7 @@ Theorem authenticity_gate_is_necessary :
     unauthenticated_semantically_valid_envelope
     necessity_good_candidate = false.
 Proof.
-  reflexivity.
+  split; reflexivity.
 Qed.
 
 (** Once authenticity has been established, the outer wrapper is semantically

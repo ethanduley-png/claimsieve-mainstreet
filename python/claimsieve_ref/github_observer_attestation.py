@@ -6,6 +6,7 @@ does NOT certify host independence, GitHub-origin signatures, or chronology.
 """
 from __future__ import annotations
 
+from contextlib import closing
 import re
 import secrets
 import sqlite3
@@ -56,7 +57,7 @@ class GitHubVerifierChallengeStore:
     def __init__(self, path: str | Path) -> None:
         self.path = str(path)
         Path(self.path).parent.mkdir(parents=True, exist_ok=True)
-        with self._connect() as connection:
+        with closing(self._connect()) as connection:
             connection.execute(
                 "CREATE TABLE IF NOT EXISTS challenges ("
                 "challenge TEXT PRIMARY KEY, ticket_digest TEXT NOT NULL,"
@@ -90,7 +91,7 @@ class GitHubVerifierChallengeStore:
         ) is None:
             raise GitHubObserverAttestationError("trusted action digest malformed")
         challenge = new_observation_challenge()
-        with self._connect() as connection:
+        with closing(self._connect()) as connection:
             connection.execute(
                 "INSERT INTO challenges(challenge, ticket_digest, action_digest,"
                 " issued_at, expires_at) VALUES (?, ?, ?, ?, ?)",
@@ -109,7 +110,7 @@ class GitHubVerifierChallengeStore:
         _challenge(challenge)
         if type(now_unix) is not int or now_unix < 1:
             raise GitHubObserverAttestationError("invalid verifier time")
-        with self._connect() as connection:
+        with closing(self._connect()) as connection:
             connection.execute("BEGIN IMMEDIATE")
             try:
                 affected = connection.execute(

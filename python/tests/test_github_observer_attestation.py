@@ -3,8 +3,10 @@ from __future__ import annotations
 
 import copy
 import os
+import sqlite3
 import tempfile
 import unittest
+from unittest.mock import patch
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -61,6 +63,29 @@ class SignedGitHubObserverTests(unittest.TestCase):
             idempotency_key="permit-observer", fencing_token=14, containment_epoch=0,
         )
         self.store = GitHubVerifierChallengeStore(Path(self.tmp.name) / "nonce.sqlite")
+
+    def test_connections_close_on_success_and_replay_rejection(self) -> None:
+        connections = []
+        original_connect = GitHubVerifierChallengeStore._connect
+
+        def track(store):
+            connection = original_connect(store)
+            connections.append(connection)
+            return connection
+
+        with patch.object(GitHubVerifierChallengeStore, "_connect", track):
+            store = GitHubVerifierChallengeStore(Path(self.tmp.name) / "lifecycle.sqlite")
+            challenge = store.issue(ticket=self.ticket, approved_action_digest=self.action_digest,
+                                    now_unix=self.NOW)
+            args = dict(challenge=challenge, ticket=self.ticket,
+                        approved_action_digest=self.action_digest, now_unix=self.NOW)
+            store.consume(**args)
+            with self.assertRaises(GitHubObserverAttestationError):
+                store.consume(**args)
+        self.assertEqual(len(connections), 4)
+        for connection in connections:
+            with self.assertRaises(sqlite3.ProgrammingError):
+                connection.execute("SELECT 1")
 
     def prepare(self, *, write: bool = True, observed_at: int | None = None, ttl: int = 60) -> tuple[str, dict]:
         if write:

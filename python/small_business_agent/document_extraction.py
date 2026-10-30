@@ -4,7 +4,8 @@ from dataclasses import dataclass
 from hashlib import sha256
 from math import isfinite
 from numbers import Integral
-from tempfile import NamedTemporaryFile
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Any, Protocol
 
 from claimsieve_ref.canonical import digest as canonical_digest
@@ -439,10 +440,10 @@ class PaddleOCRExtractor:
 
         engine = self._get_engine()
         spans: list[ExtractedSpan] = []
-        with NamedTemporaryFile(suffix=suffix) as handle:
-            handle.write(source)
-            handle.flush()
-            results = engine.predict(handle.name)
+        with TemporaryDirectory(prefix="claimsieve-ocr-") as directory:
+            source_path = Path(directory) / ("source" + suffix)
+            source_path.write_bytes(source)
+            results = engine.predict(str(source_path))
             if results is None:
                 raise ValueError("PaddleOCR returned no result collection")
             try:

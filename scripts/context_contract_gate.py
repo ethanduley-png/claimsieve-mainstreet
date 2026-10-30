@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import glob
 import re
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 
 ROOT = Path(__file__).resolve().parents[1]
 STAGES = [
@@ -44,7 +44,10 @@ def validate_test_references(text: str, rel: str, root: Path = ROOT) -> list[str
 
     for reference in references:
         candidate = Path(reference)
-        if candidate.is_absolute() or ".." in candidate.parts:
+        if (PurePosixPath(reference).is_absolute()
+                or PureWindowsPath(reference).drive
+                or PureWindowsPath(reference).root
+                or ".." in PureWindowsPath(reference).parts):
             failures.append(f"{rel}: unsafe test reference {reference}")
             continue
 

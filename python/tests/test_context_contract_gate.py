@@ -83,6 +83,12 @@ class ContextContractReferenceTests(unittest.TestCase):
                 ["context/test.md: unsafe test reference /tmp/outside.test"], failures
             )
 
+    def test_foreign_platform_paths_are_rejected(self) -> None:
+        for reference in ("C:/outside.test", "C:outside.test", "//server/share/test.py", r"..\outside.test"):
+            with self.subTest(reference=reference):
+                failures = GATE.validate_test_references(self._text(reference), "context/test.md")
+                self.assertEqual([f"context/test.md: unsafe test reference {reference}"], failures)
+
     def test_tests_section_requires_repository_reference(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             failures = GATE.validate_test_references(

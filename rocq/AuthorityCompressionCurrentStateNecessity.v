@@ -1,5 +1,6 @@
 From Stdlib Require Import Bool Arith.
 From ClaimSieve Require Import
+  AuthorityCompression
   AuthorityCompressionNecessity
   AuthorityCompressionAuthenticity
   AuthorityCompressionCurrentState.
@@ -61,7 +62,7 @@ Definition current_state_allows_without
   (current_check_unless_omitted omitted CurrentRevocationGuard
     (negb (current_permit_revoked current)) &&
    current_check_unless_omitted omitted CurrentConsumptionGuard
-    (negb (current_permit_consumed current)))))))).
+    (negb (current_permit_consumed current))))))))).
 
 Definition executable_now_without_current_guard
   (omitted : current_guard)
@@ -191,7 +192,7 @@ Theorem current_policy_digest_guard_is_necessary :
     current_wrong_policy = true /\
   executable_now current_necessity_envelope necessity_good_candidate
     current_wrong_policy = false.
-Proof. reflexivity. Qed.
+Proof. split; reflexivity. Qed.
 
 Theorem current_identity_digest_guard_is_necessary :
   executable_now_without_current_guard
@@ -199,7 +200,7 @@ Theorem current_identity_digest_guard_is_necessary :
     current_wrong_identity = true /\
   executable_now current_necessity_envelope necessity_good_candidate
     current_wrong_identity = false.
-Proof. reflexivity. Qed.
+Proof. split; reflexivity. Qed.
 
 Theorem policy_active_guard_is_necessary :
   executable_now_without_current_guard
@@ -207,7 +208,7 @@ Theorem policy_active_guard_is_necessary :
     current_policy_inactive = true /\
   executable_now current_necessity_envelope necessity_good_candidate
     current_policy_inactive = false.
-Proof. reflexivity. Qed.
+Proof. split; reflexivity. Qed.
 
 Theorem identity_active_guard_is_necessary :
   executable_now_without_current_guard
@@ -215,7 +216,7 @@ Theorem identity_active_guard_is_necessary :
     current_identity_inactive = true /\
   executable_now current_necessity_envelope necessity_good_candidate
     current_identity_inactive = false.
-Proof. reflexivity. Qed.
+Proof. split; reflexivity. Qed.
 
 Theorem campaign_active_guard_is_necessary :
   executable_now_without_current_guard
@@ -223,7 +224,7 @@ Theorem campaign_active_guard_is_necessary :
     current_campaign_inactive = true /\
   executable_now current_necessity_envelope necessity_good_candidate
     current_campaign_inactive = false.
-Proof. reflexivity. Qed.
+Proof. split; reflexivity. Qed.
 
 Theorem global_freeze_guard_is_necessary :
   executable_now_without_current_guard
@@ -231,7 +232,7 @@ Theorem global_freeze_guard_is_necessary :
     current_frozen = true /\
   executable_now current_necessity_envelope necessity_good_candidate
     current_frozen = false.
-Proof. reflexivity. Qed.
+Proof. split; reflexivity. Qed.
 
 Theorem campaign_suspension_guard_is_necessary :
   executable_now_without_current_guard
@@ -239,7 +240,7 @@ Theorem campaign_suspension_guard_is_necessary :
     current_suspended = true /\
   executable_now current_necessity_envelope necessity_good_candidate
     current_suspended = false.
-Proof. reflexivity. Qed.
+Proof. split; reflexivity. Qed.
 
 Theorem current_revocation_guard_is_necessary :
   executable_now_without_current_guard
@@ -247,7 +248,7 @@ Theorem current_revocation_guard_is_necessary :
     current_revoked = true /\
   executable_now current_necessity_envelope necessity_good_candidate
     current_revoked = false.
-Proof. reflexivity. Qed.
+Proof. split; reflexivity. Qed.
 
 Theorem current_consumption_guard_is_necessary :
   executable_now_without_current_guard
@@ -255,7 +256,7 @@ Theorem current_consumption_guard_is_necessary :
     current_consumed = true /\
   executable_now current_necessity_envelope necessity_good_candidate
     current_consumed = false.
-Proof. reflexivity. Qed.
+Proof. split; reflexivity. Qed.
 
 Theorem current_runtime_guard_set_is_pointwise_necessary :
   (executable_now_without_current_guard

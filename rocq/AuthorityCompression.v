@@ -178,7 +178,7 @@ Proof.
       (archive_campaign archive)) eqn:Hdecision;
     simpl in Hauthority;
     try discriminate;
-    exact Hdecision.
+    reflexivity.
 Qed.
 
 Theorem unauthorized_certificate_fails_closed :
@@ -361,8 +361,7 @@ Theorem archived_payload_outside_fast_path :
 Proof.
   intros left right valid_from expires_at candidate Hprojection.
   destruct Hprojection as [Haction [Hpolicy [Hidentity [Hevidence Hauthority]]]].
-  unfold verify_compact.
-  cbn [compress_authority].
+  unfold compress_authority.
   rewrite Haction, Hpolicy, Hidentity, Hevidence, Hauthority.
   reflexivity.
 Qed.

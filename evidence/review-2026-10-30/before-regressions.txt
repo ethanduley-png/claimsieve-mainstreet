@@ -1,0 +1,82 @@
+FFFFFEF
+======================================================================
+ERROR: test_recovery_rejects_mutated_proposal_before_dispatch (test_durable_state.DurableStateTest.test_recovery_rejects_mutated_proposal_before_dispatch)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<workspace>\python\tests\test_durable_state.py", line 203, in test_recovery_rejects_mutated_proposal_before_dispatch
+    self.executor.resume_reserved(reservation["reservation_id"], self.prop, 12)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<workspace>\python\claimsieve_ref\durable_state.py", line 1462, in resume_reserved
+    raise DurableStateError("reservation cannot be resumed")
+claimsieve_ref.durable_state.DurableStateError: reservation cannot be resumed
+
+======================================================================
+FAIL: test_recovery_rejects_mutated_proposal_before_dispatch (test_durable_state.DurableStateTest.test_recovery_rejects_mutated_proposal_before_dispatch) (field='body')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<workspace>\python\tests\test_durable_state.py", line 199, in test_recovery_rejects_mutated_proposal_before_dispatch
+    with self.assertRaises(DurableStateError):
+         ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+AssertionError: DurableStateError not raised
+
+======================================================================
+FAIL: test_recovery_rejects_mutated_proposal_before_dispatch (test_durable_state.DurableStateTest.test_recovery_rejects_mutated_proposal_before_dispatch) (field='tenant_id')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<workspace>\python\tests\test_durable_state.py", line 201, in test_recovery_rejects_mutated_proposal_before_dispatch
+    self.assertEqual(self.state.get_reservation(reservation["reservation_id"])["status"], "RESERVED")
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'PROVIDER_ACKNOWLEDGED' != 'RESERVED'
+- PROVIDER_ACKNOWLEDGED
++ RESERVED
+
+
+======================================================================
+FAIL: test_recovery_rejects_mutated_proposal_before_dispatch (test_durable_state.DurableStateTest.test_recovery_rejects_mutated_proposal_before_dispatch) (field='principal')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<workspace>\python\tests\test_durable_state.py", line 201, in test_recovery_rejects_mutated_proposal_before_dispatch
+    self.assertEqual(self.state.get_reservation(reservation["reservation_id"])["status"], "RESERVED")
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'PROVIDER_ACKNOWLEDGED' != 'RESERVED'
+- PROVIDER_ACKNOWLEDGED
++ RESERVED
+
+
+======================================================================
+FAIL: test_recovery_rejects_mutated_proposal_before_dispatch (test_durable_state.DurableStateTest.test_recovery_rejects_mutated_proposal_before_dispatch) (field='campaign_id')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<workspace>\python\tests\test_durable_state.py", line 201, in test_recovery_rejects_mutated_proposal_before_dispatch
+    self.assertEqual(self.state.get_reservation(reservation["reservation_id"])["status"], "RESERVED")
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'PROVIDER_ACKNOWLEDGED' != 'RESERVED'
+- PROVIDER_ACKNOWLEDGED
++ RESERVED
+
+
+======================================================================
+FAIL: test_recovery_rejects_mutated_proposal_before_dispatch (test_durable_state.DurableStateTest.test_recovery_rejects_mutated_proposal_before_dispatch) (field='objective')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<workspace>\python\tests\test_durable_state.py", line 201, in test_recovery_rejects_mutated_proposal_before_dispatch
+    self.assertEqual(self.state.get_reservation(reservation["reservation_id"])["status"], "RESERVED")
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'PROVIDER_ACKNOWLEDGED' != 'RESERVED'
+- PROVIDER_ACKNOWLEDGED
++ RESERVED
+
+
+======================================================================
+FAIL: test_observer_rejects_substituted_proposal_without_finality (test_durable_state.DurableStateTest.test_observer_rejects_substituted_proposal_without_finality)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<workspace>\python\tests\test_durable_state.py", line 213, in test_observer_rejects_substituted_proposal_without_finality
+    with self.assertRaises(DurableStateError):
+         ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+AssertionError: DurableStateError not raised
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.364s
+
+FAILED (failures=6, errors=1)

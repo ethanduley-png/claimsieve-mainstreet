@@ -75,15 +75,15 @@ Invoke-Checked $Python "scripts\run_durable_red_team.py"
 Push-Location "rust"
 try {
     Invoke-Checked $Cargo "fmt" "--all" "--" "--check"
-    Invoke-Checked $Cargo "clippy" "--workspace" "--all-targets" "--all-features" "--" "-D" "warnings"
-    Invoke-Checked $Cargo "test" "--workspace" "--all-features"
+    Invoke-Checked $Cargo "clippy" "--locked" "--workspace" "--all-targets" "--all-features" "--" "-D" "warnings"
+    Invoke-Checked $Cargo "test" "--locked" "--workspace" "--all-features"
 } finally {
     Pop-Location
 }
 
 Push-Location "rocq"
 try {
-    foreach ($file in @("Claimsieve.v", "DurableState.v", "Check.v", "CheckDurableState.v")) {
+    foreach ($file in (Get-Content "_RocqProject" | Where-Object { $_ -match '\.v$' })) {
         Invoke-Checked $Rocq "compile" "-Q" "." "ClaimSieve" $file
     }
 } finally {

@@ -84,12 +84,12 @@ if command -v rocq >/dev/null 2>&1; then
   rocq_available=true
   (
     cd rocq
-    rocq compile -Q . ClaimSieve Claimsieve.v
-    rocq compile -Q . ClaimSieve DurableState.v
-    rocq compile -Q . ClaimSieve ExecutionAssurance.v
-    rocq compile -Q . ClaimSieve Check.v
-    rocq compile -Q . ClaimSieve CheckDurableState.v
-    rocq compile -Q . ClaimSieve CheckExecutionAssurance.v
+    while IFS= read -r proof_file; do
+      proof_file="${proof_file%$'\r'}"
+      case "$proof_file" in
+        *.v) rocq compile -Q . ClaimSieve "$proof_file" ;;
+      esac
+    done < _RocqProject
   ) 2>&1 | tee evidence/ROCQ_OUTPUT.txt
   rocq_compile="PASS"
   rocq_assumptions="PRINTED_BY_CHECK_V"
@@ -97,12 +97,12 @@ elif command -v coqc >/dev/null 2>&1; then
   rocq_available=true
   (
     cd rocq
-    coqc -Q . ClaimSieve Claimsieve.v
-    coqc -Q . ClaimSieve DurableState.v
-    coqc -Q . ClaimSieve ExecutionAssurance.v
-    coqc -Q . ClaimSieve Check.v
-    coqc -Q . ClaimSieve CheckDurableState.v
-    coqc -Q . ClaimSieve CheckExecutionAssurance.v
+    while IFS= read -r proof_file; do
+      proof_file="${proof_file%$'\r'}"
+      case "$proof_file" in
+        *.v) coqc -Q . ClaimSieve "$proof_file" ;;
+      esac
+    done < _RocqProject
   ) 2>&1 | tee evidence/ROCQ_OUTPUT.txt
   rocq_compile="PASS"
   rocq_assumptions="PRINTED_BY_CHECK_V"

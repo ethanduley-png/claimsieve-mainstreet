@@ -182,6 +182,40 @@ class DurableStateTest(unittest.TestCase):
         self.assertEqual(stored["outcome"], "CONFIRMED_SUCCESS")
         self.assertFalse(result["automatic_retry_allowed"])
 
+    def test_recovery_rejects_mutated_proposal_before_dispatch(self) -> None:
+        with self.assertRaises(InjectedCrash):
+            self.executor.execute(self.permit, self.prop, self.signed, self.ev,
+                                  self.decision.document, 11, failpoint="after_reservation")
+        reservation = self.state.recovery_queue()[0]
+        for field in ("body", "tenant_id", "principal", "campaign_id", "objective"):
+            with self.subTest(field=field):
+                changed = copy.deepcopy(self.prop)
+                if field == "body":
+                    changed["action"]["parameters"]["body"] = "Unapproved replacement"
+                elif field == "objective":
+                    changed[field]["expected_effect"] = "Unapproved effect"
+                else:
+                    changed[field] = "unapproved-identity"
+                with self.assertRaises(DurableStateError):
+                    self.executor.resume_reserved(reservation["reservation_id"], changed, 12)
+                self.assertEqual(self.state.get_reservation(reservation["reservation_id"])["status"], "RESERVED")
+                self.assertIsNone(self.provider.query(reservation["idempotency_key"]))
+        self.executor.resume_reserved(reservation["reservation_id"], self.prop, 12)
+
+    def test_observer_rejects_substituted_proposal_without_finality(self) -> None:
+        self.provider.mode = "divergent"
+        result = self.executor.execute(self.permit, self.prop, self.signed, self.ev,
+                                       self.decision.document, 11)
+        reservation = result["reservation"]
+        changed = copy.deepcopy(self.prop)
+        changed["action"] = self.provider.query(reservation["idempotency_key"])["effect"]
+        self.assertNotEqual(changed["action"], self.prop["action"])
+        with self.assertRaises(DurableStateError):
+            self.observer.reconcile(reservation["reservation_id"], changed, 12)
+        self.assertNotEqual(self.state.get_reservation(reservation["reservation_id"])["outcome"], "CONFIRMED_SUCCESS")
+        observed = self.observer.reconcile(reservation["reservation_id"], self.prop, 12)
+        self.assertEqual(observed["reconciliation"], "DIVERGENT_EFFECT")
+
     def test_crash_after_reservation_is_recoverable_without_new_reservation(self) -> None:
         with self.assertRaises(InjectedCrash):
             self.executor.execute(

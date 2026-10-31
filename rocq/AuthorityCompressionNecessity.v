@@ -113,7 +113,7 @@ Theorem authority_guard_is_necessary :
   verify_compact
     necessity_unauthorized_certificate
     necessity_good_candidate = false.
-Proof. reflexivity. Qed.
+Proof. split; reflexivity. Qed.
 
 Theorem action_guard_is_necessary :
   verify_without
@@ -123,7 +123,7 @@ Theorem action_guard_is_necessary :
   verify_compact
     necessity_base_certificate
     necessity_wrong_action_candidate = false.
-Proof. reflexivity. Qed.
+Proof. split; reflexivity. Qed.
 
 Theorem policy_guard_is_necessary :
   verify_without
@@ -133,7 +133,7 @@ Theorem policy_guard_is_necessary :
   verify_compact
     necessity_base_certificate
     necessity_wrong_policy_candidate = false.
-Proof. reflexivity. Qed.
+Proof. split; reflexivity. Qed.
 
 Theorem identity_guard_is_necessary :
   verify_without
@@ -143,7 +143,7 @@ Theorem identity_guard_is_necessary :
   verify_compact
     necessity_base_certificate
     necessity_wrong_identity_candidate = false.
-Proof. reflexivity. Qed.
+Proof. split; reflexivity. Qed.
 
 Theorem not_before_guard_is_necessary :
   verify_without
@@ -153,7 +153,7 @@ Theorem not_before_guard_is_necessary :
   verify_compact
     necessity_base_certificate
     necessity_early_candidate = false.
-Proof. reflexivity. Qed.
+Proof. split; reflexivity. Qed.
 
 Theorem expiry_guard_is_necessary :
   verify_without
@@ -163,7 +163,7 @@ Theorem expiry_guard_is_necessary :
   verify_compact
     necessity_base_certificate
     necessity_expired_candidate = false.
-Proof. reflexivity. Qed.
+Proof. split; reflexivity. Qed.
 
 (** The evidence digest is retained for archive linkage and reconstruction. It
     is deliberately not consulted by [verify_compact]. *)
